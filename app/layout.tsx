@@ -15,7 +15,7 @@ const archivo = Archivo({
 })
 
 export const metadata: Metadata = {
-  title: 'Plan — organise ton event entre potes',
+  title: 'Komo — organise ton event entre potes',
   description: "Un lien dans le groupe. Tout le monde se déclare en 30 secondes. Qui vient, qui a une caisse, qui n'a pas encore de solution.",
 }
 

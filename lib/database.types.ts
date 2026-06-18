@@ -1,14 +1,17 @@
 // Placeholder types — replaced by: supabase gen types typescript --linked > lib/database.types.ts
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
+type EventType = 'weekend' | 'soiree' | 'concert' | 'road_trip' | 'sport' | 'autre'
+
 type EventRow = {
   id: string
   slug: string
   creator_token: string
   title: string
   destination: string
-  date_start: string
-  date_end: string
+  date_start: string | null
+  date_end: string | null
+  event_type: EventType
   presence_deadline: string | null
   created_at: string
 }
@@ -22,6 +25,7 @@ type ParticipantRow = {
   partial_days: Json | null
   departure_city: string | null
   luggage_size: 'light' | 'medium' | 'large' | null
+  role: 'créateur' | 'co_organisateur' | 'participant'
   joined_at: string
 }
 
@@ -40,6 +44,15 @@ type TransportLegRow = {
   created_at: string
 }
 
+type DateProposalRow = {
+  id: string
+  event_id: string
+  proposed_date: string
+  created_by: string
+  votes: Record<string, boolean>
+  created_at: string
+}
+
 type TransportOccupantRow = {
   id: string
   leg_id: string
@@ -54,7 +67,13 @@ export type Database = {
     Tables: {
       events: {
         Row: EventRow
-        Insert: Omit<EventRow, 'id' | 'created_at' | 'creator_token'> & { creator_token?: string }
+        Insert: Omit<EventRow, 'id' | 'created_at' | 'creator_token' | 'presence_deadline' | 'event_type' | 'date_start' | 'date_end'> & {
+          creator_token?: string
+          presence_deadline?: string | null
+          event_type?: EventType
+          date_start?: string | null
+          date_end?: string | null
+        }
         Update: Partial<Omit<EventRow, 'id' | 'created_at'>>
         Relationships: []
       }
@@ -69,6 +88,7 @@ export type Database = {
           partial_days?: Json | null
           departure_city?: string | null
           luggage_size?: 'light' | 'medium' | 'large' | null
+          role?: 'créateur' | 'co_organisateur' | 'participant'
         }
         Update: Partial<Omit<ParticipantRow, 'id' | 'joined_at'>>
         Relationships: []
@@ -83,6 +103,34 @@ export type Database = {
         Row: TransportOccupantRow
         Insert: Omit<TransportOccupantRow, 'id' | 'created_at'> & { created_at?: string }
         Update: Partial<Omit<TransportOccupantRow, 'id' | 'created_at'>>
+        Relationships: []
+      }
+      accommodation_options: {
+        Row: {
+          id: string; event_id: string; label: string; url: string | null
+          price_per_night: number | null; proposed_by: string
+          votes: Record<string, boolean>; created_at: string
+        }
+        Insert: { event_id: string; label: string; proposed_by: string; url?: string | null; price_per_night?: number | null; votes?: Record<string, boolean> }
+        Update: Partial<{ label: string; url: string | null; price_per_night: number | null; votes: Record<string, boolean> }>
+        Relationships: []
+      }
+      meal_slots: {
+        Row: { id: string; event_id: string; day: string; type: 'midi' | 'soir'; label: string; created_by: string; created_at: string }
+        Insert: { event_id: string; day: string; type: 'midi' | 'soir'; label: string; created_by: string }
+        Update: Partial<{ label: string }>
+        Relationships: []
+      }
+      meal_contributions: {
+        Row: { id: string; slot_id: string; participant_id: string; what: string; for_count: number; created_at: string }
+        Insert: { slot_id: string; participant_id: string; what: string; for_count?: number }
+        Update: Partial<{ what: string; for_count: number }>
+        Relationships: []
+      }
+      date_proposals: {
+        Row: DateProposalRow
+        Insert: { event_id: string; proposed_date: string; created_by: string; votes?: Record<string, boolean> }
+        Update: Partial<Omit<DateProposalRow, 'id' | 'created_at'>>
         Relationships: []
       }
     }

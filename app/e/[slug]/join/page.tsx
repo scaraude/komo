@@ -18,9 +18,11 @@ export default async function JoinPage({
 
   if (!event) notFound()
 
-  const dateLabel = event.date_start === event.date_end
-    ? new Date(event.date_start).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
-    : `${new Date(event.date_start).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} → ${new Date(event.date_end).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
+  const dateLabel = !event.date_start
+    ? 'Date à définir'
+    : event.date_start === event.date_end
+      ? new Date(event.date_start).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+      : `${new Date(event.date_start).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} → ${new Date(event.date_end!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
 
   const joinWithSlug = joinEvent.bind(null, slug)
 
@@ -29,7 +31,7 @@ export default async function JoinPage({
       <div className="w-full max-w-md">
         <p className="text-xs font-bold tracking-widest uppercase text-terracotta mb-3 flex items-center gap-2">
           <span className="w-6 h-0.5 bg-terracotta inline-block" />
-          Plan · lien reçu
+          Komo · lien reçu
         </p>
 
         <h1 className="font-serif font-black text-4xl leading-none tracking-tight mb-4">

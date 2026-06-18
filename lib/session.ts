@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 
 export function sessionCookieName(slug: string) {
-  return `plan_session_${slug}`
+  return `komo_session_${slug}`
 }
 
 export async function getSessionToken(slug: string): Promise<string | null> {
@@ -21,7 +21,7 @@ export async function setSessionCookie(slug: string, token: string) {
 }
 
 export function creatorCookieName(slug: string) {
-  return `plan_creator_${slug}`
+  return `komo_creator_${slug}`
 }
 
 export async function getCreatorToken(slug: string): Promise<string | null> {

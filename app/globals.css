@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  /* Design tokens — Plan app */
+  /* Design tokens — Komo app */
   --color-ink: #1a1410;
   --color-paper: #f4ede0;
   --color-paper-2: #eee3d0;
