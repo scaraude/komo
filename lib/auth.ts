@@ -23,6 +23,18 @@ export async function getUserId(): Promise<string | null> {
 }
 
 /**
+ * Identité courante avec son email (null si pas de session, ou si l'user
+ * anonyme n'a pas encore lié d'email). Sert à masquer le champ email quand
+ * il est déjà renseigné. Lecture seule → OK en Server Component.
+ */
+export async function getAuthUser(): Promise<{ id: string; email: string | null } | null> {
+  const supabase = await createClient()
+  const { data } = await supabase.auth.getUser()
+  if (!data.user) return null
+  return { id: data.user.id, email: data.user.email ?? null }
+}
+
+/**
  * Identité courante, en créant une session anonyme si besoin. Renvoie AUSSI
  * le client authentifié — il faut réutiliser celui-ci pour les écritures, car
  * la session fraîchement créée vit dans son état mémoire (le cookie n'est pas

@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/auth'
 import { joinEvent } from '@/lib/actions/participants'
 
 export default async function JoinPage({
@@ -17,6 +18,10 @@ export default async function JoinPage({
     .single()
 
   if (!event) notFound()
+
+  // Email déjà lié à l'identité → inutile de le redemander.
+  const user = await getAuthUser()
+  const showEmail = !user?.email
 
   const dateLabel = !event.date_start
     ? 'Date à définir'
@@ -66,17 +71,21 @@ export default async function JoinPage({
               autoFocus
               className="w-full border-2 border-ink rounded-xl px-4 py-3 text-base bg-paper focus:outline-none focus:border-terracotta transition-colors mb-4"
             />
-            <label className="block text-sm font-semibold mb-1.5" htmlFor="email">
-              Ton email <span className="font-normal text-muted">· pour te reconnecter · facultatif</span>
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              maxLength={120}
-              placeholder="ex: marie@email.com"
-              className="w-full border-2 border-ink rounded-xl px-4 py-3 text-base bg-paper focus:outline-none focus:border-terracotta transition-colors mb-4"
-            />
+            {showEmail && (
+              <>
+                <label className="block text-sm font-semibold mb-1.5" htmlFor="email">
+                  Ton email <span className="font-normal text-muted">· pour te reconnecter · facultatif</span>
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  maxLength={120}
+                  placeholder="ex: marie@email.com"
+                  className="w-full border-2 border-ink rounded-xl px-4 py-3 text-base bg-paper focus:outline-none focus:border-terracotta transition-colors mb-4"
+                />
+              </>
+            )}
             <button
               type="submit"
               className="w-full bg-terracotta text-white border-2 border-ink rounded-full px-6 py-3.5 font-bold text-base shadow-[0_4px_0_rgba(26,20,16,0.9)] active:translate-y-1 active:shadow-none transition-all"

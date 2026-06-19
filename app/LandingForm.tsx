@@ -12,7 +12,7 @@ const VIBES = [
   { value: 'road_trip', label: '🚗 Road trip' },
 ] as const
 
-export function LandingForm() {
+export function LandingForm({ showEmail }: { showEmail: boolean }) {
   const [vibe, setVibe] = useState<string | null>(null)
 
   return (
@@ -106,21 +106,25 @@ export function LandingForm() {
         })}
       </div>
 
-      {/* Email — facultatif, pour la récup cross-device */}
-      <label
-        htmlFor="email"
-        className="mb-[9px] mt-[22px] text-[12px] font-bold uppercase tracking-[0.8px] text-muted-2"
-      >
-        Ton email <span className="font-medium text-[#c2b8a6]">· pour retrouver tes Komos · facultatif</span>
-      </label>
-      <input
-        id="email"
-        name="email"
-        type="email"
-        maxLength={120}
-        placeholder="ex : marie@email.com"
-        className="w-full rounded-[15px] border-[1.5px] border-line bg-card p-4 text-[15px] text-ink outline-none placeholder:text-disabled focus:border-terracotta"
-      />
+      {/* Email — facultatif, masqué si l'identité a déjà un email lié */}
+      {showEmail && (
+        <>
+          <label
+            htmlFor="email"
+            className="mb-[9px] mt-[22px] text-[12px] font-bold uppercase tracking-[0.8px] text-muted-2"
+          >
+            Ton email <span className="font-medium text-[#c2b8a6]">· pour retrouver tes Komos · facultatif</span>
+          </label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            maxLength={120}
+            placeholder="ex : marie@email.com"
+            className="w-full rounded-[15px] border-[1.5px] border-line bg-card p-4 text-[15px] text-ink outline-none placeholder:text-disabled focus:border-terracotta"
+          />
+        </>
+      )}
 
       {/* CTA */}
       <button
