@@ -55,30 +55,30 @@ export function DeadlineBar({
   if (!deadline && !isCreator) return null
 
   return (
-    <div className="bg-amber/15 border border-amber rounded-2xl px-4 py-3 mb-6 flex flex-wrap items-center gap-3">
+    <div className="bg-terracotta-soft border-[1.5px] border-terracotta-line rounded-[16px] px-4 py-3 mb-6 flex flex-wrap items-center gap-3">
       <div className="flex-1 min-w-0">
         {deadline && days !== null ? (
-          <p className="text-sm font-semibold">
+          <p className="text-[13.5px] font-bold text-terracotta-dk">
             ⏳ {days > 0 ? `Deadline dans ${days} jour${days > 1 ? 's' : ''}` : days === 0 ? "Deadline aujourd'hui !" : 'Deadline dépassée'}
             {pendingCount > 0 && (
-              <span className="text-muted font-normal ml-2">
+              <span className="text-body font-normal ml-2">
                 · {pendingCount} pote{pendingCount > 1 ? 's' : ''} n'ont pas répondu
               </span>
             )}
           </p>
         ) : (
-          isCreator && <p className="text-sm text-muted">Ajouter une deadline de présence</p>
+          isCreator && <p className="text-[13.5px] text-body">Ajouter une deadline de présence</p>
         )}
         {isCreator && editing && (
-          <form onSubmit={handleDeadlineChange} className="mt-2 flex gap-2">
+          <form onSubmit={handleDeadlineChange} className="mt-2 flex gap-2 items-center">
             <input
               name="deadline"
               type="date"
               defaultValue={deadline ?? ''}
-              className="border-2 border-ink rounded-lg px-3 py-1.5 text-sm bg-paper focus:outline-none focus:border-terracotta"
+              className="border-[1.5px] border-line-2 rounded-[12px] px-3 py-1.5 text-[13px] bg-card text-ink focus:outline-none focus:border-terracotta"
             />
-            <button type="submit" className="text-sm font-semibold text-terracotta">OK</button>
-            <button type="button" onClick={() => setEditing(false)} className="text-sm text-muted">Annuler</button>
+            <button type="submit" className="text-[13px] font-bold text-terracotta">OK</button>
+            <button type="button" onClick={() => setEditing(false)} className="text-[13px] text-muted">Annuler</button>
           </form>
         )}
       </div>
@@ -86,14 +86,14 @@ export function DeadlineBar({
       <div className="flex gap-2 shrink-0">
         <button
           onClick={copyLink}
-          className="text-xs font-semibold px-3 py-1.5 bg-card border border-line rounded-full"
+          className="text-[12px] font-bold px-3 py-1.5 bg-card border border-line rounded-full text-ink"
         >
           {copied ? '✓ Copié !' : '🔗 Copier le lien'}
         </button>
         {isCreator && !editing && (
           <button
             onClick={() => setEditing(true)}
-            className="text-xs font-semibold px-3 py-1.5 bg-card border border-line rounded-full"
+            className="text-[12px] font-bold px-3 py-1.5 bg-card border border-line rounded-full text-ink"
           >
             ✏️ {deadline ? 'Modifier' : 'Deadline'}
           </button>

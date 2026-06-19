@@ -50,17 +50,17 @@ export function LiveCounter({
 
   return (
     <div className="grid grid-cols-3 gap-3 mb-8">
-      <div className="bg-card border border-line rounded-2xl p-4 text-center">
+      <div className="bg-card border-[1.5px] border-line-2 rounded-[20px] p-4 text-center shadow-[0_2px_8px_rgba(60,45,20,0.04)]">
         <p className="text-2xl font-bold text-ink">{counts.hot}</p>
-        <p className="text-xs text-muted mt-0.5">🔥 chauds</p>
+        <p className="text-[12px] text-muted mt-0.5">🔥 chauds</p>
       </div>
-      <div className="bg-card border border-line rounded-2xl p-4 text-center">
+      <div className="bg-card border-[1.5px] border-line-2 rounded-[20px] p-4 text-center shadow-[0_2px_8px_rgba(60,45,20,0.04)]">
         <p className="text-2xl font-bold text-ink">{counts.hesitant}</p>
-        <p className="text-xs text-muted mt-0.5">🤔 hésitants</p>
+        <p className="text-[12px] text-muted mt-0.5">🤔 hésitants</p>
       </div>
-      <div className="bg-card border border-line rounded-2xl p-4 text-center">
+      <div className="bg-card border-[1.5px] border-line-2 rounded-[20px] p-4 text-center shadow-[0_2px_8px_rgba(60,45,20,0.04)]">
         <p className="text-2xl font-bold text-ink">{counts.pending}</p>
-        <p className="text-xs text-muted mt-0.5">❓ en attente</p>
+        <p className="text-[12px] text-muted mt-0.5">❓ en attente</p>
       </div>
     </div>
   )

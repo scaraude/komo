@@ -1,22 +1,56 @@
 @import "tailwindcss";
 
 @theme {
-  /* Design tokens — Komo app */
-  --color-ink: #1a1410;
-  --color-paper: #f4ede0;
-  --color-paper-2: #eee3d0;
-  --color-card: #fffdf8;
-  --color-terracotta: #d2552a;
-  --color-terracotta-dk: #b3441f;
-  --color-olive: #5c6b3c;
-  --color-sky: #3a7ca5;
-  --color-amber: #e0a52e;
-  --color-line: #ddd0b8;
-  --color-muted: #9c8d77;
+  /* ============ Komo — design tokens (redesign 2026) ============ */
+
+  /* Ink & surfaces */
+  --color-ink: #221f1a;            /* titres, hero */
+  --color-paper: #f3ebdc;          /* surface "téléphone" / app */
+  --color-card: #fffdf8;           /* cartes, inputs */
+  --color-track: #eadfcc;          /* fond des segmented controls */
+  --color-soft: #f4eee2;           /* surface douce (encarts) */
+  --color-sheet: #f6efe2;          /* bottom sheet */
+
+  /* Terracotta (primaire) */
+  --color-terracotta: #c4602f;
+  --color-terracotta-dk: #7c3a18;  /* ombre poussoir + hover */
+  --color-terracotta-soft: #fbede4;/* pill statut / alerte */
+  --color-terracotta-line: #ecc3a8;
+
+  /* Vert olive (présence / dispo) */
+  --color-olive: #5f7a3e;
+  --color-olive-soft: #eef1e6;
+  --color-olive-text: #5a7040;
+  --color-olive-text-dk: #4e6233;
+
+  /* Prune (apéro) */
+  --color-prune: #9a5a6e;
+  --color-prune-soft: #f3e9ec;
+
+  /* Sur fond sombre */
+  --color-on-dark: #f3ebdc;
+  --color-on-dark-2: #b8b0a0;
+
+  /* Bordures */
+  --color-line: #e2d8c6;           /* bordure input */
+  --color-line-2: #ece3d3;         /* bordure carte */
+  --color-line-3: #d8cdba;         /* bordure neutre */
+  --color-dashed: #cfc2ad;
+
+  /* Texte */
+  --color-body: #5c574e;           /* corps */
+  --color-muted: #9a907f;          /* sourdine */
+  --color-muted-2: #a59c8c;        /* labels */
+  --color-faint: #8a8276;          /* sous-titres */
+  --color-disabled: #b2a895;       /* désactivé */
+  --color-disabled-2: #cfc6b6;     /* hors-fenêtre calendrier */
+
+  /* Divers */
+  --color-whatsapp: #25d366;
 
   /* Fonts */
-  --font-serif: var(--font-fraunces), Georgia, serif;
-  --font-sans: var(--font-archivo), system-ui, sans-serif;
+  --font-serif: var(--font-dm-serif), Georgia, serif;
+  --font-sans: var(--font-hanken), system-ui, sans-serif;
 }
 
 :root {
@@ -25,42 +59,26 @@
 }
 
 body {
-  background: var(--background);
-  background-image:
-    radial-gradient(circle at 12% 18%, rgba(210,85,42,.06) 0, transparent 38%),
-    radial-gradient(circle at 88% 8%, rgba(58,124,165,.07) 0, transparent 42%),
-    radial-gradient(circle at 70% 92%, rgba(92,107,60,.06) 0, transparent 45%);
+  background: radial-gradient(120% 90% at 50% 0%, #f4ecdd 0%, #e8ddc9 100%);
+  background-attachment: fixed;
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
 }
 
-/* Grain overlay — decorative */
-.grain::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 999;
-  opacity: 0.035;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
+/* Cacher les scrollbars (proto mobile-first) */
+*::-webkit-scrollbar { width: 0; height: 0; }
 
-/* Transport: unassigned zone stripes */
-.stripes-terracotta {
-  background-image: repeating-linear-gradient(
-    45deg,
-    #fbe9df,
-    #fbe9df 12px,
-    #f9e2d4 12px,
-    #f9e2d4 24px
-  );
-}
+/* ============ Animations (depuis le proto hi-fi) ============ */
+@keyframes screenIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes sheetUp  { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes fadeIn   { from { opacity: 0; } to { opacity: 1; } }
+
+.animate-screen-in { animation: screenIn .3s ease; }
+.animate-sheet-up  { animation: sheetUp .3s cubic-bezier(.2,.8,.2,1); }
+.animate-fade-in   { animation: fadeIn .2s ease; }
 
 @keyframes pulse-dot {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(210, 85, 42, 0.25); }
-  50%       { box-shadow: 0 0 0 7px rgba(210, 85, 42, 0.05); }
+  0%, 100% { box-shadow: 0 0 0 3px rgba(196, 96, 47, 0.25); }
+  50%       { box-shadow: 0 0 0 7px rgba(196, 96, 47, 0.05); }
 }
-
-.animate-pulse-dot {
-  animation: pulse-dot 1.8s infinite;
-}
+.animate-pulse-dot { animation: pulse-dot 1.8s infinite; }

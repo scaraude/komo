@@ -1,16 +1,18 @@
 import type { Metadata } from 'next'
-import { Fraunces, Archivo } from 'next/font/google'
+import { DM_Serif_Display, Hanken_Grotesk } from 'next/font/google'
 import './globals.css'
 
-const fraunces = Fraunces({
+const dmSerif = DM_Serif_Display({
+  weight: '400',
   subsets: ['latin'],
-  variable: '--font-fraunces',
+  variable: '--font-dm-serif',
   display: 'swap',
 })
 
-const archivo = Archivo({
+const hanken = Hanken_Grotesk({
+  weight: ['400', '500', '600', '700', '800'],
   subsets: ['latin'],
-  variable: '--font-archivo',
+  variable: '--font-hanken',
   display: 'swap',
 })
 
@@ -25,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="fr" className={`${fraunces.variable} ${archivo.variable}`}>
+    <html lang="fr" className={`${dmSerif.variable} ${hanken.variable}`}>
       <body className="min-h-screen font-sans">{children}</body>
     </html>
   )
