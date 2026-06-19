@@ -1,14 +1,12 @@
 'use server'
 
-import { createClientWithHeaders } from '@/lib/supabase/server'
-import { getSessionToken } from '@/lib/session'
+import { createClient } from '@/lib/supabase/server'
 
 type PresenceStatus = 'hot' | 'maybe' | 'unsure' | 'no'
 
 export async function updatePresence(slug: string, participantId: string, status: PresenceStatus) {
-  const sessionToken = await getSessionToken(slug)
-  if (!sessionToken) throw new Error('Non authentifié.')
-  const supabase = await createClientWithHeaders({ 'x-session-token': sessionToken })
+  // Authz RLS : participants_update_own_or_org (user_id = auth.uid()).
+  const supabase = await createClient()
   const { error } = await supabase
     .from('participants')
     .update({ presence_status: status })
@@ -21,9 +19,7 @@ export async function updatePartialDays(
   participantId: string,
   days: Record<string, boolean>
 ) {
-  const sessionToken = await getSessionToken(slug)
-  if (!sessionToken) throw new Error('Non authentifié.')
-  const supabase = await createClientWithHeaders({ 'x-session-token': sessionToken })
+  const supabase = await createClient()
   const { error } = await supabase
     .from('participants')
     .update({ partial_days: days })

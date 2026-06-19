@@ -1,16 +1,9 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClientWithHeaders } from '@/lib/supabase/server'
-import { getSessionToken, getCreatorToken } from '@/lib/session'
+import { createClient } from '@/lib/supabase/server'
 import { computeSuggestions } from '@/lib/transport/solver'
 import type { Assignment } from '@/lib/transport/solver'
-
-async function getSupabaseWithSession(slug: string) {
-  const sessionToken = await getSessionToken(slug)
-  if (!sessionToken) throw new Error('Non authentifié.')
-  return createClientWithHeaders({ 'x-session-token': sessionToken })
-}
 
 export async function createLeg(
   slug: string,
@@ -19,7 +12,7 @@ export async function createLeg(
   direction: 'aller' | 'retour',
   formData: FormData
 ) {
-  const supabase = await getSupabaseWithSession(slug)
+  const supabase = await createClient()
 
   const mode = formData.get('mode')?.toString() as 'car' | 'rental' | 'train' | 'bus' | 'navette'
   const label = formData.get('label')?.toString().trim() ?? ''
@@ -101,7 +94,7 @@ export async function createLeg(
 }
 
 export async function joinLeg(slug: string, legId: string, participantId: string) {
-  const supabase = await getSupabaseWithSession(slug)
+  const supabase = await createClient()
   const { error } = await supabase.from('transport_occupants').insert({
     leg_id: legId,
     participant_id: participantId,
@@ -112,7 +105,7 @@ export async function joinLeg(slug: string, legId: string, participantId: string
 }
 
 export async function leaveLeg(slug: string, legId: string, participantId: string) {
-  const supabase = await getSupabaseWithSession(slug)
+  const supabase = await createClient()
   await supabase
     .from('transport_occupants')
     .delete()
@@ -122,7 +115,7 @@ export async function leaveLeg(slug: string, legId: string, participantId: strin
 }
 
 export async function deleteLeg(slug: string, legId: string) {
-  const supabase = await getSupabaseWithSession(slug)
+  const supabase = await createClient()
   // RLS (legs_delete_author) garantit que seul l'auteur peut supprimer.
   // Un refus se traduit par 0 ligne supprimée (sans erreur) — on le détecte
   // via .select() pour pouvoir rollback l'UI optimiste côté client.
@@ -142,7 +135,7 @@ export async function suggestAssignments(
   eventId: string,
   direction: 'aller' | 'retour',
 ): Promise<{ assignments: Assignment[]; unresolved: string[] }> {
-  const supabase = await getSupabaseWithSession(slug)
+  const supabase = await createClient()
 
   const { data: legs } = await supabase
     .from('transport_legs').select('id, total_seats, departure_city, arrival_city')
@@ -178,9 +171,8 @@ export async function suggestAssignments(
 }
 
 export async function applyAssignments(slug: string, assignments: Assignment[]) {
-  const creatorToken = await getCreatorToken(slug)
-  if (!creatorToken) throw new Error('Non autorisé.')
-  const supabase = await createClientWithHeaders({ 'x-creator-token': creatorToken })
+  // Authz RLS : occupants_insert autorise un orga à affecter dans son event.
+  const supabase = await createClient()
 
   // Fetch existing occupants to avoid duplicates
   const legIds = [...new Set(assignments.map((a) => a.legId))]
@@ -208,7 +200,7 @@ export async function updateDepartureInfo(
   city: string,
   luggageSize: 'light' | 'medium' | 'large' | null
 ) {
-  const supabase = await getSupabaseWithSession(slug)
+  const supabase = await createClient()
   await supabase
     .from('participants')
     .update({ departure_city: city, luggage_size: luggageSize })

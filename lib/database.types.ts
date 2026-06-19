@@ -7,6 +7,7 @@ type EventRow = {
   id: string
   slug: string
   creator_token: string
+  created_by: string | null
   title: string
   destination: string
   date_start: string | null
@@ -20,7 +21,8 @@ type ParticipantRow = {
   id: string
   event_id: string
   pseudo: string
-  session_token: string
+  session_token: string | null
+  user_id: string | null
   presence_status: 'hot' | 'maybe' | 'unsure' | 'no' | null
   partial_days: Json | null
   departure_city: string | null
@@ -72,8 +74,9 @@ export type Database = {
     Tables: {
       events: {
         Row: EventRow
-        Insert: Omit<EventRow, 'id' | 'created_at' | 'creator_token' | 'presence_deadline' | 'event_type' | 'date_start' | 'date_end'> & {
+        Insert: Omit<EventRow, 'id' | 'created_at' | 'creator_token' | 'created_by' | 'presence_deadline' | 'event_type' | 'date_start' | 'date_end'> & {
           creator_token?: string
+          created_by?: string | null
           presence_deadline?: string | null
           event_type?: EventType
           date_start?: string | null
@@ -87,7 +90,8 @@ export type Database = {
         Insert: {
           event_id: string
           pseudo: string
-          session_token: string
+          session_token?: string | null
+          user_id?: string | null
           joined_at?: string
           presence_status?: 'hot' | 'maybe' | 'unsure' | 'no' | null
           partial_days?: Json | null

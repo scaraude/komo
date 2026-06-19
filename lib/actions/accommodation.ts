@@ -1,14 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClientWithHeaders } from '@/lib/supabase/server'
-import { getSessionToken } from '@/lib/session'
-
-async function getSupabase(slug: string) {
-  const sessionToken = await getSessionToken(slug)
-  if (!sessionToken) throw new Error('Non authentifié.')
-  return createClientWithHeaders({ 'x-session-token': sessionToken })
-}
+import { createClient } from '@/lib/supabase/server'
 
 export async function proposeAccommodation(
   slug: string,
@@ -22,7 +15,7 @@ export async function proposeAccommodation(
   const priceRaw = formData.get('price_per_night')?.toString()
   const price_per_night = priceRaw ? parseFloat(priceRaw) : null
 
-  const supabase = await getSupabase(slug)
+  const supabase = await createClient()
   const { error } = await supabase.from('accommodation_options').insert({
     event_id: eventId,
     label,
@@ -39,7 +32,7 @@ export async function voteAccommodation(
   optionId: string,
   participantId: string,
 ) {
-  const supabase = await getSupabase(slug)
+  const supabase = await createClient()
   const { data } = await supabase
     .from('accommodation_options').select('votes').eq('id', optionId).single()
   if (!data) return // option optimiste pas encore en DB

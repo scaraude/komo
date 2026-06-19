@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getSessionToken, getCreatorToken } from '@/lib/session'
+import { getUserId } from '@/lib/auth'
 import { PresenceToggle } from '@/components/presence/PresenceToggle'
 import { PartialPresence } from '@/components/presence/PartialPresence'
 import { DeadlineBar } from '@/components/presence/DeadlineBar'
@@ -74,12 +74,12 @@ export default async function EventPage({
   const { data: event } = await supabase.from('events').select('*').eq('slug', slug).single()
   if (!event) notFound()
 
-  const sessionToken = await getSessionToken(slug)
-  if (!sessionToken) redirect(`/e/${slug}/join`)
+  const userId = await getUserId()
+  if (!userId) redirect(`/e/${slug}/join`)
 
   const { data: participant } = await supabase
     .from('participants').select('*')
-    .eq('event_id', event.id).eq('session_token', sessionToken).single()
+    .eq('event_id', event.id).eq('user_id', userId).maybeSingle()
   if (!participant) redirect(`/e/${slug}/join`)
 
   const { data: allParticipants } = await supabase
@@ -87,8 +87,7 @@ export default async function EventPage({
     .eq('event_id', event.id).order('joined_at', { ascending: true })
   const participants = allParticipants ?? []
 
-  const creatorToken = await getCreatorToken(slug)
-  const isCreator = !!creatorToken && creatorToken === event.creator_token
+  const isCreator = event.created_by === userId
   const isAdmin = participant.role === 'créateur' || participant.role === 'co_organisateur'
   const wording = EVENT_TYPE_WORDING[event.event_type as keyof typeof EVENT_TYPE_WORDING] ?? EVENT_TYPE_WORDING.autre
   const vibe = VIBE[event.event_type as keyof typeof VIBE] ?? VIBE.autre

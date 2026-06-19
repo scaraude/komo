@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { nanoid } from 'nanoid'
 import { createClient } from '@/lib/supabase/server'
-import { setCreatorCookie } from '@/lib/session'
+import { ensureUser } from '@/lib/auth'
 
 export async function createEvent(formData: FormData) {
   const title = formData.get('title')?.toString().trim()
@@ -16,32 +16,30 @@ export async function createEvent(formData: FormData) {
   if (!title || !destination) return
   if (!sondage && (!dateStart || !dateEnd)) return
 
-  const supabase = await createClient()
+  // Crée une session anonyme si besoin → l'auteur est identifié par auth.uid().
+  // On réutilise le client authentifié renvoyé (la RLS insert exige
+  // created_by = auth.uid()).
+  const { userId, supabase } = await ensureUser()
   const slug = nanoid(8)
-  const creatorToken = crypto.randomUUID()
 
   const { error } = await supabase.from('events').insert({
     slug,
-    creator_token: creatorToken,
     title,
     destination,
     date_start: dateStart,
     date_end: dateEnd,
     event_type: eventType,
+    created_by: userId,
   })
 
   if (error) throw new Error("Impossible de créer l'event.")
 
-  await setCreatorCookie(slug, creatorToken)
   redirect(`/e/${slug}/join`)
 }
 
 export async function updateDeadline(slug: string, deadline: string) {
-  const { getCreatorToken } = await import('@/lib/session')
-  const { createClientWithHeaders } = await import('@/lib/supabase/server')
-  const creatorToken = await getCreatorToken(slug)
-  if (!creatorToken) throw new Error('Non autorisé.')
-  const supabase = await createClientWithHeaders({ 'x-creator-token': creatorToken })
+  // Authz déléguée à la RLS (events_update_creator : created_by = auth.uid()).
+  const supabase = await createClient()
   await supabase
     .from('events')
     .update({ presence_deadline: deadline || null })

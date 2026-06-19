@@ -1,14 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClientWithHeaders } from '@/lib/supabase/server'
-import { getSessionToken } from '@/lib/session'
-
-async function getSupabase(slug: string) {
-  const sessionToken = await getSessionToken(slug)
-  if (!sessionToken) throw new Error('Non authentifié.')
-  return createClientWithHeaders({ 'x-session-token': sessionToken })
-}
+import { createClient } from '@/lib/supabase/server'
 
 export async function addMealSlot(
   slug: string,
@@ -18,7 +11,7 @@ export async function addMealSlot(
   type: 'midi' | 'soir',
   label: string,
 ) {
-  const supabase = await getSupabase(slug)
+  const supabase = await createClient()
   const { error } = await supabase.from('meal_slots').insert({
     event_id: eventId,
     day,
@@ -37,7 +30,7 @@ export async function addContribution(
   what: string,
   forCount: number,
 ) {
-  const supabase = await getSupabase(slug)
+  const supabase = await createClient()
   const { error } = await supabase.from('meal_contributions').insert({
     slot_id: slotId,
     participant_id: participantId,
@@ -49,7 +42,7 @@ export async function addContribution(
 }
 
 export async function removeContribution(slug: string, contributionId: string) {
-  const supabase = await getSupabase(slug)
+  const supabase = await createClient()
   await supabase.from('meal_contributions').delete().eq('id', contributionId)
   revalidatePath(`/e/${slug}`)
 }

@@ -1,14 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClientWithHeaders } from '@/lib/supabase/server'
-import { getSessionToken } from '@/lib/session'
-
-async function getSupabase(slug: string) {
-  const sessionToken = await getSessionToken(slug)
-  if (!sessionToken) throw new Error('Non authentifié.')
-  return createClientWithHeaders({ 'x-session-token': sessionToken })
-}
+import { createClient } from '@/lib/supabase/server'
 
 export async function proposeDateOption(
   slug: string,
@@ -16,7 +9,7 @@ export async function proposeDateOption(
   participantId: string,
   date: string,
 ) {
-  const supabase = await getSupabase(slug)
+  const supabase = await createClient()
   const { error } = await supabase.from('date_proposals').insert({
     event_id: eventId,
     proposed_date: date,
@@ -32,7 +25,7 @@ export async function voteDate(
   participantId: string,
   vote: boolean,
 ) {
-  const supabase = await getSupabase(slug)
+  const supabase = await createClient()
   const { data } = await supabase
     .from('date_proposals').select('votes').eq('id', proposalId).single()
   if (!data) return // proposition optimiste pas encore en DB
@@ -45,11 +38,9 @@ export async function voteDate(
 }
 
 export async function fixDate(slug: string, eventId: string, proposalId: string) {
-  const { getCreatorToken } = await import('@/lib/session')
-  const { createClientWithHeaders: withHeaders } = await import('@/lib/supabase/server')
-  const creatorToken = await getCreatorToken(slug)
-  if (!creatorToken) throw new Error('Non autorisé.')
-  const supabase = await withHeaders({ 'x-creator-token': creatorToken })
+  // Authz RLS : events_update_creator (created_by = auth.uid()) pour fixer la
+  // date ; le delete des propositions passe par la policy permissive du module.
+  const supabase = await createClient()
 
   const { data: proposal } = await supabase
     .from('date_proposals').select('proposed_date').eq('id', proposalId).single()
