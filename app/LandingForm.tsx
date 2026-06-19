@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { createEvent } from '@/lib/actions/events'
 import { DestinationField } from './DestinationField'
 
@@ -19,10 +20,18 @@ export function LandingForm() {
       action={createEvent}
       className="animate-screen-in flex min-h-dvh flex-col px-6 pb-10 pt-8"
     >
-      {/* Logo */}
-      <div className="mb-12 flex items-center gap-[7px]">
-        <span className="font-serif text-[26px] leading-none text-ink">Komo</span>
-        <span className="mt-1.5 h-[7px] w-[7px] rounded-full bg-terracotta" />
+      {/* Logo + accès à mes events */}
+      <div className="mb-12 flex items-center justify-between">
+        <div className="flex items-center gap-[7px]">
+          <span className="font-serif text-[26px] leading-none text-ink">Komo</span>
+          <span className="mt-1.5 h-[7px] w-[7px] rounded-full bg-terracotta" />
+        </div>
+        <Link
+          href="/mes-komos"
+          className="rounded-full border-[1.5px] border-line-3 bg-card px-[14px] py-[8px] text-[13px] font-semibold text-body"
+        >
+          Mes Komos
+        </Link>
       </div>
 
       {/* Titre */}
