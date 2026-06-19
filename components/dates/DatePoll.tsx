@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { proposeDateOption, voteDate, fixDate } from '@/lib/actions/dates'
 import type { Database } from '@/lib/database.types'
+import { randomId } from '@/lib/uuid'
 
 type Proposal = Database['public']['Tables']['date_proposals']['Row']
 
@@ -58,7 +59,7 @@ export function DatePoll({
   function handlePropose() {
     if (!newDate) return
     const optimistic: Proposal = {
-      id: crypto.randomUUID(),
+      id: randomId(),
       event_id: eventId,
       proposed_date: newDate,
       created_by: participantId,

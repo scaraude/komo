@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { proposeAccommodation, voteAccommodation } from '@/lib/actions/accommodation'
 import type { Database } from '@/lib/database.types'
+import { randomId } from '@/lib/uuid'
 
 type Option = Database['public']['Tables']['accommodation_options']['Row']
 
@@ -104,7 +105,7 @@ export function AccommodationSection({
             const priceRaw = fd.get('price_per_night')?.toString()
             const price_per_night = priceRaw ? parseFloat(priceRaw) : null
             const optimistic: Option = {
-              id: crypto.randomUUID(), event_id: eventId, label, url,
+              id: randomId(), event_id: eventId, label, url,
               price_per_night, proposed_by: participantId, votes: {}, created_at: new Date().toISOString(),
             }
             setOptions((prev) => [...prev, optimistic])
