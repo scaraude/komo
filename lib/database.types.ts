@@ -132,9 +132,9 @@ export type Database = {
         Relationships: []
       }
       products: {
-        Row: { id: string; event_id: string; meal_id: string | null; name: string; tags: string[]; checked: boolean; created_by: string | null; created_at: string }
-        Insert: { event_id: string; name: string; meal_id?: string | null; tags?: string[]; checked?: boolean; created_by?: string | null }
-        Update: Partial<{ name: string; meal_id: string | null; tags: string[]; checked: boolean }>
+        Row: { id: string; event_id: string; meal_id: string | null; name: string; quantity: number | null; unit: string; tags: string[]; checked: boolean; created_by: string | null; created_at: string }
+        Insert: { event_id: string; name: string; quantity?: number | null; unit?: string; meal_id?: string | null; tags?: string[]; checked?: boolean; created_by?: string | null }
+        Update: Partial<{ name: string; quantity: number | null; unit: string; meal_id: string | null; tags: string[]; checked: boolean }>
         Relationships: []
       }
       date_proposals: {

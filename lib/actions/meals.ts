@@ -5,14 +5,41 @@ import { createClient } from '@/lib/supabase/server'
 
 // Refonte bouffe : repas (meals) + produits (products). RLS membre-de-l'event.
 
-export async function addMeal(slug: string, eventId: string, participantId: string, label: string) {
+type NewItem = { name: string; quantity?: number | null; unit?: string }
+
+export async function createMeal(
+  slug: string,
+  eventId: string,
+  participantId: string,
+  label: string,
+  items: NewItem[] = [],
+) {
   const clean = label.trim()
   if (!clean) throw new Error('Nom du repas requis.')
   const supabase = await createClient()
-  const { error } = await supabase.from('meals').insert({
-    event_id: eventId, label: clean, created_by: participantId,
-  })
-  if (error) throw new Error("Impossible d'ajouter ce repas.")
+
+  const { data: meal, error } = await supabase
+    .from('meals')
+    .insert({ event_id: eventId, label: clean, created_by: participantId })
+    .select('id')
+    .single()
+  if (error || !meal) throw new Error("Impossible d'ajouter ce repas.")
+
+  // Produits saisis dans le repas : taggés avec le nom du repas.
+  const rows = items
+    .map((it) => ({ ...it, name: it.name.trim() }))
+    .filter((it) => it.name)
+    .map((it) => ({
+      event_id: eventId,
+      meal_id: meal.id,
+      name: it.name,
+      quantity: it.quantity ?? null,
+      unit: it.unit || 'unité',
+      tags: [clean],
+      created_by: participantId,
+    }))
+  if (rows.length) await supabase.from('products').insert(rows)
+
   revalidatePath(`/e/${slug}`)
 }
 
@@ -28,7 +55,7 @@ export async function addProduct(
   slug: string,
   eventId: string,
   participantId: string,
-  input: { name: string; tags?: string[]; mealId?: string | null },
+  input: { name: string; quantity?: number | null; unit?: string; tags?: string[]; mealId?: string | null },
 ) {
   const name = input.name.trim()
   if (!name) throw new Error('Nom du produit requis.')
@@ -37,6 +64,8 @@ export async function addProduct(
   const { error } = await supabase.from('products').insert({
     event_id: eventId,
     name,
+    quantity: input.quantity ?? null,
+    unit: input.unit || 'unité',
     tags,
     meal_id: input.mealId ?? null,
     created_by: participantId,

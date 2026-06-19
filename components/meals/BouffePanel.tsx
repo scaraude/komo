@@ -1,15 +1,22 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { addMeal, deleteMeal, addProduct, toggleProduct, deleteProduct } from '@/lib/actions/meals'
+import { createMeal, deleteMeal, addProduct, toggleProduct, deleteProduct } from '@/lib/actions/meals'
 import { randomId } from '@/lib/uuid'
 import type { Database } from '@/lib/database.types'
 
 type Meal = Database['public']['Tables']['meals']['Row']
 type Product = Database['public']['Tables']['products']['Row']
 
+const UNITS = ['unité', 'g', 'kg', 'L', 'cl', 'paquet', 'bouteille'] as const
+
 const INPUT =
   'w-full bg-card border-[1.5px] border-line rounded-[13px] p-[13px] text-[14.5px] text-ink outline-none focus:border-terracotta placeholder:text-disabled'
+
+function qtyLabel(p: Pick<Product, 'quantity' | 'unit'>) {
+  if (p.quantity == null) return null
+  return p.unit === 'unité' ? `×${p.quantity}` : `${p.quantity} ${p.unit}`
+}
 
 export function BouffePanel({
   slug,
@@ -27,7 +34,6 @@ export function BouffePanel({
   const [meals, setMeals] = useState(initialMeals)
   const [products, setProducts] = useState(initialProducts)
   const [view, setView] = useState<'meals' | 'shopping'>('meals')
-  // sheet: 'choose' (repas/produit) | 'meal' | { product, mealId }
   const [sheet, setSheet] = useState<null | 'choose' | 'meal' | 'product'>(null)
   const [presetMeal, setPresetMeal] = useState<string | null>(null)
   const [, startTransition] = useTransition()
@@ -36,27 +42,36 @@ export function BouffePanel({
     return products.filter((p) => p.meal_id === mealId)
   }
 
-  function handleAddMeal(label: string) {
-    const optimistic: Meal = {
-      id: randomId(), event_id: eventId, label, created_by: participantId,
+  function handleCreateMeal(label: string, items: DraftItem[]) {
+    const mealId = randomId()
+    const optimisticMeal: Meal = {
+      id: mealId, event_id: eventId, label, created_by: participantId,
       created_at: new Date().toISOString(),
     }
-    setMeals((m) => [...m, optimistic])
+    const optimisticProducts: Product[] = items.map((it) => ({
+      id: randomId(), event_id: eventId, meal_id: mealId, name: it.name,
+      quantity: it.quantity, unit: it.unit, tags: [label], checked: false,
+      created_by: participantId, created_at: new Date().toISOString(),
+    }))
+    setMeals((m) => [...m, optimisticMeal])
+    setProducts((p) => [...p, ...optimisticProducts])
     setSheet(null)
-    startTransition(() => addMeal(slug, eventId, participantId, label).catch(() =>
-      setMeals((m) => m.filter((x) => x.id !== optimistic.id)),
-    ))
+    startTransition(() => createMeal(slug, eventId, participantId, label, items).catch(() => {
+      setMeals((m) => m.filter((x) => x.id !== mealId))
+      setProducts((p) => p.filter((x) => x.meal_id !== mealId))
+    }))
   }
 
-  function handleAddProduct(name: string, tags: string[], mealId: string | null) {
+  function handleAddProduct(name: string, opts: { quantity: number | null; unit: string; tags: string[]; mealId: string | null }) {
     const optimistic: Product = {
-      id: randomId(), event_id: eventId, meal_id: mealId, name, tags, checked: false,
+      id: randomId(), event_id: eventId, meal_id: opts.mealId, name,
+      quantity: opts.quantity, unit: opts.unit, tags: opts.tags, checked: false,
       created_by: participantId, created_at: new Date().toISOString(),
     }
     setProducts((p) => [...p, optimistic])
     setSheet(null)
     setPresetMeal(null)
-    startTransition(() => addProduct(slug, eventId, participantId, { name, tags, mealId }).catch(() =>
+    startTransition(() => addProduct(slug, eventId, participantId, { name, ...opts }).catch(() =>
       setProducts((p) => p.filter((x) => x.id !== optimistic.id)),
     ))
   }
@@ -78,7 +93,6 @@ export function BouffePanel({
   function handleDeleteMeal(id: string) {
     const prev = products
     setMeals((m) => m.filter((x) => x.id !== id))
-    // les produits du repas deviennent libres (cohérent avec le on delete set null)
     setProducts((p) => p.map((x) => (x.meal_id === id ? { ...x, meal_id: null } : x)))
     startTransition(() => deleteMeal(slug, id).catch(() => { setMeals((m) => [...m]); setProducts(prev) }))
   }
@@ -87,7 +101,6 @@ export function BouffePanel({
 
   return (
     <section>
-      {/* Vue : Repas | Courses */}
       <div className="bg-track rounded-[13px] p-[5px] flex gap-[4px] mb-[16px]">
         {([['meals', 'Repas'], ['shopping', 'Liste de courses']] as const).map(([v, label]) => (
           <button key={v} onClick={() => setView(v)}
@@ -119,7 +132,6 @@ export function BouffePanel({
         />
       )}
 
-      {/* Bouton Ajouter */}
       <button onClick={() => setSheet('choose')}
         className="mt-[14px] w-full rounded-[16px] bg-terracotta p-[15px] text-center text-[15px] font-bold text-white shadow-[0_4px_0_var(--color-terracotta-dk)] active:translate-y-1 active:shadow-none transition-all">
         ＋ Ajouter
@@ -135,7 +147,7 @@ export function BouffePanel({
                 <span className="text-[24px]">🍽️</span>
                 <div>
                   <div className="text-[15px] font-bold text-ink">Un repas</div>
-                  <div className="text-[12.5px] text-muted">Un moment à organiser (dîner, apéro…)</div>
+                  <div className="text-[12.5px] text-muted">Un moment + ses produits</div>
                 </div>
               </button>
               <button onClick={() => { setPresetMeal(null); setSheet('product') }}
@@ -148,7 +160,7 @@ export function BouffePanel({
               </button>
             </div>
           )}
-          {sheet === 'meal' && <MealForm onSubmit={handleAddMeal} />}
+          {sheet === 'meal' && <MealForm onSubmit={handleCreateMeal} />}
           {sheet === 'product' && (
             <ProductForm meals={meals} presetMeal={presetMeal} onSubmit={handleAddProduct} />
           )}
@@ -191,11 +203,10 @@ function MealsView({
                 <p className="text-[12.5px] text-muted italic">Pas encore de produit.</p>
               )}
               {items.map((p) => (
-                <button key={p.id} onClick={() => onToggle(p)}
-                  className="flex items-center gap-2 text-left">
+                <button key={p.id} onClick={() => onToggle(p)} className="flex items-center gap-2 text-left">
                   <CheckBox checked={p.checked} />
                   <span className={`text-[14px] ${p.checked ? 'text-muted line-through' : 'text-ink'}`}>{p.name}</span>
-                  <Tags tags={p.tags} />
+                  <Qty p={p} />
                 </button>
               ))}
               <button onClick={() => onAddProductTo(meal.id)}
@@ -218,11 +229,7 @@ function ShoppingView({
   onDelete: (id: string) => void
 }) {
   if (products.length === 0) {
-    return (
-      <p className="text-muted text-[13px] py-6 text-center">
-        Rien à acheter pour l&apos;instant.
-      </p>
-    )
+    return <p className="text-muted text-[13px] py-6 text-center">Rien à acheter pour l&apos;instant.</p>
   }
   const todo = products.filter((p) => !p.checked)
   const done = products.filter((p) => p.checked)
@@ -231,11 +238,13 @@ function ShoppingView({
       {[...todo, ...done].map((p) => {
         const ml = p.meal_id ? mealLabel(p.meal_id) : null
         return (
-          <div key={p.id}
-            className="flex items-center gap-2.5 rounded-[13px] border-[1.5px] border-line-2 bg-card px-[14px] py-[11px]">
+          <div key={p.id} className="flex items-center gap-2.5 rounded-[13px] border-[1.5px] border-line-2 bg-card px-[14px] py-[11px]">
             <button onClick={() => onToggle(p)} className="shrink-0"><CheckBox checked={p.checked} /></button>
             <button onClick={() => onToggle(p)} className="flex-1 min-w-0 text-left">
-              <span className={`text-[14.5px] ${p.checked ? 'text-muted line-through' : 'text-ink font-medium'}`}>{p.name}</span>
+              <span className="flex items-center gap-2">
+                <span className={`text-[14.5px] ${p.checked ? 'text-muted line-through' : 'text-ink font-medium'}`}>{p.name}</span>
+                <Qty p={p} />
+              </span>
               <span className="flex items-center gap-1.5 mt-0.5">
                 {ml && <span className="text-[11px] text-muted">🍽️ {ml}</span>}
                 <Tags tags={p.tags} />
@@ -261,6 +270,12 @@ function CheckBox({ checked }: { checked: boolean }) {
   )
 }
 
+function Qty({ p }: { p: Product }) {
+  const label = qtyLabel(p)
+  if (!label) return null
+  return <span className="shrink-0 rounded-full bg-soft px-[7px] py-[1px] text-[11px] font-semibold text-body">{label}</span>
+}
+
 function Tags({ tags }: { tags: string[] }) {
   if (!tags.length) return null
   return (
@@ -276,23 +291,82 @@ function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () =
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-4">
       <div className="absolute inset-0 bg-ink/40" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-paper rounded-[22px] shadow-[0_8px_40px_rgba(60,45,20,0.18)] p-6 animate-sheet-up">
+      <div className="relative w-full max-w-md bg-paper rounded-[22px] shadow-[0_8px_40px_rgba(60,45,20,0.18)] p-6 max-h-[90vh] overflow-y-auto animate-sheet-up">
         {children}
       </div>
     </div>
   )
 }
 
-function MealForm({ onSubmit }: { onSubmit: (label: string) => void }) {
-  const [label, setLabel] = useState('')
+/* Champ compact quantité + unité : [ 2 ] [unité ▾] */
+function QtyUnit({
+  qty, unit, onQty, onUnit,
+}: {
+  qty: string
+  unit: string
+  onQty: (v: string) => void
+  onUnit: (v: string) => void
+}) {
   return (
-    <form onSubmit={(e) => { e.preventDefault(); if (label.trim()) onSubmit(label.trim()) }}>
-      <h3 className="font-serif text-[20px] text-ink mb-4">Nouveau repas</h3>
+    <div className="flex gap-2 shrink-0">
+      <input type="number" min="0" step="any" inputMode="decimal" value={qty}
+        onChange={(e) => onQty(e.target.value)} aria-label="Quantité"
+        className="w-[64px] bg-card border-[1.5px] border-line rounded-[13px] p-[13px] text-[14.5px] text-ink text-center outline-none focus:border-terracotta" />
+      <select value={unit} onChange={(e) => onUnit(e.target.value)} aria-label="Unité"
+        className="bg-card border-[1.5px] border-line rounded-[13px] px-[10px] text-[14px] text-ink outline-none focus:border-terracotta">
+        {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+      </select>
+    </div>
+  )
+}
+
+type DraftItem = { name: string; quantity: number | null; unit: string }
+
+function MealForm({ onSubmit }: { onSubmit: (label: string, items: DraftItem[]) => void }) {
+  const [label, setLabel] = useState('')
+  const [items, setItems] = useState<DraftItem[]>([])
+  const [pname, setPname] = useState('')
+  const [pqty, setPqty] = useState('1')
+  const [punit, setPunit] = useState('unité')
+
+  function addItem() {
+    if (!pname.trim()) return
+    setItems((xs) => [...xs, { name: pname.trim(), quantity: pqty ? Number(pqty) : null, unit: punit }])
+    setPname(''); setPqty('1'); setPunit('unité')
+  }
+
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); if (label.trim()) onSubmit(label.trim(), items) }}
+      className="flex flex-col gap-3">
+      <h3 className="font-serif text-[20px] text-ink">Nouveau repas</h3>
       <input autoFocus value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60}
         placeholder="ex : Dîner samedi, Apéro vendredi…" className={INPUT} />
+
+      <p className="text-[12px] font-bold uppercase tracking-[0.8px] text-muted-2">Produits</p>
+      {items.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          {items.map((it, i) => (
+            <div key={i} className="flex items-center gap-2 rounded-[11px] bg-soft px-[12px] py-[9px]">
+              <span className="text-[14px] text-ink flex-1">{it.name}</span>
+              <span className="text-[12px] text-muted">{qtyLabel(it)}</span>
+              <button type="button" onClick={() => setItems((xs) => xs.filter((_, j) => j !== i))}
+                className="text-[13px] text-muted hover:text-prune">✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <input value={pname} onChange={(e) => setPname(e.target.value)} maxLength={60}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem() } }}
+          placeholder="ex : Pâtes" className={INPUT} />
+        <QtyUnit qty={pqty} unit={punit} onQty={setPqty} onUnit={setPunit} />
+      </div>
+      <button type="button" onClick={addItem} disabled={!pname.trim()}
+        className="self-start text-[13px] text-terracotta font-semibold disabled:opacity-40">＋ ajouter à la liste</button>
+
       <button type="submit" disabled={!label.trim()}
-        className="mt-4 w-full rounded-[15px] bg-terracotta p-[15px] font-bold text-white shadow-[0_4px_0_var(--color-terracotta-dk)] active:translate-y-1 active:shadow-none transition-all disabled:opacity-50">
-        Ajouter le repas
+        className="mt-1 w-full rounded-[15px] bg-terracotta p-[15px] font-bold text-white shadow-[0_4px_0_var(--color-terracotta-dk)] active:translate-y-1 active:shadow-none transition-all disabled:opacity-50">
+        Créer le repas{items.length > 0 ? ` (${items.length})` : ''}
       </button>
     </form>
   )
@@ -303,9 +377,11 @@ function ProductForm({
 }: {
   meals: Meal[]
   presetMeal: string | null
-  onSubmit: (name: string, tags: string[], mealId: string | null) => void
+  onSubmit: (name: string, opts: { quantity: number | null; unit: string; tags: string[]; mealId: string | null }) => void
 }) {
   const [name, setName] = useState('')
+  const [qty, setQty] = useState('1')
+  const [unit, setUnit] = useState('unité')
   const [tagsRaw, setTagsRaw] = useState('')
   const [mealId, setMealId] = useState<string>(presetMeal ?? '')
 
@@ -313,14 +389,17 @@ function ProductForm({
     e.preventDefault()
     if (!name.trim()) return
     const tags = tagsRaw.split(',').map((t) => t.trim()).filter(Boolean)
-    onSubmit(name.trim(), tags, mealId || null)
+    onSubmit(name.trim(), { quantity: qty ? Number(qty) : null, unit, tags, mealId: mealId || null })
   }
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
       <h3 className="font-serif text-[20px] text-ink">Nouveau produit</h3>
-      <input autoFocus value={name} onChange={(e) => setName(e.target.value)} maxLength={60}
-        placeholder="ex : Pâtes, Bière, Chips…" className={INPUT} />
+      <div className="flex gap-2">
+        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} maxLength={60}
+          placeholder="ex : Pâtes, Bière…" className={INPUT} />
+        <QtyUnit qty={qty} unit={unit} onQty={setQty} onUnit={setUnit} />
+      </div>
       <input value={tagsRaw} onChange={(e) => setTagsRaw(e.target.value)} maxLength={80}
         placeholder="Tags séparés par des virgules (goûter, apéro…)" className={INPUT} />
       <div>
