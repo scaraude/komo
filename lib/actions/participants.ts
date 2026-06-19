@@ -3,15 +3,28 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { ensureUser } from '@/lib/auth'
+import { ensureUser, siteOrigin } from '@/lib/auth'
 
 export async function joinEvent(slug: string, formData: FormData) {
   const pseudo = formData.get('pseudo')?.toString().trim()
   if (!pseudo || pseudo.length < 1) return
+  const email = formData.get('email')?.toString().trim() || null
 
   // Session anonyme si besoin → l'identité est auth.uid(). On réutilise le
   // client authentifié renvoyé (la RLS insert exige user_id = auth.uid()).
   const { userId, supabase } = await ensureUser()
+
+  // Attache l'email à l'identité (best-effort, non bloquant). Anti-énumération
+  // oblige : si l'email est déjà pris, Supabase ne lie rien et ne dit rien — on
+  // ne bloque pas, l'utilisateur reste sur sa session. La récup passe alors par
+  // « Se connecter ». Le clic du mail de confirmation finalise le lien.
+  if (email) {
+    const origin = await siteOrigin()
+    await supabase.auth.updateUser(
+      { email },
+      { emailRedirectTo: `${origin}/auth/confirm?next=/e/${slug}` },
+    )
+  }
 
   const { data: event, error: eventError } = await supabase
     .from('events')

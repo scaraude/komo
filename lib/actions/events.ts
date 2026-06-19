@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { nanoid } from 'nanoid'
 import { createClient } from '@/lib/supabase/server'
-import { ensureUser } from '@/lib/auth'
+import { ensureUser, siteOrigin } from '@/lib/auth'
 
 export async function createEvent(formData: FormData) {
   const title = formData.get('title')?.toString().trim()
@@ -12,6 +12,7 @@ export async function createEvent(formData: FormData) {
   const sondage = formData.get('sondage') === '1'
   const dateStart = sondage ? null : (formData.get('date_start')?.toString() || null)
   const dateEnd = sondage ? null : (formData.get('date_end')?.toString() || null)
+  const email = formData.get('email')?.toString().trim() || null
 
   if (!title || !destination) return
   if (!sondage && (!dateStart || !dateEnd)) return
@@ -33,6 +34,15 @@ export async function createEvent(formData: FormData) {
   })
 
   if (error) throw new Error("Impossible de créer l'event.")
+
+  // Attache l'email à l'identité (best-effort, non bloquant) pour la récup.
+  if (email) {
+    const origin = await siteOrigin()
+    await supabase.auth.updateUser(
+      { email },
+      { emailRedirectTo: `${origin}/auth/confirm?next=/e/${slug}` },
+    )
+  }
 
   redirect(`/e/${slug}/join`)
 }

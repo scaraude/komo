@@ -106,15 +106,31 @@ export function LandingForm() {
         })}
       </div>
 
+      {/* Email — facultatif, pour la récup cross-device */}
+      <label
+        htmlFor="email"
+        className="mb-[9px] mt-[22px] text-[12px] font-bold uppercase tracking-[0.8px] text-muted-2"
+      >
+        Ton email <span className="font-medium text-[#c2b8a6]">· pour retrouver tes Komos · facultatif</span>
+      </label>
+      <input
+        id="email"
+        name="email"
+        type="email"
+        maxLength={120}
+        placeholder="ex : marie@email.com"
+        className="w-full rounded-[15px] border-[1.5px] border-line bg-card p-4 text-[15px] text-ink outline-none placeholder:text-disabled focus:border-terracotta"
+      />
+
       {/* CTA */}
       <button
         type="submit"
-        className="mt-auto rounded-[17px] bg-terracotta p-[18px] text-center text-[16px] font-bold text-white shadow-[0_4px_0_var(--color-terracotta-dk)] transition-all active:translate-y-1 active:shadow-none"
+        className="mt-[22px] rounded-[17px] bg-terracotta p-[18px] text-center text-[16px] font-bold text-white shadow-[0_4px_0_var(--color-terracotta-dk)] transition-all active:translate-y-1 active:shadow-none"
       >
         Créer le plan →
       </button>
       <p className="mt-[14px] text-center text-[12.5px] text-muted-2">
-        Zéro compte · un lien suffit
+        Pas de mot de passe · <a href="/connexion" className="font-semibold text-terracotta">déjà un Komo ?</a>
       </p>
     </form>
   )

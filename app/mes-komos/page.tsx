@@ -70,6 +70,10 @@ export default async function MesKomosPage() {
           >
             Créer un Komo →
           </Link>
+          <p className="mt-4 text-[13px] text-muted">
+            Tu avais déjà des Komos&nbsp;?{' '}
+            <Link href="/connexion" className="font-semibold text-terracotta">Se connecter</Link>
+          </p>
         </div>
       ) : (
         <div className="flex flex-col gap-[11px]">
