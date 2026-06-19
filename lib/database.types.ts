@@ -125,16 +125,16 @@ export type Database = {
         Update: Partial<{ label: string; url: string | null; price_per_night: number | null; votes: Record<string, boolean> }>
         Relationships: []
       }
-      meal_slots: {
-        Row: { id: string; event_id: string; day: string; type: 'midi' | 'soir'; label: string; created_by: string; created_at: string }
-        Insert: { event_id: string; day: string; type: 'midi' | 'soir'; label: string; created_by: string }
+      meals: {
+        Row: { id: string; event_id: string; label: string; created_by: string | null; created_at: string }
+        Insert: { event_id: string; label: string; created_by?: string | null }
         Update: Partial<{ label: string }>
         Relationships: []
       }
-      meal_contributions: {
-        Row: { id: string; slot_id: string; participant_id: string; what: string; for_count: number; created_at: string }
-        Insert: { slot_id: string; participant_id: string; what: string; for_count?: number }
-        Update: Partial<{ what: string; for_count: number }>
+      products: {
+        Row: { id: string; event_id: string; meal_id: string | null; name: string; tags: string[]; checked: boolean; created_by: string | null; created_at: string }
+        Insert: { event_id: string; name: string; meal_id?: string | null; tags?: string[]; checked?: boolean; created_by?: string | null }
+        Update: Partial<{ name: string; meal_id: string | null; tags: string[]; checked: boolean }>
         Relationships: []
       }
       date_proposals: {

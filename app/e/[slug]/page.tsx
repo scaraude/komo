@@ -9,7 +9,7 @@ import { LiveCounter } from '@/components/presence/LiveCounter'
 import { TransportPanel } from '@/components/transport/TransportPanel'
 import { DatePoll } from '@/components/dates/DatePoll'
 import { AccommodationSection } from '@/components/accommodation/AccommodationSection'
-import { MealGrid } from '@/components/meals/MealGrid'
+import { BouffePanel } from '@/components/meals/BouffePanel'
 import { RecapButton } from '@/components/event/RecapButton'
 import { promoteParticipant } from '@/lib/actions/participants'
 import { ShareSheet } from './ShareSheet'
@@ -111,21 +111,9 @@ export default async function EventPage({
     ? await supabase.from('accommodation_options').select('*').eq('event_id', event.id).order('created_at')
     : { data: [] }
 
-  // Meal data
-  const { data: mealSlots } = await supabase.from('meal_slots').select('*').eq('event_id', event.id).order('day').order('type')
-  const { data: mealContribs } = await supabase.from('meal_contributions').select('*')
-    .in('slot_id', (mealSlots ?? []).map((s) => s.id))
-
-  // Days between start and end
-  const eventDays: string[] = []
-  if (!isSondage && event.date_start && event.date_end) {
-    const cur = new Date(event.date_start + 'T12:00:00')
-    const end = new Date(event.date_end + 'T12:00:00')
-    while (cur <= end) {
-      eventDays.push(cur.toISOString().slice(0, 10))
-      cur.setDate(cur.getDate() + 1)
-    }
-  }
+  // Bouffe : repas + produits
+  const { data: meals } = await supabase.from('meals').select('*').eq('event_id', event.id).order('created_at')
+  const { data: products } = await supabase.from('products').select('*').eq('event_id', event.id).order('created_at')
 
   // Transport data
   const { data: legs } = await supabase
@@ -145,7 +133,7 @@ export default async function EventPage({
       const taken = (occupants ?? []).filter((o) => o.leg_id === l.id).length
       return acc + Math.max(0, (l.total_seats ?? 0) - taken)
     }, 0)
-  const bouffeCount = (mealContribs ?? []).length
+  const bouffeCount = (products ?? []).length
   const dateProposalCount = (dateProposals ?? []).length
   const rsvpLabel = participant.presence_status ? RSVP_LABEL[participant.presence_status] : 'à déclarer'
 
@@ -353,14 +341,12 @@ export default async function EventPage({
 
       {/* Bouffe */}
       {activeTab === 'bouffe' && (
-        <MealGrid
+        <BouffePanel
           slug={slug}
           eventId={event.id}
           participantId={participant.id}
-          initialSlots={mealSlots ?? []}
-          initialContributions={mealContribs ?? []}
-          participants={participants}
-          days={eventDays}
+          initialMeals={meals ?? []}
+          initialProducts={products ?? []}
         />
       )}
 
