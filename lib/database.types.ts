@@ -44,6 +44,7 @@ type TransportLegRow = {
   vehicle_ref: string | null
   departure_time: string | null
   departure_time_end: string | null
+  arrival_time: string | null
   total_seats: number | null
   trunk_size: 'small' | 'medium' | 'large' | null
   link_url: string | null

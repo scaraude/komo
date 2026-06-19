@@ -48,6 +48,7 @@ export function ProposeVehicleForm({
   const hasDriver = mode === 'car' || mode === 'rental'
   const hasBillet = mode === 'train' || mode === 'bus'
   const hasTrainNumber = mode === 'train'
+  const hasArrival = mode === 'train' // heure d'arrivée (départ → arrivée)
   const hasLink = mode === 'train' || mode === 'bus' || mode === 'navette'
 
   // Trajet orienté départ → arrivée. Le côté participant (input requis) est le
@@ -120,9 +121,11 @@ export function ProposeVehicleForm({
             defaultValue={departureIsHome ? eventDestination : undefined}
           />
 
-          {/* Date + heure de départ */}
+          {/* Date + heure(s) */}
           <div>
-            <p className={LABEL_CLASS}>Date &amp; heure de départ</p>
+            <p className={LABEL_CLASS}>
+              {hasArrival ? 'Date & horaires (départ → arrivée)' : 'Date & heure de départ'}
+            </p>
             <div className="flex flex-col gap-2">
               <input name="departure_date" type="date" defaultValue={defaultDate}
                 aria-label="Date de départ" className={INPUT_CLASS} />
@@ -146,6 +149,14 @@ export function ProposeVehicleForm({
                     className={INPUT_CLASS} />
                   <span aria-hidden className="shrink-0 text-muted text-[14px]">→</span>
                   <input name="departure_time_end" type="time" aria-label="Heure de fin"
+                    className={INPUT_CLASS} />
+                </div>
+              ) : hasArrival ? (
+                <div className="flex items-center gap-2">
+                  <input name="departure_time" type="time" aria-label="Heure de départ"
+                    className={INPUT_CLASS} />
+                  <span aria-hidden className="shrink-0 text-muted text-[14px]">→</span>
+                  <input name="arrival_time" type="time" aria-label="Heure d'arrivée"
                     className={INPUT_CLASS} />
                 </div>
               ) : (

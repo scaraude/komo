@@ -52,13 +52,19 @@ export function CarCard({
   const to = leg.arrival_city ?? eventDestination
   const route = `${from} → ${to}`
 
-  // Date « 23/07 » + heure fixe ou plage « 08:00–10:00 ».
+  // Date « 23/07 ». Heure : départ→arrivée (train) « 08:12 → 10:45 », plage de
+  // départ (voiture/loc) « 08:00–10:00 », ou heure simple.
   const dateLabel = leg.departure_time
     ? `${leg.departure_time.slice(8, 10)}/${leg.departure_time.slice(5, 7)}`
     : null
   const t1 = leg.departure_time?.slice(11, 16)
   const t2 = leg.departure_time_end?.slice(11, 16)
-  const timeLabel = t1 && t2 ? `${t1}–${t2}` : t1 || t2 || null
+  const tArr = leg.arrival_time?.slice(11, 16)
+  const timeLabel = t1 && tArr
+    ? `${t1} → ${tArr}`
+    : t1 && t2
+      ? `${t1}–${t2}`
+      : t1 || t2 || tArr || null
 
   function participantFor(id: string) {
     return participants.find((p) => p.id === id)

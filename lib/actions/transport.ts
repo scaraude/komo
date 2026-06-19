@@ -25,6 +25,7 @@ export async function createLeg(
   const rawDate = formData.get('departure_date')?.toString() || null
   const rawTime = formData.get('departure_time')?.toString() || null
   const rawTimeEnd = formData.get('departure_time_end')?.toString() || null
+  const rawArrival = formData.get('arrival_time')?.toString() || null
   const seatsInput = parseInt(formData.get('total_seats')?.toString() ?? '4', 10)
   const trunkSize = (formData.get('trunk_size')?.toString() || null) as 'small' | 'medium' | 'large' | null
   const linkUrl = formData.get('link_url')?.toString().trim() || null
@@ -45,7 +46,7 @@ export async function createLeg(
   // Date du trajet : celle saisie, sinon on retombe sur la date de l'event
   // (début pour un aller, fin pour un retour). Les heures s'y rattachent.
   let baseDate = rawDate
-  if (!baseDate && (rawTime || rawTimeEnd)) {
+  if (!baseDate && (rawTime || rawTimeEnd || rawArrival)) {
     const { data: event } = await supabase
       .from('events')
       .select('date_start, date_end')
@@ -55,6 +56,7 @@ export async function createLeg(
   }
   const departureTime = baseDate && rawTime ? `${baseDate}T${rawTime}:00` : null
   const departureTimeEnd = baseDate && rawTimeEnd ? `${baseDate}T${rawTimeEnd}:00` : null
+  const arrivalTime = baseDate && rawArrival ? `${baseDate}T${rawArrival}:00` : null
 
   const { data: leg, error } = await supabase
     .from('transport_legs')
@@ -68,6 +70,7 @@ export async function createLeg(
       vehicle_ref: vehicleRef,
       departure_time: departureTime,
       departure_time_end: departureTimeEnd,
+      arrival_time: arrivalTime,
       total_seats: totalSeats,
       trunk_size: trunkSize,
       link_url: linkUrl,
