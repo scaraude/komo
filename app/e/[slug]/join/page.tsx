@@ -1,7 +1,7 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getAuthUser } from '@/lib/auth'
-import { joinEvent } from '@/lib/actions/participants'
+import { JoinForm } from './JoinForm'
 
 export default async function JoinPage({
   params,
@@ -13,7 +13,7 @@ export default async function JoinPage({
 
   const { data: event } = await supabase
     .from('events')
-    .select('title, date_start, date_end, destination')
+    .select('id, title, date_start, date_end, destination')
     .eq('slug', slug)
     .single()
 
@@ -23,13 +23,23 @@ export default async function JoinPage({
   const user = await getAuthUser()
   const showEmail = !user?.email
 
+  // Déjà participant (ex. retour de magic link « relier ») → droit à l'event,
+  // pas de re-formulaire ni de doublon.
+  if (user) {
+    const { data: already } = await supabase
+      .from('participants')
+      .select('id')
+      .eq('event_id', event.id)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (already) redirect(`/e/${slug}`)
+  }
+
   const dateLabel = !event.date_start
     ? 'Date à définir'
     : event.date_start === event.date_end
       ? new Date(event.date_start).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
       : `${new Date(event.date_start).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} → ${new Date(event.date_end!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
-
-  const joinWithSlug = joinEvent.bind(null, slug)
 
   return (
     <main className="min-h-screen flex items-center justify-center px-4">
@@ -52,48 +62,7 @@ export default async function JoinPage({
           </span>
         </div>
 
-        <div className="bg-card border-2 border-ink rounded-2xl p-6 shadow-[5px_5px_0_rgba(26,20,16,0.9)]">
-          <p className="font-semibold text-lg mb-1">Tu es invité·e 🎉</p>
-          <p className="text-muted text-sm mb-5">Choisis un pseudo pour rejoindre.</p>
-
-          <form action={joinWithSlug}>
-            <label className="block text-sm font-semibold mb-1.5" htmlFor="pseudo">
-              Ton pseudo
-            </label>
-            <input
-              id="pseudo"
-              name="pseudo"
-              type="text"
-              required
-              minLength={1}
-              maxLength={30}
-              placeholder="ex: Marco, Inès, YoYo…"
-              autoFocus
-              className="w-full border-2 border-ink rounded-xl px-4 py-3 text-base bg-paper focus:outline-none focus:border-terracotta transition-colors mb-4"
-            />
-            {showEmail && (
-              <>
-                <label className="block text-sm font-semibold mb-1.5" htmlFor="email">
-                  Ton email <span className="font-normal text-muted">· pour te reconnecter · facultatif</span>
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  maxLength={120}
-                  placeholder="ex: marie@email.com"
-                  className="w-full border-2 border-ink rounded-xl px-4 py-3 text-base bg-paper focus:outline-none focus:border-terracotta transition-colors mb-4"
-                />
-              </>
-            )}
-            <button
-              type="submit"
-              className="w-full bg-terracotta text-white border-2 border-ink rounded-full px-6 py-3.5 font-bold text-base shadow-[0_4px_0_rgba(26,20,16,0.9)] active:translate-y-1 active:shadow-none transition-all"
-            >
-              Rejoindre l&apos;event →
-            </button>
-          </form>
-        </div>
+        <JoinForm slug={slug} showEmail={showEmail} />
       </div>
     </main>
   )

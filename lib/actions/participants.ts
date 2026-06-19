@@ -3,30 +3,70 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { ensureUser, siteOrigin } from '@/lib/auth'
 
-export async function joinEvent(slug: string, formData: FormData) {
+export type JoinState = { status: 'idle' | 'verify' }
+
+/**
+ * Rejoindre un event. Signature `(slug, prevState, formData)` pour useActionState
+ * (slug est bind côté form). Renvoie `verify` pour afficher « Vérifie tes mails »,
+ * sinon redirige vers l'event.
+ */
+export async function joinEvent(
+  slug: string,
+  _prev: JoinState,
+  formData: FormData,
+): Promise<JoinState> {
   const pseudo = formData.get('pseudo')?.toString().trim()
-  if (!pseudo || pseudo.length < 1) return
+  if (!pseudo || pseudo.length < 1) return { status: 'idle' }
   const email = formData.get('email')?.toString().trim() || null
+
+  const supabase = await createClient()
+  const origin = await siteOrigin()
+
+  // Flux « relier » : un visiteur sans identité réelle (pas de session, ou
+  // session anonyme) saisit un email DÉJÀ rattaché à un compte. Créer ici un
+  // participant ferait un doublon sous une identité anonyme jetable (Supabase
+  // refuse d'attacher un email déjà pris → l'anonyme reste anonyme). On envoie
+  // donc un magic link : au clic il revient authentifié sur son identité
+  // existante (→ /auth/confirm → cette page) et le dédoublonnage par user_id
+  // le reconnaît. L'oracle d'existence vit côté service_role uniquement.
+  if (email) {
+    const { data: auth } = await supabase.auth.getUser()
+    const current = auth.user
+    if (!current || current.is_anonymous) {
+      const admin = createAdminClient()
+      const { data: registered } = await admin.rpc('email_is_registered', {
+        p_email: email,
+      })
+      if (registered) {
+        await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            shouldCreateUser: false,
+            emailRedirectTo: `${origin}/auth/confirm?next=/e/${slug}/join`,
+          },
+        })
+        return { status: 'verify' }
+      }
+    }
+  }
 
   // Session anonyme si besoin → l'identité est auth.uid(). On réutilise le
   // client authentifié renvoyé (la RLS insert exige user_id = auth.uid()).
-  const { userId, supabase } = await ensureUser()
+  const { userId, supabase: authed } = await ensureUser()
 
-  // Attache l'email à l'identité (best-effort, non bloquant). Anti-énumération
-  // oblige : si l'email est déjà pris, Supabase ne lie rien et ne dit rien — on
-  // ne bloque pas, l'utilisateur reste sur sa session. La récup passe alors par
-  // « Se connecter ». Le clic du mail de confirmation finalise le lien.
+  // Email libre → on l'attache à l'identité (best-effort). Le clic du mail de
+  // confirmation finalise le lien et permet la reconnexion ultérieure.
   if (email) {
-    const origin = await siteOrigin()
-    await supabase.auth.updateUser(
+    await authed.auth.updateUser(
       { email },
       { emailRedirectTo: `${origin}/auth/confirm?next=/e/${slug}` },
     )
   }
 
-  const { data: event, error: eventError } = await supabase
+  const { data: event, error: eventError } = await authed
     .from('events')
     .select('id, created_by')
     .eq('slug', slug)
@@ -36,7 +76,7 @@ export async function joinEvent(slug: string, formData: FormData) {
 
   // Dédoublonnage : déjà participant de cet event (même user) ? on réutilise.
   // Couplé à l'index unique (event_id, user_id), ça tue les multi-comptes.
-  const { data: existing } = await supabase
+  const { data: existing } = await authed
     .from('participants')
     .select('id')
     .eq('event_id', event.id)
@@ -45,7 +85,7 @@ export async function joinEvent(slug: string, formData: FormData) {
 
   if (!existing) {
     const role = event.created_by === userId ? 'créateur' : 'participant'
-    const { error } = await supabase.from('participants').insert({
+    const { error } = await authed.from('participants').insert({
       event_id: event.id,
       pseudo,
       user_id: userId,
