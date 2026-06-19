@@ -20,12 +20,14 @@ export default async function JoinPage({
 
   if (!event) notFound()
 
-  // Visiteur déjà connecté (session présente) → join direct, sans email ni
-  // (en général) pseudo. Sinon → flow « email d'abord ».
+  // Email obligatoire dans tous les cas. Seule une identité ayant DÉJÀ un email
+  // (compte confirmé) peut rejoindre en direct ; un anonyme sans email repasse
+  // par le flow « email d'abord ».
   const user = await getAuthUser()
-  let priorPseudo: string | null = null
+
+  // Déjà participant (ex. retour de magic link) → accès direct, quelle que soit
+  // l'identité.
   if (user) {
-    // Déjà participant (ex. retour de magic link) → accès direct à l'event.
     const { data: already } = await supabase
       .from('participants')
       .select('id')
@@ -33,12 +35,16 @@ export default async function JoinPage({
       .eq('user_id', user.id)
       .maybeSingle()
     if (already) redirect(`/e/${slug}`)
+  }
 
+  const canJoinDirect = Boolean(user?.email)
+  let priorPseudo: string | null = null
+  if (canJoinDirect) {
     // Pseudo réutilisable (dernier participant connu de cette identité).
     const { data: prior } = await supabase
       .from('participants')
       .select('pseudo')
-      .eq('user_id', user.id)
+      .eq('user_id', user!.id)
       .order('joined_at', { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -72,7 +78,7 @@ export default async function JoinPage({
           </span>
         </div>
 
-        {user ? (
+        {canJoinDirect ? (
           <div className="bg-card border-2 border-ink rounded-2xl p-6 shadow-[5px_5px_0_rgba(26,20,16,0.9)]">
             <p className="font-semibold text-lg mb-1">Tu es invité·e 🎉</p>
             <p className="text-muted text-sm mb-5">
