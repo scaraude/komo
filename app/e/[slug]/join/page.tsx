@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getAuthUser } from '@/lib/auth'
+import { joinDirect } from '@/lib/actions/participants'
 import { JoinForm } from './JoinForm'
 
 export default async function JoinPage({
@@ -19,13 +20,12 @@ export default async function JoinPage({
 
   if (!event) notFound()
 
-  // Email déjà lié à l'identité → inutile de le redemander.
+  // Visiteur déjà connecté (session présente) → join direct, sans email ni
+  // (en général) pseudo. Sinon → flow « email d'abord ».
   const user = await getAuthUser()
-  const showEmail = !user?.email
-
-  // Déjà participant (ex. retour de magic link « relier ») → droit à l'event,
-  // pas de re-formulaire ni de doublon.
+  let priorPseudo: string | null = null
   if (user) {
+    // Déjà participant (ex. retour de magic link) → accès direct à l'event.
     const { data: already } = await supabase
       .from('participants')
       .select('id')
@@ -33,6 +33,16 @@ export default async function JoinPage({
       .eq('user_id', user.id)
       .maybeSingle()
     if (already) redirect(`/e/${slug}`)
+
+    // Pseudo réutilisable (dernier participant connu de cette identité).
+    const { data: prior } = await supabase
+      .from('participants')
+      .select('pseudo')
+      .eq('user_id', user.id)
+      .order('joined_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    priorPseudo = prior?.pseudo ?? null
   }
 
   const dateLabel = !event.date_start
@@ -62,7 +72,42 @@ export default async function JoinPage({
           </span>
         </div>
 
-        <JoinForm slug={slug} showEmail={showEmail} />
+        {user ? (
+          <div className="bg-card border-2 border-ink rounded-2xl p-6 shadow-[5px_5px_0_rgba(26,20,16,0.9)]">
+            <p className="font-semibold text-lg mb-1">Tu es invité·e 🎉</p>
+            <p className="text-muted text-sm mb-5">
+              {priorPseudo ? (
+                <>
+                  Connecté·e en tant que <strong>{priorPseudo}</strong>.
+                </>
+              ) : (
+                'Choisis un pseudo pour rejoindre.'
+              )}
+            </p>
+            <form action={joinDirect.bind(null, slug)}>
+              {!priorPseudo && (
+                <input
+                  name="pseudo"
+                  type="text"
+                  required
+                  minLength={1}
+                  maxLength={30}
+                  placeholder="ex: Marco, Inès, YoYo…"
+                  autoFocus
+                  className="w-full border-2 border-ink rounded-xl px-4 py-3 text-base bg-paper focus:outline-none focus:border-terracotta transition-colors mb-4"
+                />
+              )}
+              <button
+                type="submit"
+                className="w-full bg-terracotta text-white border-2 border-ink rounded-full px-6 py-3.5 font-bold text-base shadow-[0_4px_0_rgba(26,20,16,0.9)] active:translate-y-1 active:shadow-none transition-all"
+              >
+                Rejoindre l&apos;event →
+              </button>
+            </form>
+          </div>
+        ) : (
+          <JoinForm slug={slug} />
+        )}
       </div>
     </main>
   )
