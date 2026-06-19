@@ -57,6 +57,19 @@ describe('computeSuggestions', () => {
     expect(result).toEqual([])
   })
 
+  it('ignores legs without real seats (train/bus/navette → total_seats null)', () => {
+    const mixed = [
+      { id: 'train', total_seats: null, departure_city: 'Paris' },
+      { id: 'car', total_seats: 3, departure_city: 'Paris' },
+    ]
+    const result = computeSuggestions(
+      [{ id: 'p1', departure_city: 'Paris' }],
+      mixed,
+      [],
+    )
+    expect(result).toEqual([{ legId: 'car', participantId: 'p1' }])
+  })
+
   it('tracks seats across multiple assignments', () => {
     const smallLegs = [{ id: 'leg1', total_seats: 2, departure_city: 'Paris' }]
     const result = computeSuggestions(

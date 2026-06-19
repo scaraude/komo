@@ -32,19 +32,17 @@ export function computeSuggestions(
   const assignments: Assignment[] = []
 
   for (const p of unassigned) {
-    // legs with free seats, sorted: same departure_city first, then most free seats
+    // Seuls les legs avec des places réelles (voiture/location) sont candidats —
+    // train/bus/navette ont total_seats null et ne reçoivent pas d'affectation.
     const candidates = legs
-      .filter((l) => {
-        const seats = l.total_seats ?? 4
-        return (taken.get(l.id) ?? 0) < seats
-      })
+      .filter((l) => l.total_seats != null && (taken.get(l.id) ?? 0) < l.total_seats)
       .sort((a, b) => {
         const cityA = p.departure_city?.toLowerCase()
         const aMatch = cityA && a.departure_city.toLowerCase().includes(cityA) ? 0 : 1
         const bMatch = cityA && b.departure_city.toLowerCase().includes(cityA) ? 0 : 1
         if (aMatch !== bMatch) return aMatch - bMatch
-        const freeA = (a.total_seats ?? 4) - (taken.get(a.id) ?? 0)
-        const freeB = (b.total_seats ?? 4) - (taken.get(b.id) ?? 0)
+        const freeA = (a.total_seats ?? 0) - (taken.get(a.id) ?? 0)
+        const freeB = (b.total_seats ?? 0) - (taken.get(b.id) ?? 0)
         return freeB - freeA
       })
 

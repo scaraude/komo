@@ -20,6 +20,9 @@ export function TransportPanel({
   participants,
   initialDirection,
   isCreator,
+  eventDestination,
+  eventDateStart,
+  eventDateEnd,
 }: {
   slug: string
   eventId: string
@@ -29,6 +32,9 @@ export function TransportPanel({
   participants: Participant[]
   initialDirection: 'aller' | 'retour'
   isCreator: boolean
+  eventDestination: string
+  eventDateStart: string | null
+  eventDateEnd: string | null
 }) {
   const [direction, setDirection] = useState<'aller' | 'retour'>(initialDirection)
   const [showForm, setShowForm] = useState(false)
@@ -46,40 +52,41 @@ export function TransportPanel({
 
   return (
     <section>
-      {/* Toggle aller/retour — VIR-17 */}
-      <div className="inline-flex border-2 border-ink rounded-full overflow-hidden mb-6 shadow-[3px_3px_0_rgba(26,20,16,0.9)]">
+      {/* Segmented aller/retour */}
+      <div className="bg-track rounded-[13px] p-[5px] flex gap-[4px] mb-[18px]">
         {(['aller', 'retour'] as const).map((d) => (
           <button key={d} onClick={() => setDirection(d)}
-            className={`px-5 py-2 text-sm font-bold transition-colors ${
-              direction === d ? 'bg-ink text-paper' : 'bg-card text-ink'
+            className={`flex-1 text-center rounded-[9px] py-[10px] text-[13px] transition-colors ${
+              direction === d ? 'bg-ink text-white font-bold' : 'text-[#6b665c]'
             }`}>
-            {d === 'aller' ? '→ Aller' : '← Retour'}
+            {d === 'aller' ? 'Aller' : 'Retour'}
           </button>
         ))}
       </div>
 
-      {/* CarCards — VIR-15 */}
-      <div className="flex flex-col gap-4">
+      {/* Liste de cartes-trajet */}
+      <div className="flex flex-col gap-[11px]">
         {directionLegs.length === 0 && (
-          <p className="text-muted text-sm py-4 text-center">Aucun trajet proposé pour l'instant.</p>
+          <p className="text-muted text-[13px] py-4 text-center">Aucun trajet proposé pour l'instant.</p>
         )}
         {directionLegs.map((leg) => (
           <CarCard key={leg.id} slug={slug} leg={leg}
             occupants={occupants.filter((o) => o.leg_id === leg.id)}
             participants={participants}
             currentParticipantId={participantId}
+            eventDestination={eventDestination}
           />
         ))}
       </div>
 
-      <div className="mt-4 flex gap-2">
+      <div className="mt-[11px] flex gap-2">
         <button onClick={() => setShowForm(true)}
-          className="flex-1 py-3 border-2 border-dashed border-ink rounded-2xl text-sm font-semibold text-muted hover:border-terracotta hover:text-terracotta transition-colors">
-          + Je propose un trajet
+          className="flex-1 border-[1.5px] border-dashed border-[var(--color-dashed)] rounded-[18px] p-[16px] text-center text-muted font-semibold hover:border-terracotta hover:text-terracotta transition-colors">
+          ＋ Je propose un trajet
         </button>
         {isCreator && unassigned.length > 0 && (
           <button onClick={() => setShowSuggest(true)}
-            className="px-4 py-3 border-2 border-ink rounded-2xl text-sm font-bold bg-card hover:bg-ink hover:text-paper transition-colors">
+            className="px-[18px] bg-card border-[1.5px] border-line-3 rounded-[18px] font-bold text-ink hover:bg-soft transition-colors">
             ✨
           </button>
         )}
@@ -90,7 +97,9 @@ export function TransportPanel({
 
       {showForm && (
         <ProposeVehicleForm slug={slug} eventId={eventId} participantId={participantId}
-          direction={direction} onClose={() => setShowForm(false)} />
+          direction={direction} eventDestination={eventDestination}
+          eventDateStart={eventDateStart} eventDateEnd={eventDateEnd}
+          onClose={() => setShowForm(false)} />
       )}
       {showSuggest && (
         <SuggestModal slug={slug} eventId={eventId} direction={direction}

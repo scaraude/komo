@@ -23,22 +23,45 @@ export async function createLeg(
 
   const mode = formData.get('mode')?.toString() as 'car' | 'rental' | 'train' | 'bus' | 'navette'
   const label = formData.get('label')?.toString().trim() ?? ''
-  const departureCity = formData.get('departure_city')?.toString().trim() ?? ''
+  // Géométrie du leg : le formulaire soumet directement départ + arrivée selon
+  // la direction. Le côté event vaut '' quand non personnalisé → null → hérite
+  // de events.destination. La contrainte CHECK garantit le côté participant.
+  const departureCity = formData.get('departure_city')?.toString().trim() || null
+  const arrivalCity = formData.get('arrival_city')?.toString().trim() || null
+  const vehicleRef = formData.get('vehicle_ref')?.toString().trim() || null
+  const rawDate = formData.get('departure_date')?.toString() || null
   const rawTime = formData.get('departure_time')?.toString() || null
-  const totalSeats = parseInt(formData.get('total_seats')?.toString() ?? '4', 10)
+  const rawTimeEnd = formData.get('departure_time_end')?.toString() || null
+  const seatsInput = parseInt(formData.get('total_seats')?.toString() ?? '4', 10)
   const trunkSize = (formData.get('trunk_size')?.toString() || null) as 'small' | 'medium' | 'large' | null
   const linkUrl = formData.get('link_url')?.toString().trim() || null
+  const comment = formData.get('comment')?.toString().trim() || null
 
-  let departureTime: string | null = null
-  if (rawTime) {
+  // Seules voiture/location gèrent des places (et donc un·e chauffeur·euse).
+  // Train/bus/navette = pas de places → total_seats null, pas d'occupant.
+  // Pour voiture/location, la place de chauffeur·euse compte EN PLUS des places
+  // passagers annoncées (total = passagers + 1) pour ne pas rogner une place.
+  const tracksSeats = mode === 'car' || mode === 'rental'
+  const isDriver = tracksSeats && formData.get('is_driver') !== 'false'
+  const totalSeats = tracksSeats ? (isDriver ? seatsInput + 1 : seatsInput) : null
+  // On inscrit le proposeur d'office : comme chauffeur·euse pour voiture/loc (si
+  // le toggle est on), comme simple passager pour les modes illimités
+  // (train/bus/navette) où total_seats null = capacité illimitée.
+  const addSelf = tracksSeats ? isDriver : true
+
+  // Date du trajet : celle saisie, sinon on retombe sur la date de l'event
+  // (début pour un aller, fin pour un retour). Les heures s'y rattachent.
+  let baseDate = rawDate
+  if (!baseDate && (rawTime || rawTimeEnd)) {
     const { data: event } = await supabase
       .from('events')
       .select('date_start, date_end')
       .eq('id', eventId)
       .single()
-    const eventDate = direction === 'retour' ? event?.date_end : event?.date_start
-    if (eventDate) departureTime = `${eventDate}T${rawTime}:00`
+    baseDate = (direction === 'retour' ? event?.date_end : event?.date_start) ?? null
   }
+  const departureTime = baseDate && rawTime ? `${baseDate}T${rawTime}:00` : null
+  const departureTimeEnd = baseDate && rawTimeEnd ? `${baseDate}T${rawTimeEnd}:00` : null
 
   const { data: leg, error } = await supabase
     .from('transport_legs')
@@ -48,23 +71,33 @@ export async function createLeg(
       mode,
       label,
       departure_city: departureCity,
+      arrival_city: arrivalCity,
+      vehicle_ref: vehicleRef,
       departure_time: departureTime,
+      departure_time_end: departureTimeEnd,
       total_seats: totalSeats,
       trunk_size: trunkSize,
       link_url: linkUrl,
-      driver_id: participantId,
+      comment,
+      driver_id: isDriver ? participantId : null,
+      created_by: participantId,
     })
     .select('id')
     .single()
 
   if (error || !leg) throw new Error('Impossible de créer le trajet.')
 
-  await supabase.from('transport_occupants').insert({
-    leg_id: leg.id,
-    participant_id: participantId,
-    is_driver: true,
-    locked: false,
-  })
+  if (addSelf) {
+    await supabase.from('transport_occupants').insert({
+      leg_id: leg.id,
+      participant_id: participantId,
+      is_driver: isDriver,
+      locked: false,
+    })
+  }
+
+  // Rafraîchit le Server Component pour afficher le nouveau trajet sans reload.
+  revalidatePath(`/e/${slug}`)
 }
 
 export async function joinLeg(slug: string, legId: string, participantId: string) {
@@ -88,6 +121,22 @@ export async function leaveLeg(slug: string, legId: string, participantId: strin
     .eq('is_driver', false)
 }
 
+export async function deleteLeg(slug: string, legId: string) {
+  const supabase = await getSupabaseWithSession(slug)
+  // RLS (legs_delete_author) garantit que seul l'auteur peut supprimer.
+  // Un refus se traduit par 0 ligne supprimée (sans erreur) — on le détecte
+  // via .select() pour pouvoir rollback l'UI optimiste côté client.
+  const { data, error } = await supabase
+    .from('transport_legs')
+    .delete()
+    .eq('id', legId)
+    .select('id')
+  if (error) throw new Error('Impossible de supprimer ce trajet.')
+  if (!data || data.length === 0) throw new Error("Tu n'es pas l'auteur de ce trajet.")
+  // Les occupants sont supprimés en cascade (FK on delete cascade).
+  revalidatePath(`/e/${slug}`)
+}
+
 export async function suggestAssignments(
   slug: string,
   eventId: string,
@@ -96,7 +145,7 @@ export async function suggestAssignments(
   const supabase = await getSupabaseWithSession(slug)
 
   const { data: legs } = await supabase
-    .from('transport_legs').select('id, total_seats, departure_city')
+    .from('transport_legs').select('id, total_seats, departure_city, arrival_city')
     .eq('event_id', eventId).eq('direction', direction)
 
   const { data: occupants } = await supabase
@@ -112,7 +161,16 @@ export async function suggestAssignments(
     (p) => ['hot', 'maybe', 'unsure'].includes(p.presence_status ?? '') && !assignedIds.has(p.id)
   )
 
-  const assignments = computeSuggestions(unassigned, legs ?? [], occupants ?? [])
+  // Le solver matche sur le côté PARTICIPANT du leg (sa ville). Selon la
+  // direction c'est departure_city (aller) ou arrival_city (retour) — la
+  // contrainte garantit ce côté non-null.
+  const solverLegs = (legs ?? []).map((l) => ({
+    id: l.id,
+    total_seats: l.total_seats,
+    departure_city: (direction === 'aller' ? l.departure_city : l.arrival_city) ?? '',
+  }))
+
+  const assignments = computeSuggestions(unassigned, solverLegs, occupants ?? [])
   const assignedSet = new Set(assignments.map((a) => a.participantId))
   const unresolved = unassigned.filter((p) => !assignedSet.has(p.id)).map((p) => p.id)
 

@@ -376,6 +376,9 @@ export default async function EventPage({
           participants={participants}
           initialDirection="aller"
           isCreator={isAdmin}
+          eventDestination={event.destination}
+          eventDateStart={event.date_start}
+          eventDateEnd={event.date_end}
         />
       )}
     </main>

@@ -35,12 +35,17 @@ type TransportLegRow = {
   direction: 'aller' | 'retour'
   mode: 'car' | 'rental' | 'train' | 'bus' | 'navette'
   driver_id: string | null
+  created_by: string | null
   label: string
-  departure_city: string
+  departure_city: string | null
+  arrival_city: string | null
+  vehicle_ref: string | null
   departure_time: string | null
+  departure_time_end: string | null
   total_seats: number | null
   trunk_size: 'small' | 'medium' | 'large' | null
   link_url: string | null
+  comment: string | null
   created_at: string
 }
 
