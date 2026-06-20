@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
+import { clientEnv } from '@/lib/env/client'
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://komo-skarods-projects.vercel.app'
+const BASE_URL = clientEnv.siteUrl
 
 export async function generateMetadata({
   params,

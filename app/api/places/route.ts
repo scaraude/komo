@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { serverEnv } from '@/lib/env/server'
 
 // Proxy serveur vers l'autocomplete Geoapify. La clé reste côté serveur
 // (GEOAPIFY_API_KEY, non NEXT_PUBLIC_) — jamais exposée dans le bundle client.
@@ -21,7 +22,7 @@ export type PlaceSuggestion = {
 }
 
 export async function GET(request: NextRequest) {
-  const key = process.env.GEOAPIFY_API_KEY
+  const key = serverEnv.geoapifyApiKey
   if (!key) {
     return NextResponse.json({ error: 'geocoder_not_configured' }, { status: 503 })
   }
