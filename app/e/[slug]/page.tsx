@@ -110,9 +110,10 @@ export default async function EventPage({
     ? await supabase.from('accommodation_options').select('*').eq('event_id', event.id).order('created_at')
     : { data: [] }
 
-  // Bouffe : repas + produits
+  // Bouffe : repas + produits + responsables
   const { data: meals } = await supabase.from('meals').select('*').eq('event_id', event.id).order('created_at')
   const { data: products } = await supabase.from('products').select('*').eq('event_id', event.id).order('created_at')
+  const { data: mealOwners } = await supabase.from('meal_owners').select('*').eq('event_id', event.id)
 
   // Transport data
   const { data: legs } = await supabase
@@ -330,6 +331,10 @@ export default async function EventPage({
           participantId={participant.id}
           initialMeals={meals ?? []}
           initialProducts={products ?? []}
+          initialMealOwners={mealOwners ?? []}
+          participants={participants}
+          dateStart={event.date_start}
+          dateEnd={event.date_end}
         />
       )}
 

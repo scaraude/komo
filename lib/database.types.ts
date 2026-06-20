@@ -126,9 +126,15 @@ export type Database = {
         Relationships: []
       }
       meals: {
-        Row: { id: string; event_id: string; label: string; created_by: string | null; created_at: string }
-        Insert: { event_id: string; label: string; created_by?: string | null }
-        Update: Partial<{ label: string }>
+        Row: { id: string; event_id: string; label: string; meal_date: string | null; created_by: string | null; created_at: string }
+        Insert: { event_id: string; label: string; meal_date?: string | null; created_by?: string | null }
+        Update: Partial<{ label: string; meal_date: string | null }>
+        Relationships: []
+      }
+      meal_owners: {
+        Row: { id: string; event_id: string; meal_id: string; participant_id: string; created_at: string }
+        Insert: { event_id: string; meal_id: string; participant_id: string }
+        Update: Partial<{ event_id: string; meal_id: string; participant_id: string }>
         Relationships: []
       }
       products: {

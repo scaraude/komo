@@ -19,6 +19,7 @@ export async function createMeal(
   participantId: string,
   label: string,
   items: NewItem[] = [],
+  mealDate: string | null = null,
 ) {
   const clean = label.trim()
   if (!clean) throw new Error('Nom du repas requis.')
@@ -26,7 +27,7 @@ export async function createMeal(
 
   const { data: meal, error } = await supabase
     .from('meals')
-    .insert({ event_id: eventId, label: clean, created_by: participantId })
+    .insert({ event_id: eventId, label: clean, meal_date: mealDate, created_by: participantId })
     .select('id')
     .single()
   if (error || !meal) {
@@ -52,6 +53,50 @@ export async function createMeal(
     if (itemsError) console.error('createMeal items insert failed', itemsError)
   }
 
+  revalidatePath(`/e/${slug}`)
+}
+
+export async function setMealDate(slug: string, mealId: string, mealDate: string | null) {
+  const { supabase } = await ensureUser()
+  const { error } = await supabase.from('meals').update({ meal_date: mealDate }).eq('id', mealId)
+  if (error) {
+    console.error('setMealDate failed', error)
+    throw new Error('Impossible de changer la date.')
+  }
+  revalidatePath(`/e/${slug}`)
+}
+
+// Responsable d'un repas : on s'inscrit / se retire soi-même (toggle sur soi).
+// join=true → INSERT (idempotent via unique(meal_id, participant_id)),
+// join=false → DELETE.
+export async function toggleMealOwner(
+  slug: string,
+  eventId: string,
+  mealId: string,
+  participantId: string,
+  join: boolean,
+) {
+  const { supabase } = await ensureUser()
+  if (join) {
+    const { error } = await supabase
+      .from('meal_owners')
+      .insert({ event_id: eventId, meal_id: mealId, participant_id: participantId })
+    // 23505 = doublon (déjà responsable) : on l'ignore, l'état voulu est atteint.
+    if (error && error.code !== '23505') {
+      console.error('toggleMealOwner insert failed', error)
+      throw new Error("Impossible de t'inscrire comme responsable.")
+    }
+  } else {
+    const { error } = await supabase
+      .from('meal_owners')
+      .delete()
+      .eq('meal_id', mealId)
+      .eq('participant_id', participantId)
+    if (error) {
+      console.error('toggleMealOwner delete failed', error)
+      throw new Error('Impossible de te retirer.')
+    }
+  }
   revalidatePath(`/e/${slug}`)
 }
 
