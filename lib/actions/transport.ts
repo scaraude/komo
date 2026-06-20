@@ -2,8 +2,16 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { ensureUser } from '@/lib/auth'
 import { computeSuggestions } from '@/lib/transport/solver'
 import type { Assignment } from '@/lib/transport/solver'
+
+// Les écritures (legs / occupants / participants) sont protégées par des
+// policies RLS basées sur `auth.uid()`. Il FAUT utiliser le client authentifié
+// renvoyé par ensureUser() : un `createClient()` neuf ne relit pas forcément la
+// session dans la même requête, la requête partirait en anonyme et la RLS la
+// rejetterait (INSERT → erreur 42501 ; DELETE/UPDATE → 0 ligne silencieuse).
+// Les lectures pures restent sur createClient() (policies select publiques).
 
 export async function createLeg(
   slug: string,
@@ -12,7 +20,7 @@ export async function createLeg(
   direction: 'aller' | 'retour',
   formData: FormData
 ) {
-  const supabase = await createClient()
+  const { supabase } = await ensureUser()
 
   const mode = formData.get('mode')?.toString() as 'car' | 'rental' | 'train' | 'bus' | 'navette'
   const label = formData.get('label')?.toString().trim() ?? ''
@@ -97,7 +105,7 @@ export async function createLeg(
 }
 
 export async function joinLeg(slug: string, legId: string, participantId: string) {
-  const supabase = await createClient()
+  const { supabase } = await ensureUser()
   const { error } = await supabase.from('transport_occupants').insert({
     leg_id: legId,
     participant_id: participantId,
@@ -108,7 +116,7 @@ export async function joinLeg(slug: string, legId: string, participantId: string
 }
 
 export async function leaveLeg(slug: string, legId: string, participantId: string) {
-  const supabase = await createClient()
+  const { supabase } = await ensureUser()
   await supabase
     .from('transport_occupants')
     .delete()
@@ -118,7 +126,7 @@ export async function leaveLeg(slug: string, legId: string, participantId: strin
 }
 
 export async function deleteLeg(slug: string, legId: string) {
-  const supabase = await createClient()
+  const { supabase } = await ensureUser()
   // RLS (legs_delete_author) garantit que seul l'auteur peut supprimer.
   // Un refus se traduit par 0 ligne supprimée (sans erreur) — on le détecte
   // via .select() pour pouvoir rollback l'UI optimiste côté client.
@@ -175,7 +183,7 @@ export async function suggestAssignments(
 
 export async function applyAssignments(slug: string, assignments: Assignment[]) {
   // Authz RLS : occupants_insert autorise un orga à affecter dans son event.
-  const supabase = await createClient()
+  const { supabase } = await ensureUser()
 
   // Fetch existing occupants to avoid duplicates
   const legIds = [...new Set(assignments.map((a) => a.legId))]
@@ -203,7 +211,7 @@ export async function updateDepartureInfo(
   city: string,
   luggageSize: 'light' | 'medium' | 'large' | null
 ) {
-  const supabase = await createClient()
+  const { supabase } = await ensureUser()
   await supabase
     .from('participants')
     .update({ departure_city: city, luggage_size: luggageSize })
