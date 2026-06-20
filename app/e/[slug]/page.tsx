@@ -13,6 +13,7 @@ import { BouffePanel } from '@/components/meals/BouffePanel'
 import { RecapButton } from '@/components/event/RecapButton'
 import { promoteParticipant } from '@/lib/actions/participants'
 import { ShareSheet } from './ShareSheet'
+import { ParticipantsBadge } from './ParticipantsBadge'
 import type { Database } from '@/lib/database.types'
 
 type Participant = Database['public']['Tables']['participants']['Row']
@@ -45,8 +46,6 @@ const STATUS_CONFIG = {
 const RSVP_LABEL: Record<string, string> = {
   hot: 'chaud 🔥', maybe: 'probable 🤔', unsure: 'pas sûr 😬', no: 'pas là ✕',
 }
-
-const AVATAR_COLORS = ['#c4602f', '#5f7a3e', '#9a8a6a', '#3a7ca5', '#9a5a6e']
 
 function heroDateRange(start: string, end: string) {
   const s = new Date(start + 'T12:00:00')
@@ -151,25 +150,9 @@ export default async function EventPage({
             {isSondage ? 'Dates à définir' : heroDateRange(event.date_start!, event.date_end!)}
             {event.destination ? ` · ${event.destination}` : ''}
           </div>
-          <div className="mt-[16px] flex items-center">
-            {participants.slice(0, 3).map((p, i) => (
-              <div
-                key={p.id}
-                className="-mr-[11px] flex h-[30px] w-[30px] items-center justify-center rounded-full border-[2.5px] border-ink text-[11px] font-bold text-white"
-                style={{ backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
-              >
-                {p.pseudo[0]?.toUpperCase()}
-              </div>
-            ))}
-            {participants.length > 3 && (
-              <div className="flex h-[30px] w-[30px] items-center justify-center rounded-full border-[2.5px] border-ink bg-[#3a352e] text-[11px] font-bold text-white">
-                +{participants.length - 3}
-              </div>
-            )}
-            <div className="ml-4 text-[13px] text-on-dark-2">
-              {participants.length} dans le coup
-            </div>
-          </div>
+          <ParticipantsBadge
+            participants={participants.map((p) => ({ id: p.id, pseudo: p.pseudo }))}
+          />
         </div>
 
         {/* Pill de statut */}
@@ -192,7 +175,7 @@ export default async function EventPage({
             <ModuleTile href="?tab=presence" emoji="👥" title="Présence"
               subtitle={`${hotCount} chaud${hotCount > 1 ? 's' : ''} · ${maybeCount} hésite${maybeCount > 1 ? 'nt' : ''}`} />
           )}
-          <ModuleTile href="?tab=transport" emoji="🚗" title="Covoit"
+          <ModuleTile href="?tab=transport" emoji="🚗" title="Transport"
             subtitle={freeSeats > 0 ? `${freeSeats} place${freeSeats > 1 ? 's' : ''} libre${freeSeats > 1 ? 's' : ''}` : 'à organiser'} />
           <ModuleTile href="?tab=bouffe" emoji="🛒" title="Bouffe"
             subtitle={bouffeCount > 0 ? `${bouffeCount} produit${bouffeCount > 1 ? 's' : ''}` : 'rien encore'} />
@@ -213,7 +196,7 @@ export default async function EventPage({
 
   // ====================== ÉCRANS MODULES ======================
   const moduleTitle: Record<string, string> = {
-    presence: 'Présence', dates: 'Dates', transport: 'Covoiturage', bouffe: 'Bouffe',
+    presence: 'Présence', dates: 'Dates', transport: 'Transport', bouffe: 'Bouffe',
   }
 
   return (
