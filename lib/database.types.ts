@@ -61,6 +61,22 @@ type DateProposalRow = {
   created_at: string
 }
 
+type ActivityRow = {
+  id: string
+  event_id: string
+  label: string
+  activity_date: string | null
+  start_time: string | null
+  price: number | null
+  price_type: 'total' | 'per_person' | 'per_group' | null
+  group_size: number | null
+  min_participants: number | null
+  max_participants: number | null
+  booking_url: string | null
+  created_by: string | null
+  created_at: string
+}
+
 type TransportOccupantRow = {
   id: string
   leg_id: string
@@ -147,6 +163,24 @@ export type Database = {
         Row: DateProposalRow
         Insert: { event_id: string; proposed_date: string; created_by: string; votes?: Record<string, boolean> }
         Update: Partial<Omit<DateProposalRow, 'id' | 'created_at'>>
+        Relationships: []
+      }
+      activities: {
+        Row: ActivityRow
+        Insert: {
+          event_id: string; label: string
+          activity_date?: string | null; start_time?: string | null
+          price?: number | null; price_type?: 'total' | 'per_person' | 'per_group' | null
+          group_size?: number | null; min_participants?: number | null; max_participants?: number | null
+          booking_url?: string | null; created_by?: string | null
+        }
+        Update: Partial<Omit<ActivityRow, 'id' | 'event_id' | 'created_at'>>
+        Relationships: []
+      }
+      activity_signups: {
+        Row: { id: string; event_id: string; activity_id: string; participant_id: string; created_at: string }
+        Insert: { event_id: string; activity_id: string; participant_id: string }
+        Update: Partial<{ event_id: string; activity_id: string; participant_id: string }>
         Relationships: []
       }
     }
