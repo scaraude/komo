@@ -7,6 +7,16 @@ import { ensureUser } from '@/lib/auth'
 // on DOIT écrire via le client authentifié de ensureUser() (cf. note dans
 // lib/actions/meals.ts), sinon la requête part en anonyme et la RLS la rejette.
 
+// Neutralise les schémas d'URL piégés (javascript:, data:…). URL sans schéma →
+// préfixée en https://. Schéma non-http(s) → rejeté (null).
+function safeHttpUrl(raw: string | null | undefined): string | null {
+  const v = raw?.trim()
+  if (!v) return null
+  if (/^https?:\/\//i.test(v)) return v
+  if (/^[a-z][a-z0-9+.-]*:/i.test(v)) return null
+  return `https://${v}`
+}
+
 export type ActivityInput = {
   label: string
   activityDate?: string | null
@@ -33,6 +43,12 @@ export async function proposeActivity(
   const price = priceType ? input.price ?? null : null
   const groupSize = priceType === 'per_group' ? input.groupSize ?? null : null
 
+  const min = input.minParticipants ?? null
+  const max = input.maxParticipants ?? null
+  if (min != null && max != null && min > max) {
+    throw new Error('Le minimum ne peut pas dépasser le maximum.')
+  }
+
   const { supabase } = await ensureUser()
   const { error } = await supabase.from('activities').insert({
     event_id: eventId,
@@ -42,9 +58,9 @@ export async function proposeActivity(
     price,
     price_type: priceType,
     group_size: groupSize,
-    min_participants: input.minParticipants ?? null,
-    max_participants: input.maxParticipants ?? null,
-    booking_url: input.bookingUrl?.trim() || null,
+    min_participants: min,
+    max_participants: max,
+    booking_url: safeHttpUrl(input.bookingUrl),
     created_by: participantId,
   })
   if (error) {

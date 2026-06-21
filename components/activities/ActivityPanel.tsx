@@ -1,36 +1,20 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { proposeActivity, toggleActivitySignup, deleteActivity, type ActivityInput } from '@/lib/actions/activities'
 import type { Database } from '@/lib/database.types'
 import { randomId } from '@/lib/uuid'
+import { perPerson, totalCost, formatEuro } from '@/lib/activities/cost'
 
 type Activity = Database['public']['Tables']['activities']['Row']
 type Signup = Database['public']['Tables']['activity_signups']['Row']
 type Person = { id: string; pseudo: string }
 
-// ---- Calcul du coût selon le mode de découpage ----
-function formatEuro(n: number): string {
-  const s = Number.isInteger(n) ? String(n) : (Math.round(n * 100) / 100).toFixed(2).replace('.', ',')
-  return `${s}€`
-}
-
-function perPerson(a: Activity, n: number): number | null {
-  if (a.price == null || !a.price_type) return null
-  if (a.price_type === 'per_person') return a.price
-  if (a.price_type === 'total') return n > 0 ? a.price / n : null
-  // per_group : chacun paie sa part d'un groupe complet (prix ÷ taille de groupe).
-  const g = a.group_size && a.group_size > 0 ? a.group_size : 1
-  return a.price / g
-}
-
-function totalCost(a: Activity, n: number): number | null {
-  if (a.price == null || !a.price_type) return null
-  if (a.price_type === 'per_person') return a.price * n
-  if (a.price_type === 'total') return a.price
-  const g = a.group_size && a.group_size > 0 ? a.group_size : 1
-  return a.price * Math.ceil(n / g)
+// Postgres `numeric` revient en string via PostgREST (précision préservée) :
+// on le ramène en number, sinon formatEuro affiche « 40,00€ » au lieu de « 40€ ».
+function normalizeActivity(a: Activity): Activity {
+  return { ...a, price: a.price == null ? null : Number(a.price) }
 }
 
 function priceTypeLabel(a: Activity): string {
@@ -71,10 +55,13 @@ export function ActivityPanel({
   dateStart: string | null
   dateEnd: string | null
 }) {
-  const [activities, setActivities] = useState(initialActivities)
+  const [activities, setActivities] = useState(() => initialActivities.map(normalizeActivity))
   const [signups, setSignups] = useState(initialSignups)
   const [showForm, setShowForm] = useState(false)
   const [, startTransition] = useTransition()
+  // Ids des activités ajoutées en optimiste (temp uuid) en attente de leur ligne
+  // réelle via realtime — sert à remplacer le placeholder au lieu de doublonner.
+  const optimisticActivityIds = useRef<Set<string>>(new Set())
 
   // Realtime : la liste et les inscriptions se mettent à jour sans recharger.
   useEffect(() => {
@@ -85,10 +72,23 @@ export function ActivityPanel({
         { event: '*', schema: 'public', table: 'activities', filter: `event_id=eq.${eventId}` },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            const row = payload.new as Activity
-            setActivities((prev) => (prev.some((a) => a.id === row.id) ? prev : [...prev, row]))
+            const row = normalizeActivity(payload.new as Activity)
+            setActivities((prev) => {
+              if (prev.some((a) => a.id === row.id)) return prev
+              // Remplace le placeholder optimiste correspondant (même auteur + label)
+              // plutôt que d'ajouter un doublon.
+              const idx = prev.findIndex(
+                (a) => optimisticActivityIds.current.has(a.id) && a.created_by === row.created_by && a.label === row.label,
+              )
+              if (idx === -1) return [...prev, row]
+              optimisticActivityIds.current.delete(prev[idx].id)
+              const next = [...prev]
+              next[idx] = row
+              return next
+            })
           } else if (payload.eventType === 'UPDATE') {
-            setActivities((prev) => prev.map((a) => (a.id === (payload.new as Activity).id ? (payload.new as Activity) : a)))
+            const row = normalizeActivity(payload.new as Activity)
+            setActivities((prev) => prev.map((a) => (a.id === row.id ? row : a)))
           } else if (payload.eventType === 'DELETE') {
             setActivities((prev) => prev.filter((a) => a.id !== (payload.old as Activity).id))
           }
@@ -98,7 +98,12 @@ export function ActivityPanel({
         (payload) => {
           if (payload.eventType === 'INSERT') {
             const row = payload.new as Signup
-            setSignups((prev) => (prev.some((s) => s.id === row.id) ? prev : [...prev, row]))
+            // Réconcilie sur la clé métier (activity_id, participant_id) : remplace
+            // toute ligne optimiste (id temporaire) par la vraie, sans doublonner.
+            setSignups((prev) => [
+              ...prev.filter((s) => !(s.activity_id === row.activity_id && s.participant_id === row.participant_id)),
+              row,
+            ])
           } else if (payload.eventType === 'DELETE') {
             setSignups((prev) => prev.filter((s) => s.id !== (payload.old as Signup).id))
           }
@@ -158,6 +163,7 @@ export function ActivityPanel({
       created_by: participantId,
       created_at: new Date().toISOString(),
     }
+    optimisticActivityIds.current.add(optimistic.id)
     setActivities((prev) => [...prev, optimistic])
     setShowForm(false)
     startTransition(() => proposeActivity(slug, eventId, participantId, input))
