@@ -10,6 +10,7 @@ import { TransportPanel } from '@/components/transport/TransportPanel'
 import { DatePoll } from '@/components/dates/DatePoll'
 import { AccommodationSection } from '@/components/accommodation/AccommodationSection'
 import { BouffePanel } from '@/components/meals/BouffePanel'
+import { ActivityPanel } from '@/components/activities/ActivityPanel'
 import { RecapButton } from '@/components/event/RecapButton'
 import { promoteParticipant } from '@/lib/actions/participants'
 import { ShareSheet } from './ShareSheet'
@@ -56,7 +57,7 @@ function heroDateRange(start: string, end: string) {
   return `${s.getDate()} ${month(s)} → ${e.getDate()} ${month(e)}`
 }
 
-const MODULE_TABS = new Set(['presence', 'dates', 'transport', 'bouffe'])
+const MODULE_TABS = new Set(['presence', 'dates', 'transport', 'bouffe', 'activites'])
 
 export default async function EventPage({
   params,
@@ -115,6 +116,10 @@ export default async function EventPage({
   const { data: products } = await supabase.from('products').select('*').eq('event_id', event.id).order('created_at')
   const { data: mealOwners } = await supabase.from('meal_owners').select('*').eq('event_id', event.id)
 
+  // Activités : propositions + inscriptions
+  const { data: activities } = await supabase.from('activities').select('*').eq('event_id', event.id).order('created_at')
+  const { data: activitySignups } = await supabase.from('activity_signups').select('*').eq('event_id', event.id)
+
   // Transport data
   const { data: legs } = await supabase
     .from('transport_legs').select('*').eq('event_id', event.id)
@@ -134,6 +139,7 @@ export default async function EventPage({
       return acc + Math.max(0, (l.total_seats ?? 0) - taken)
     }, 0)
   const bouffeCount = (products ?? []).length
+  const activityCount = (activities ?? []).length
   const dateProposalCount = (dateProposals ?? []).length
   const rsvpLabel = participant.presence_status ? RSVP_LABEL[participant.presence_status] : 'à déclarer'
 
@@ -180,6 +186,8 @@ export default async function EventPage({
             subtitle={freeSeats > 0 ? `${freeSeats} place${freeSeats > 1 ? 's' : ''} libre${freeSeats > 1 ? 's' : ''}` : 'à organiser'} />
           <ModuleTile href="?tab=bouffe" emoji="🛒" title="Bouffe"
             subtitle={bouffeCount > 0 ? `${bouffeCount} produit${bouffeCount > 1 ? 's' : ''}` : 'rien encore'} />
+          <ModuleTile href="?tab=activites" emoji="🎟️" title="Activités"
+            subtitle={activityCount > 0 ? `${activityCount} activité${activityCount > 1 ? 's' : ''}` : 'rien encore'} />
           <div className="flex h-[94px] flex-col justify-between rounded-[19px] border-[1.5px] border-dashed border-[#ddd1bd] bg-soft p-[17px]">
             <div className="text-[23px] opacity-50">💸</div>
             <div>
@@ -197,7 +205,7 @@ export default async function EventPage({
 
   // ====================== ÉCRANS MODULES ======================
   const moduleTitle: Record<string, string> = {
-    presence: 'Présence', dates: 'Dates', transport: 'Transport', bouffe: 'Bouffe',
+    presence: 'Présence', dates: 'Dates', transport: 'Transport', bouffe: 'Bouffe', activites: 'Activités',
   }
 
   return (
@@ -333,6 +341,21 @@ export default async function EventPage({
           initialProducts={products ?? []}
           initialMealOwners={mealOwners ?? []}
           participants={participants}
+          dateStart={event.date_start}
+          dateEnd={event.date_end}
+        />
+      )}
+
+      {/* Activités */}
+      {activeTab === 'activites' && (
+        <ActivityPanel
+          slug={slug}
+          eventId={event.id}
+          participantId={participant.id}
+          initialActivities={activities ?? []}
+          initialSignups={activitySignups ?? []}
+          participants={participants.map((p) => ({ id: p.id, pseudo: p.pseudo }))}
+          isAdmin={isAdmin}
           dateStart={event.date_start}
           dateEnd={event.date_end}
         />
