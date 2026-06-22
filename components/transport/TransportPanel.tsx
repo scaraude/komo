@@ -67,7 +67,7 @@ export function TransportPanel({
       {/* Liste de cartes-trajet */}
       <div className="flex flex-col gap-[11px]">
         {directionLegs.length === 0 && (
-          <p className="text-muted text-[13px] py-4 text-center">Aucun trajet proposé pour l'instant.</p>
+          <p className="text-muted text-[13px] py-4 text-center">Aucun trajet proposé pour l&apos;instant.</p>
         )}
         {directionLegs.map((leg) => (
           <CarCard key={leg.id} slug={slug} leg={leg}
@@ -86,6 +86,8 @@ export function TransportPanel({
         </button>
         {isCreator && unassigned.length > 0 && (
           <button onClick={() => setShowSuggest(true)}
+            aria-label="Auto-affecter les trajets"
+            title="Auto-affecter"
             className="px-[18px] bg-card border-[1.5px] border-line-3 rounded-[18px] font-bold text-ink hover:bg-soft transition-colors">
             ✨
           </button>

@@ -47,13 +47,15 @@ export function PlaceAutocomplete({
       return
     }
     const q = value.trim()
-    if (q.length < 3) {
-      setPlaces([])
-      setOpen(false)
-      return
-    }
     const ctrl = new AbortController()
     const t = setTimeout(async () => {
+      // Reset déplacé ici (et non en synchrone dans l'effet) : requête trop courte
+      // → on vide les suggestions au lieu d'appeler l'API.
+      if (q.length < 3) {
+        setPlaces([])
+        setOpen(false)
+        return
+      }
       setLoading(true)
       try {
         const res = await fetch(`/api/places?q=${encodeURIComponent(q)}`, { signal: ctrl.signal })

@@ -65,6 +65,16 @@ export function ProposeVehicleForm({
   const useRange = hasSeats && rangeMode
 
   function handleSubmit(formData: FormData) {
+    // Label optionnel : si vide, on le déduit (départ → arrivée, sinon le mode)
+    // pour ne pas imposer à l'utilisateur de nommer son trajet.
+    if (!formData.get('label')?.toString().trim()) {
+      const dep = formData.get('departure_city')?.toString().trim()
+      const arr = formData.get('arrival_city')?.toString().trim()
+      const from = dep || (departureIsHome ? '' : eventDestination)
+      const to = arr || (departureIsHome ? eventDestination : '')
+      const modeLabel = MODES.find((m) => m.value === mode)?.label.replace(/^\S+\s/, '') ?? 'Trajet'
+      formData.set('label', from && to ? `${from} → ${to}` : from || to || modeLabel)
+    }
     startTransition(async () => {
       await createLeg(slug, eventId, participantId, direction, formData)
       onClose()
@@ -102,9 +112,9 @@ export function ProposeVehicleForm({
             })}
           </div>
 
-          {/* Label */}
-          <input name="label" type="text" required maxLength={60}
-            placeholder={hasBillet ? 'Nom (ex : TGV 8h12)' : 'Nom du trajet (ex : Golf de Marine)'}
+          {/* Label — optionnel : déduit du trajet si laissé vide */}
+          <input name="label" type="text" maxLength={60}
+            placeholder={hasBillet ? 'Nom (ex : TGV 8h12) — optionnel' : 'Nom du trajet (optionnel)'}
             className={INPUT_CLASS} />
 
           {/* Trajet : départ → arrivée. Le côté event hérite du lieu de l'event. */}
