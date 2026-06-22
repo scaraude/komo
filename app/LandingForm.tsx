@@ -10,10 +10,12 @@ const VIBES = [
   { value: 'soiree', label: '🎉 Soirée' },
   { value: 'concert', label: '🎸 Concert' },
   { value: 'road_trip', label: '🚗 Road trip' },
+  { value: 'sport', label: '⚽ Sport' },
 ] as const
 
 export function LandingForm({ showEmail }: { showEmail: boolean }) {
   const [vibe, setVibe] = useState<string | null>(null)
+  const [pollMode, setPollMode] = useState(false)
 
   return (
     <form
@@ -73,13 +75,29 @@ export function LandingForm({ showEmail }: { showEmail: boolean }) {
       <DestinationField />
 
       {/* Dates */}
-      <span className="mb-[9px] text-[12px] font-bold uppercase tracking-[0.8px] text-muted-2">
-        Quand
-      </span>
-      <div className="mb-[18px] flex gap-[10px]">
-        <DateField name="date_start" />
-        <DateField name="date_end" />
+      <div className="mb-[9px] flex items-center justify-between">
+        <span className="text-[12px] font-bold uppercase tracking-[0.8px] text-muted-2">
+          Quand
+        </span>
+        <button
+          type="button"
+          onClick={() => setPollMode((v) => !v)}
+          className="text-[12.5px] font-semibold text-terracotta"
+        >
+          {pollMode ? '← Dates fixes' : 'Pas encore de date ?'}
+        </button>
       </div>
+      {pollMode ? (
+        <div className="mb-[18px] rounded-[15px] border-[1.5px] border-dashed border-terracotta bg-terracotta-soft px-4 py-[14px] text-[13.5px] font-medium leading-[1.45] text-terracotta-dk">
+          📅 On vote pour les dates — chacun coche ce qui l&apos;arrange, tu fixeras la meilleure.
+          <input type="hidden" name="sondage" value="1" />
+        </div>
+      ) : (
+        <div className="mb-[18px] flex gap-[10px]">
+          <DateField name="date_start" />
+          <DateField name="date_end" />
+        </div>
+      )}
 
       {/* Vibe */}
       <span className="mb-[11px] text-[12px] font-bold uppercase tracking-[0.8px] text-muted-2">
