@@ -63,7 +63,7 @@ export function AccommodationSection({
           const count = voteCount(o)
           const pct = totalParticipants > 0 ? (count / totalParticipants) * 100 : 0
           return (
-            <div key={o.id} className="bg-card border-2 border-ink rounded-2xl overflow-hidden shadow-[3px_3px_0_rgba(26,20,16,0.8)]">
+            <div key={o.id} className="bg-card border-[1.5px] border-line-2 rounded-[18px] overflow-hidden shadow-[0_2px_8px_rgba(60,45,20,0.04)]">
               <div className="px-4 pt-3 pb-2 flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm">{o.label}</p>
@@ -80,8 +80,8 @@ export function AccommodationSection({
                   <span className="text-xs text-muted">{count}/{totalParticipants}</span>
                   <button
                     onClick={() => handleVote(o)}
-                    className={`text-xs font-bold px-3 py-1.5 rounded-full border-2 transition-colors ${
-                      voted ? 'bg-ink text-paper border-ink' : 'bg-card border-ink hover:border-terracotta hover:text-terracotta'
+                    className={`text-xs font-bold px-3 py-1.5 rounded-full border-[1.5px] transition-colors ${
+                      voted ? 'bg-ink text-paper border-ink' : 'bg-card border-line-3 hover:border-terracotta hover:text-terracotta'
                     }`}
                   >
                     {voted ? '✓ Top' : 'Top'}
@@ -112,26 +112,26 @@ export function AccommodationSection({
             setShowForm(false)
             startTransition(() => proposeAccommodation(slug, eventId, participantId, fd))
           }}
-          className="flex flex-col gap-3 bg-card border-2 border-ink rounded-2xl p-4"
+          className="flex flex-col gap-3 bg-card border-[1.5px] border-line-2 rounded-[18px] p-4 shadow-[0_2px_8px_rgba(60,45,20,0.04)]"
         >
           <input name="label" type="text" required maxLength={80} placeholder="Airbnb Les Calanques, Camping…"
-            className="w-full border-2 border-ink rounded-xl px-3 py-2.5 text-sm bg-paper focus:outline-none focus:border-terracotta" />
+            className="w-full border-[1.5px] border-line rounded-[13px] px-3 py-2.5 text-sm bg-card focus:outline-none focus:border-terracotta" />
           <div className="flex gap-2">
             <input name="url" type="url" placeholder="https://airbnb.com/…"
-              className="flex-1 border-2 border-ink rounded-xl px-3 py-2.5 text-sm bg-paper focus:outline-none focus:border-terracotta" />
-            <input name="price_per_night" type="number" min="0" step="1" placeholder="€/nuit"
-              className="w-24 border-2 border-ink rounded-xl px-3 py-2.5 text-sm bg-paper focus:outline-none focus:border-terracotta" />
+              className="flex-1 border-[1.5px] border-line rounded-[13px] px-3 py-2.5 text-sm bg-card focus:outline-none focus:border-terracotta" />
+            <input name="price_per_night" type="number" min="0" step="1" placeholder="€/nuit" aria-label="Prix par nuit"
+              className="w-24 border-[1.5px] border-line rounded-[13px] px-3 py-2.5 text-sm bg-card focus:outline-none focus:border-terracotta" />
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={() => setShowForm(false)}
-              className="flex-1 py-2.5 border-2 border-ink rounded-full text-sm font-bold">Annuler</button>
+              className="flex-1 py-2.5 border-[1.5px] border-line-3 bg-card rounded-[15px] text-sm font-bold">Annuler</button>
             <button type="submit"
-              className="flex-1 py-2.5 bg-terracotta text-white border-2 border-ink rounded-full text-sm font-bold">Proposer →</button>
+              className="flex-1 py-2.5 bg-terracotta text-white rounded-[15px] text-sm font-bold shadow-[0_4px_0_var(--color-terracotta-dk)] active:translate-y-1 active:shadow-none transition-all">Proposer →</button>
           </div>
         </form>
       ) : (
         <button onClick={() => setShowForm(true)}
-          className="w-full py-3 border-2 border-dashed border-ink rounded-2xl text-sm font-semibold text-muted hover:border-olive hover:text-olive transition-colors">
+          className="w-full py-3 border-[1.5px] border-dashed border-[var(--color-dashed)] rounded-[18px] text-sm font-semibold text-muted hover:border-olive hover:text-olive transition-colors">
           + Proposer un logement
         </button>
       )}
