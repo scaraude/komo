@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { createMeal, deleteMeal, addProduct, toggleProduct, deleteProduct, setMealDate, toggleMealOwner } from '@/lib/actions/meals'
+import { Sheet } from '@/components/ui/Sheet'
 import { randomId } from '@/lib/uuid'
 import type { Database } from '@/lib/database.types'
 
@@ -549,17 +550,6 @@ function Qty({ p }: { p: Product }) {
   const label = qtyLabel(p)
   if (!label) return null
   return <span className="shrink-0 rounded-full bg-soft px-[7px] py-[1px] text-[11px] font-semibold text-body">{label}</span>
-}
-
-function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-4">
-      <div className="absolute inset-0 bg-ink/40" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-paper rounded-[22px] shadow-[0_8px_40px_rgba(60,45,20,0.18)] p-6 max-h-[90vh] overflow-y-auto animate-sheet-up">
-        {children}
-      </div>
-    </div>
-  )
 }
 
 /* Champ compact quantité + unité : [ 2 ] [unité ▾] */
