@@ -204,17 +204,14 @@ export default async function EventPage({
   }
 
   // ====================== ÉCRANS MODULES ======================
-  const moduleTitle: Record<string, string> = {
-    presence: 'Présence', dates: 'Dates', transport: 'Transport', bouffe: 'Bouffe', activites: 'Activités',
-  }
-
   return (
     <main className="animate-screen-in mx-auto min-h-dvh w-full max-w-[440px] px-[20px] pb-10 pt-3">
       <Link
         href={`/e/${slug}`}
-        className="mb-4 inline-block text-[14px] font-semibold text-muted"
+        className="mb-4 inline-flex items-center gap-1 text-[14px] font-semibold text-muted"
       >
-        ‹ {moduleTitle[activeTab!]}
+        <span aria-hidden>‹</span> Retour
+        <span className="sr-only">à l&apos;accueil de l&apos;event</span>
       </Link>
 
       {/* Sondage de dates */}

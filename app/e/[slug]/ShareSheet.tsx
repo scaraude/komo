@@ -5,14 +5,11 @@ import { useEffect, useState } from 'react'
 export function ShareSheet({ slug, title }: { slug: string; title: string }) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [url, setUrl] = useState(`komo.app/${slug}`)
-  const [fullUrl, setFullUrl] = useState('')
 
-  useEffect(() => {
-    const u = `${window.location.origin}/e/${slug}`
-    setFullUrl(u)
-    setUrl(u.replace(/^https?:\/\//, ''))
-  }, [slug])
+  // Dérivé du window (client only). La feuille ne se rend que `open` (post-clic,
+  // donc hydraté) → pas de mismatch SSR et plus de flash « komo.app/… ».
+  const fullUrl = typeof window !== 'undefined' ? `${window.location.origin}/e/${slug}` : ''
+  const url = fullUrl.replace(/^https?:\/\//, '')
 
   useEffect(() => {
     if (!open) return

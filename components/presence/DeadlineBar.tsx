@@ -21,15 +21,17 @@ export function DeadlineBar({
   pendingCount: number
   isCreator: boolean
 }) {
-  const [days, setDays] = useState(deadline ? daysUntil(deadline) : null)
   const [copied, setCopied] = useState(false)
   const [editing, setEditing] = useState(false)
   const [, startTransition] = useTransition()
+  // Tick minute pour recalculer le compte à rebours sans stocker `days` en state
+  // (évite un setState synchrone dans l'effet + réagit au changement de prop).
+  const [, setTick] = useState(0)
+  const days = deadline ? daysUntil(deadline) : null
 
   useEffect(() => {
     if (!deadline) return
-    setDays(daysUntil(deadline))
-    const id = setInterval(() => setDays(daysUntil(deadline!)), 60_000)
+    const id = setInterval(() => setTick((t) => t + 1), 60_000)
     return () => clearInterval(id)
   }, [deadline])
 
@@ -62,7 +64,7 @@ export function DeadlineBar({
             ⏳ {days > 0 ? `Deadline dans ${days} jour${days > 1 ? 's' : ''}` : days === 0 ? "Deadline aujourd'hui !" : 'Deadline dépassée'}
             {pendingCount > 0 && (
               <span className="text-body font-normal ml-2">
-                · {pendingCount} pote{pendingCount > 1 ? 's' : ''} n'ont pas répondu
+                · {pendingCount} pote{pendingCount > 1 ? 's' : ''} n&apos;ont pas répondu
               </span>
             )}
           </p>
