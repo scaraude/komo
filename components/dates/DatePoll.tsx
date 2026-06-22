@@ -91,14 +91,14 @@ export function DatePoll({
 
       <div className="flex flex-col gap-3 mb-6">
         {sorted.length === 0 && (
-          <p className="text-sm text-muted text-center py-6">Aucune date proposée pour l'instant.</p>
+          <p className="text-sm text-muted text-center py-6">Aucune date proposée pour l&apos;instant.</p>
         )}
         {sorted.map((p) => {
           const count = getVoteCount(p)
           const voted = hasVoted(p)
           const pct = totalParticipants > 0 ? (count / totalParticipants) * 100 : 0
           return (
-            <div key={p.id} className="bg-card border-2 border-ink rounded-2xl overflow-hidden shadow-[3px_3px_0_rgba(26,20,16,0.8)]">
+            <div key={p.id} className="bg-card border-[1.5px] border-line-2 rounded-[18px] overflow-hidden shadow-[0_2px_8px_rgba(60,45,20,0.04)]">
               <div className="px-4 pt-3 pb-2 flex items-center justify-between gap-3">
                 <div>
                   <p className="font-semibold text-sm capitalize">{formatDate(p.proposed_date)}</p>
@@ -115,10 +115,10 @@ export function DatePoll({
                   )}
                   <button
                     onClick={() => handleVote(p)}
-                    className={`text-xs font-bold px-3 py-1.5 rounded-full border-2 transition-colors ${
+                    className={`text-xs font-bold px-3 py-1.5 rounded-full border-[1.5px] transition-colors ${
                       voted
                         ? 'bg-ink text-paper border-ink'
-                        : 'bg-card text-ink border-ink hover:border-terracotta hover:text-terracotta'
+                        : 'bg-card text-ink border-line-3 hover:border-terracotta hover:text-terracotta'
                     }`}
                   >
                     {voted ? '✓ Je peux' : 'Je peux'}
@@ -142,18 +142,19 @@ export function DatePoll({
             type="date"
             value={newDate}
             onChange={(e) => setNewDate(e.target.value)}
-            className="flex-1 border-2 border-ink rounded-xl px-3 py-2.5 text-sm bg-card focus:outline-none focus:border-terracotta"
+            className="flex-1 border-[1.5px] border-line rounded-[13px] px-3 py-2.5 text-sm bg-card focus:outline-none focus:border-terracotta"
           />
           <button
             onClick={handlePropose}
             disabled={!newDate}
-            className="px-4 py-2.5 bg-terracotta text-white border-2 border-ink rounded-xl text-sm font-bold disabled:opacity-50"
+            className="px-4 py-2.5 bg-terracotta text-white rounded-[13px] text-sm font-bold shadow-[0_3px_0_var(--color-terracotta-dk)] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50"
           >
             Proposer
           </button>
           <button
             onClick={() => setShowInput(false)}
-            className="px-3 py-2.5 border-2 border-ink rounded-xl text-sm"
+            aria-label="Annuler"
+            className="px-3 py-2.5 border-[1.5px] border-line-3 bg-card rounded-[13px] text-sm"
           >
             ✕
           </button>
@@ -161,7 +162,7 @@ export function DatePoll({
       ) : (
         <button
           onClick={() => setShowInput(true)}
-          className="w-full py-3 border-2 border-dashed border-ink rounded-2xl text-sm font-semibold text-muted hover:border-terracotta hover:text-terracotta transition-colors"
+          className="w-full py-3 border-[1.5px] border-dashed border-[var(--color-dashed)] rounded-[18px] text-sm font-semibold text-muted hover:border-terracotta hover:text-terracotta transition-colors"
         >
           + Proposer une date
         </button>

@@ -198,7 +198,7 @@ export function ActivityPanel({
       ) : (
         <button
           onClick={() => setShowForm(true)}
-          className="w-full rounded-2xl border-2 border-dashed border-ink py-3 text-sm font-semibold text-muted transition-colors hover:border-olive hover:text-olive"
+          className="w-full rounded-[18px] border-[1.5px] border-dashed border-[var(--color-dashed)] py-3 text-sm font-semibold text-muted transition-colors hover:border-olive hover:text-olive"
         >
           + Proposer une activité
         </button>
@@ -250,7 +250,7 @@ function ActivityCard({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border-2 border-ink bg-card shadow-[3px_3px_0_rgba(26,20,16,0.8)]">
+    <div className="overflow-hidden rounded-[18px] border-[1.5px] border-line-2 bg-card shadow-[0_2px_8px_rgba(60,45,20,0.04)]">
       <div className="flex items-start justify-between gap-3 px-4 pt-3.5">
         <div className="min-w-0 flex-1">
           <p className="text-[15px] font-bold text-ink">{activity.label}</p>
@@ -301,9 +301,9 @@ function ActivityCard({
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted">Si on est</span>
             <div className="flex items-center gap-2">
-              <button onClick={() => setSimN((n) => Math.max(1, n - 1))} className="flex h-6 w-6 items-center justify-center rounded-full border border-ink text-sm font-bold leading-none">–</button>
+              <button onClick={() => setSimN((n) => Math.max(1, n - 1))} aria-label="Un participant de moins" className="flex h-6 w-6 items-center justify-center rounded-full border-[1.5px] border-line-3 text-sm font-bold leading-none">–</button>
               <span className="w-6 text-center text-sm font-bold text-ink">{simN}</span>
-              <button onClick={() => setSimN((n) => n + 1)} className="flex h-6 w-6 items-center justify-center rounded-full border border-ink text-sm font-bold leading-none">+</button>
+              <button onClick={() => setSimN((n) => n + 1)} aria-label="Un participant de plus" className="flex h-6 w-6 items-center justify-center rounded-full border-[1.5px] border-line-3 text-sm font-bold leading-none">+</button>
             </div>
           </div>
           <div className="mt-1.5 flex items-baseline justify-between">
@@ -323,12 +323,12 @@ function ActivityCard({
         <button
           onClick={onToggle}
           disabled={full}
-          className={`flex-1 rounded-full border-2 border-ink py-2 text-sm font-bold transition-colors ${
+          className={`flex-1 rounded-full border-[1.5px] py-2 text-sm font-bold transition-colors ${
             mine
-              ? 'bg-ink text-paper'
+              ? 'border-ink bg-ink text-paper'
               : full
                 ? 'cursor-not-allowed border-line bg-card text-disabled'
-                : 'bg-card hover:border-terracotta hover:text-terracotta'
+                : 'border-line-3 bg-card hover:border-terracotta hover:text-terracotta'
           }`}
         >
           {mine ? '✓ Inscrit' : full ? 'Complet' : "Je m'inscris"}
@@ -338,7 +338,7 @@ function ActivityCard({
             href={activity.booking_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-full border-2 border-ink bg-card px-4 py-2 text-sm font-bold text-sky transition-colors hover:border-sky"
+            className="rounded-full border-[1.5px] border-line-3 bg-card px-4 py-2 text-sm font-bold text-sky transition-colors hover:border-sky"
           >
             Réserver →
           </a>
@@ -363,7 +363,7 @@ function ActivityForm({
   const [priceMode, setPriceMode] = useState<'none' | 'total' | 'per_person' | 'per_group'>('none')
 
   const inputCls =
-    'w-full rounded-xl border-2 border-ink bg-paper px-3 py-2.5 text-sm focus:border-terracotta focus:outline-none'
+    'w-full rounded-[13px] border-[1.5px] border-line bg-card px-3 py-2.5 text-sm focus:border-terracotta focus:outline-none'
 
   return (
     <form
@@ -386,7 +386,7 @@ function ActivityForm({
           bookingUrl: fd.get('booking_url')?.toString() || null,
         })
       }}
-      className="flex flex-col gap-3 rounded-2xl border-2 border-ink bg-card p-4"
+      className="flex flex-col gap-3 rounded-[18px] border-[1.5px] border-line-2 bg-card p-4 shadow-[0_2px_8px_rgba(60,45,20,0.04)]"
     >
       <input name="label" type="text" required maxLength={80} placeholder="Padel, accrobranche, resto…" className={inputCls} autoFocus />
 
@@ -396,7 +396,7 @@ function ActivityForm({
       </div>
 
       {/* Prix + mode de découpage */}
-      <div className="rounded-xl border-2 border-line-2 p-3">
+      <div className="rounded-[13px] border-[1.5px] border-line-2 p-3">
         <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-muted">Prix</label>
         <div className="mb-2 grid grid-cols-2 gap-1.5">
           {([
@@ -409,8 +409,8 @@ function ActivityForm({
               key={val}
               type="button"
               onClick={() => setPriceMode(val)}
-              className={`rounded-full border-2 py-1.5 text-xs font-bold transition-colors ${
-                priceMode === val ? 'border-ink bg-ink text-paper' : 'border-line-2 text-muted hover:border-ink'
+              className={`rounded-full border-[1.5px] py-1.5 text-xs font-bold transition-colors ${
+                priceMode === val ? 'border-ink bg-ink text-paper' : 'border-line-2 text-muted hover:border-line-3'
               }`}
             >
               {lbl}
@@ -429,17 +429,17 @@ function ActivityForm({
 
       {/* Capacité */}
       <div className="flex gap-2">
-        <input name="min_participants" type="number" min="0" step="1" placeholder="min (optionnel)" className={`${inputCls} flex-1`} />
-        <input name="max_participants" type="number" min="1" step="1" placeholder="max / places" className={`${inputCls} flex-1`} />
+        <input name="min_participants" type="number" min="0" step="1" placeholder="min (optionnel)" aria-label="Minimum de participants" className={`${inputCls} flex-1`} />
+        <input name="max_participants" type="number" min="1" step="1" placeholder="max / places" aria-label="Maximum de participants (places)" className={`${inputCls} flex-1`} />
       </div>
 
       <input name="booking_url" type="url" placeholder="Lien de réservation (optionnel)" className={inputCls} />
 
       <div className="flex gap-2">
-        <button type="button" onClick={onCancel} className="flex-1 rounded-full border-2 border-ink py-2.5 text-sm font-bold">
+        <button type="button" onClick={onCancel} className="flex-1 rounded-[15px] border-[1.5px] border-line-3 bg-card py-2.5 text-sm font-bold">
           Annuler
         </button>
-        <button type="submit" className="flex-1 rounded-full border-2 border-ink bg-terracotta py-2.5 text-sm font-bold text-white">
+        <button type="submit" className="flex-1 rounded-[15px] bg-terracotta py-2.5 text-sm font-bold text-white shadow-[0_4px_0_var(--color-terracotta-dk)] active:translate-y-1 active:shadow-none transition-all">
           Proposer →
         </button>
       </div>
