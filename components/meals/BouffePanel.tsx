@@ -1,6 +1,12 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from 'react'
+import {
+  DndContext, DragOverlay, MouseSensor, TouchSensor, pointerWithin,
+  useDraggable, useDroppable, useSensor, useSensors,
+  type DragEndEvent, type DragStartEvent,
+  type DraggableAttributes, type DraggableSyntheticListeners,
+} from '@dnd-kit/core'
 import { createMeal, deleteMeal, addProduct, toggleProduct, deleteProduct, setMealDate, toggleMealOwner } from '@/lib/actions/meals'
 import { randomId } from '@/lib/uuid'
 import type { Database } from '@/lib/database.types'
@@ -17,7 +23,10 @@ const INPUT =
 
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
-function qtyLabel(p: Pick<Product, 'quantity' | 'unit'>) {
+// useSyncExternalStore sans mises à jour (sert juste à détecter le client).
+const subscribeNoop = () => () => {}
+
+function qtyLabel(p: { quantity: number | null; unit: string }) {
   if (p.quantity == null) return null
   return p.unit === 'unité' ? `×${p.quantity}` : `${p.quantity} ${p.unit}`
 }
@@ -67,6 +76,15 @@ function buildMonths(eventDays: string[]): CalendarMonth[] {
   return months
 }
 
+type DraftItem = { name: string; quantity: number | null; unit: string }
+
+// État de la modale d'ajout :
+//  - 'add'    : modale globale à 2 onglets (Produit | Repas)
+//  - 'mealAt' : depuis un jour vide du calendrier → repas seul, date verrouillée
+type SheetState =
+  | { kind: 'add'; tab: 'product' | 'meal'; presetMeal: string | null }
+  | { kind: 'mealAt'; date: string }
+
 export function BouffePanel({
   slug,
   eventId,
@@ -92,10 +110,13 @@ export function BouffePanel({
   const [products, setProducts] = useState(initialProducts)
   const [owners, setOwners] = useState(initialMealOwners)
   const [view, setView] = useState<'meals' | 'shopping'>('meals')
-  const [sheet, setSheet] = useState<null | 'choose' | 'meal' | 'product'>(null)
-  const [presetMeal, setPresetMeal] = useState<string | null>(null)
+  const [sheet, setSheet] = useState<SheetState | null>(null)
   const [dateSheetMeal, setDateSheetMeal] = useState<string | null>(null)
+  const [confirmDeleteMeal, setConfirmDeleteMeal] = useState<string | null>(null)
   const [, startTransition] = useTransition()
+  // Repas créés en optimiste (id temporaire) pas encore persistés. Agir dessus
+  // (je gère, + produit) ferait échouer la FK meal_id/meal_owners en base.
+  const pendingMealIds = useRef<Set<string>>(new Set())
 
   const eventDays = dateStart && dateEnd ? getDaysBetween(dateStart, dateEnd) : []
   const pseudoOf = (id: string) => participants.find((p) => p.id === id)?.pseudo ?? '?'
@@ -109,23 +130,36 @@ export function BouffePanel({
   }
 
   function handleCreateMeal(label: string, items: DraftItem[], mealDate: string | null) {
-    const mealId = randomId()
+    const tempMealId = randomId()
     const optimisticMeal: Meal = {
-      id: mealId, event_id: eventId, label, meal_date: mealDate, created_by: participantId,
+      id: tempMealId, event_id: eventId, label, meal_date: mealDate, created_by: participantId,
       created_at: new Date().toISOString(),
     }
     const optimisticProducts: Product[] = items.map((it) => ({
-      id: randomId(), event_id: eventId, meal_id: mealId, name: it.name,
+      id: randomId(), event_id: eventId, meal_id: tempMealId, name: it.name,
       quantity: it.quantity, unit: it.unit, tags: [label], checked: false,
       created_by: participantId, created_at: new Date().toISOString(),
     }))
+    pendingMealIds.current.add(tempMealId)
     setMeals((m) => [...m, optimisticMeal])
     setProducts((p) => [...p, ...optimisticProducts])
     setSheet(null)
-    startTransition(() => createMeal(slug, eventId, participantId, label, items, mealDate).catch(() => {
-      setMeals((m) => m.filter((x) => x.id !== mealId))
-      setProducts((p) => p.filter((x) => x.meal_id !== mealId))
-    }))
+    startTransition(() =>
+      createMeal(slug, eventId, participantId, label, items, mealDate)
+        .then(({ mealId, productIds }) => {
+          // Remplace les ids temporaires par les ids réels de la DB (même ordre).
+          pendingMealIds.current.delete(tempMealId)
+          const idMap = new Map(optimisticProducts.map((p, i) => [p.id, productIds[i] ?? p.id]))
+          setMeals((m) => m.map((x) => (x.id === tempMealId ? { ...x, id: mealId } : x)))
+          setProducts((p) => p.map((x) =>
+            x.meal_id === tempMealId ? { ...x, id: idMap.get(x.id) ?? x.id, meal_id: mealId } : x))
+        })
+        .catch(() => {
+          pendingMealIds.current.delete(tempMealId)
+          setMeals((m) => m.filter((x) => x.id !== tempMealId))
+          setProducts((p) => p.filter((x) => x.meal_id !== tempMealId))
+        }),
+    )
   }
 
   function handleSetMealDate(mealId: string, date: string | null) {
@@ -136,6 +170,8 @@ export function BouffePanel({
   }
 
   function handleToggleOwner(mealId: string) {
+    // Repas pas encore persisté (id temporaire) : meal_owners.meal_id échouerait.
+    if (pendingMealIds.current.has(mealId)) return
     const mine = owners.find((o) => o.meal_id === mealId && o.participant_id === participantId)
     const join = !mine
     const prev = owners
@@ -150,18 +186,34 @@ export function BouffePanel({
     startTransition(() => toggleMealOwner(slug, eventId, mealId, participantId, join).catch(() => setOwners(prev)))
   }
 
-  function handleAddProduct(name: string, opts: { quantity: number | null; unit: string; tags: string[]; mealId: string | null }) {
-    const optimistic: Product = {
-      id: randomId(), event_id: eventId, meal_id: opts.mealId, name,
-      quantity: opts.quantity, unit: opts.unit, tags: opts.tags, checked: false,
+  // Ajout d'un ou plusieurs produits d'un coup (onglet Produit ou « ＋ produit » d'un repas).
+  function handleAddProducts(items: DraftItem[], mealId: string | null) {
+    // Rattacher un produit à un repas pas encore persisté ferait échouer la FK
+    // products.meal_id : on attend que le repas ait son id réel.
+    if (mealId != null && pendingMealIds.current.has(mealId)) return
+    const mealLabel = meals.find((m) => m.id === mealId)?.label
+    const tags = mealLabel ? [mealLabel] : []
+    const optimistic: Product[] = items.map((it) => ({
+      id: randomId(), event_id: eventId, meal_id: mealId, name: it.name,
+      quantity: it.quantity, unit: it.unit, tags, checked: false,
       created_by: participantId, created_at: new Date().toISOString(),
-    }
-    setProducts((p) => [...p, optimistic])
+    }))
+    const ids = new Set(optimistic.map((p) => p.id))
+    setProducts((p) => [...p, ...optimistic])
     setSheet(null)
-    setPresetMeal(null)
-    startTransition(() => addProduct(slug, eventId, participantId, { name, ...opts }).catch(() =>
-      setProducts((p) => p.filter((x) => x.id !== optimistic.id)),
-    ))
+    startTransition(() => {
+      Promise.all(
+        optimistic.map((p) =>
+          addProduct(slug, eventId, participantId, { name: p.name, quantity: p.quantity, unit: p.unit, tags, mealId }),
+        ),
+      )
+        .then((realIds) => {
+          // Remplace les ids temporaires par les ids réels de la DB (même ordre).
+          const idMap = new Map(optimistic.map((p, i) => [p.id, realIds[i] ?? p.id]))
+          setProducts((p) => p.map((x) => (idMap.has(x.id) ? { ...x, id: idMap.get(x.id)! } : x)))
+        })
+        .catch(() => setProducts((p) => p.filter((x) => !ids.has(x.id))))
+    })
   }
 
   function handleToggle(prod: Product) {
@@ -178,11 +230,24 @@ export function BouffePanel({
     startTransition(() => deleteProduct(slug, id).catch(() => setProducts(prev)))
   }
 
-  function handleDeleteMeal(id: string) {
-    const prev = products
+  // Clic sur 🗑 : si le repas a des produits, on demande quoi en faire.
+  // Sinon suppression directe.
+  function requestDeleteMeal(id: string) {
+    if (productsOf(id).length === 0) handleDeleteMeal(id, false)
+    else setConfirmDeleteMeal(id)
+  }
+
+  function handleDeleteMeal(id: string, alsoProducts: boolean) {
+    const prevMeals = meals
+    const prevProducts = products
     setMeals((m) => m.filter((x) => x.id !== id))
-    setProducts((p) => p.map((x) => (x.meal_id === id ? { ...x, meal_id: null } : x)))
-    startTransition(() => deleteMeal(slug, id).catch(() => { setMeals((m) => [...m]); setProducts(prev) }))
+    setProducts((p) =>
+      alsoProducts
+        ? p.filter((x) => x.meal_id !== id)
+        : p.map((x) => (x.meal_id === id ? { ...x, meal_id: null } : x)),
+    )
+    setConfirmDeleteMeal(null)
+    startTransition(() => deleteMeal(slug, id, alsoProducts).catch(() => { setMeals(prevMeals); setProducts(prevProducts) }))
   }
 
   const checkedCount = products.filter((p) => p.checked).length
@@ -206,16 +271,17 @@ export function BouffePanel({
       {view === 'meals' ? (
         <MealsView
           meals={meals}
+          eventDays={eventDays}
           productsOf={productsOf}
           ownersOf={ownersOf}
           pseudoOf={pseudoOf}
           participantId={participantId}
-          canPickDate={eventDays.length > 0}
-          onDeleteMeal={handleDeleteMeal}
-          onAddProductTo={(mealId) => { setPresetMeal(mealId); setSheet('product') }}
-          onToggle={handleToggle}
+          onDeleteMeal={requestDeleteMeal}
+          onAddProductTo={(mealId) => setSheet({ kind: 'add', tab: 'product', presetMeal: mealId })}
+          onAddMealAt={(date) => setSheet({ kind: 'mealAt', date })}
           onToggleOwner={handleToggleOwner}
           onPickDate={(mealId) => setDateSheetMeal(mealId)}
+          onMoveMeal={handleSetMealDate}
         />
       ) : (
         <ShoppingView
@@ -226,38 +292,36 @@ export function BouffePanel({
         />
       )}
 
-      <button onClick={() => setSheet('choose')}
+      <button onClick={() => setSheet({ kind: 'add', tab: 'product', presetMeal: null })}
         className="mt-[14px] w-full rounded-[16px] bg-terracotta p-[15px] text-center text-[15px] font-bold text-white shadow-[0_4px_0_var(--color-terracotta-dk)] active:translate-y-1 active:shadow-none transition-all">
         ＋ Ajouter
       </button>
 
-      {sheet && (
-        <Sheet onClose={() => { setSheet(null); setPresetMeal(null) }}>
-          {sheet === 'choose' && (
-            <div className="flex flex-col gap-3">
-              <h3 className="font-serif text-[20px] text-ink mb-1">Ajouter…</h3>
-              <button onClick={() => setSheet('meal')}
-                className="flex items-center gap-3 rounded-[15px] border-[1.5px] border-line bg-card p-[16px] text-left">
-                <span className="text-[24px]">🍽️</span>
-                <div>
-                  <div className="text-[15px] font-bold text-ink">Un repas</div>
-                  <div className="text-[12.5px] text-muted">Un moment + ses produits</div>
-                </div>
-              </button>
-              <button onClick={() => { setPresetMeal(null); setSheet('product') }}
-                className="flex items-center gap-3 rounded-[15px] border-[1.5px] border-line bg-card p-[16px] text-left">
-                <span className="text-[24px]">🛒</span>
-                <div>
-                  <div className="text-[15px] font-bold text-ink">Un produit</div>
-                  <div className="text-[12.5px] text-muted">À acheter — seul ou dans un repas</div>
-                </div>
-              </button>
-            </div>
-          )}
-          {sheet === 'meal' && <MealForm eventDays={eventDays} onSubmit={handleCreateMeal} />}
-          {sheet === 'product' && (
-            <ProductForm meals={meals} presetMeal={presetMeal} onSubmit={handleAddProduct} />
-          )}
+      {sheet?.kind === 'add' && (
+        <Sheet onClose={() => setSheet(null)}>
+          <AddForm
+            initialMode={sheet.tab}
+            lockedDate={null}
+            presetMeal={sheet.presetMeal}
+            meals={meals}
+            eventDays={eventDays}
+            onCreateMeal={handleCreateMeal}
+            onAddProducts={handleAddProducts}
+          />
+        </Sheet>
+      )}
+
+      {sheet?.kind === 'mealAt' && (
+        <Sheet onClose={() => setSheet(null)}>
+          <AddForm
+            initialMode="meal"
+            lockedDate={sheet.date}
+            presetMeal={null}
+            meals={meals}
+            eventDays={eventDays}
+            onCreateMeal={handleCreateMeal}
+            onAddProducts={handleAddProducts}
+          />
         </Sheet>
       )}
 
@@ -279,173 +343,310 @@ export function BouffePanel({
           </div>
         </Sheet>
       )}
+
+      {confirmDeleteMeal && (
+        <Sheet onClose={() => setConfirmDeleteMeal(null)}>
+          <div className="flex flex-col gap-4">
+            <div>
+              <h3 className="font-serif text-[20px] text-ink">
+                Supprimer « {meals.find((m) => m.id === confirmDeleteMeal)?.label} »&nbsp;?
+              </h3>
+              <p className="mt-1 text-[14px] text-body">
+                Veux-tu aussi supprimer ses produits de la liste de courses&nbsp;?
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button onClick={() => handleDeleteMeal(confirmDeleteMeal, true)}
+                className="w-full rounded-[15px] bg-prune p-[14px] font-bold text-white active:translate-y-px transition-transform">
+                Oui, supprimer aussi les produits
+              </button>
+              <button onClick={() => handleDeleteMeal(confirmDeleteMeal, false)}
+                className="w-full rounded-[15px] border-[1.5px] border-line bg-card p-[14px] font-bold text-ink active:translate-y-px transition-transform">
+                Non, garder les produits
+              </button>
+              <button onClick={() => setConfirmDeleteMeal(null)}
+                className="w-full p-[10px] text-[14px] font-semibold text-muted hover:text-ink transition-colors">
+                Annuler
+              </button>
+            </div>
+          </div>
+        </Sheet>
+      )}
     </section>
   )
 }
 
-/* ---------------- Vue Repas ---------------- */
-function MealsView({
-  meals, productsOf, ownersOf, pseudoOf, participantId, canPickDate,
-  onDeleteMeal, onAddProductTo, onToggle, onToggleOwner, onPickDate,
-}: {
-  meals: Meal[]
+/* ---------------- Vue Repas : agenda par jour (drag & drop) ---------------- */
+type CardProps = {
   productsOf: (mealId: string | null) => Product[]
   ownersOf: (mealId: string) => MealOwner[]
   pseudoOf: (id: string) => string
   participantId: string
-  canPickDate: boolean
   onDeleteMeal: (id: string) => void
   onAddProductTo: (mealId: string) => void
-  onToggle: (p: Product) => void
   onToggleOwner: (mealId: string) => void
   onPickDate: (mealId: string) => void
-}) {
-  const [layout, setLayout] = useState<'list' | 'grouped'>('list')
+}
 
-  if (meals.length === 0) {
+function MealsView({
+  meals, eventDays, onAddMealAt, onMoveMeal, ...cardProps
+}: CardProps & {
+  meals: Meal[]
+  eventDays: string[]
+  onAddMealAt: (date: string) => void
+  onMoveMeal: (mealId: string, date: string | null) => void
+}) {
+  // Souris : drag dès 6px. Tactile : appui long 200ms (le tap reste un tap).
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+  )
+  const [poolOpen, setPoolOpen] = useState(true)
+  const [activeId, setActiveId] = useState<string | null>(null)
+  // @dnd-kit génère ses ids via un compteur module → mismatch d'hydratation.
+  // useSyncExternalStore : false au SSR + à l'hydratation, true ensuite côté
+  // client → on ne monte le DnD qu'après, sans setState dans un effet.
+  const dndReady = useSyncExternalStore(subscribeNoop, () => true, () => false)
+
+  const canPickDate = eventDays.length > 0
+  const undated = meals.filter((m) => !m.meal_date)
+  const mealsOn = (iso: string) => meals.filter((m) => m.meal_date === iso)
+  const activeMeal = activeId ? meals.find((m) => m.id === activeId) ?? null : null
+
+  function handleDragEnd(e: DragEndEvent) {
+    setActiveId(null)
+    if (e.over == null) return
+    const meal = meals.find((m) => m.id === e.active.id)
+    if (!meal) return
+    const overId = String(e.over.id)
+    const newDate = overId === 'pool' ? null : overId.startsWith('day:') ? overId.slice(4) : undefined
+    if (newDate === undefined || (meal.meal_date ?? null) === newDate) return
+    onMoveMeal(meal.id, newDate)
+  }
+
+  // Pas de dates d'event : pas d'agenda ni de DnD → simple liste.
+  if (!canPickDate) {
+    if (meals.length === 0) {
+      return (
+        <p className="text-muted text-[13px] py-6 text-center">
+          Aucun repas pour l&apos;instant. Ajoute un dîner, un apéro…
+        </p>
+      )
+    }
     return (
-      <p className="text-muted text-[13px] py-6 text-center">
-        Aucun repas pour l&apos;instant. Ajoute un dîner, un apéro…
-      </p>
+      <div className="flex flex-col gap-[11px]">
+        {meals.map((meal) => <MealCard key={meal.id} meal={meal} showDate={false} {...cardProps} />)}
+      </div>
     )
   }
 
-  const cardProps = {
-    productsOf, ownersOf, pseudoOf, participantId, canPickDate,
-    onDeleteMeal, onAddProductTo, onToggle, onToggleOwner, onPickDate,
+  // Layout factorisé : `zone` (drop ou simple div) et `meal` (drag ou statique)
+  // sont fournis selon qu'on est en mode DnD ou statique (serveur / 1er rendu).
+  const layout = (
+    zone: (id: string, className: string | undefined, render: (isOver: boolean) => React.ReactNode) => React.ReactNode,
+    meal: (m: Meal, showDate: boolean) => React.ReactNode,
+  ) => (
+    <>
+      {/* Accordéon « Tous les repas » (repas non datés) — aussi zone de drop */}
+      {zone('pool', 'mb-[18px]', (isOver) => (
+        <div className={`rounded-[16px] border-[1.5px] transition-colors ${
+          isOver ? 'border-terracotta bg-terracotta-soft/50' : 'border-line-2 bg-track/50'
+        }`}>
+          <button type="button" onClick={() => setPoolOpen((o) => !o)}
+            className="flex w-full items-center gap-2 px-[14px] py-[11px] text-left">
+            <span className={`text-[11px] text-muted transition-transform ${poolOpen ? 'rotate-90' : ''}`}>▶</span>
+            <span className="text-[12px] font-bold uppercase tracking-[0.8px] text-muted-2">Tous les repas</span>
+            <span className="text-[11.5px] text-muted-2">· {undated.length}</span>
+          </button>
+          {poolOpen && (
+            <div className="px-[10px] pb-[10px] flex flex-col gap-[11px]">
+              {undated.length > 0
+                ? undated.map((m) => meal(m, true))
+                : <p className="px-[6px] pb-1 text-[12.5px] text-muted italic">Glisse un repas ici pour le sortir du planning.</p>}
+            </div>
+          )}
+        </div>
+      ))}
+
+      <div className="flex flex-col gap-[14px]">
+        {eventDays.map((day) => {
+          const dayMeals = mealsOn(day)
+          return zone(`day:${day}`, undefined, (isOver) => (
+            <div className={`rounded-[14px] py-1 transition-colors ${isOver ? 'bg-terracotta-soft/50' : ''}`}>
+              <DaySep label={mealDateLabel(day)} />
+              {dayMeals.length > 0 ? (
+                <div className="flex flex-col gap-[11px]">
+                  {dayMeals.map((m) => meal(m, false))}
+                </div>
+              ) : (
+                <button onClick={() => onAddMealAt(day)}
+                  className="w-full rounded-[14px] border-[1.5px] border-dashed border-[var(--color-dashed)] px-[14px] py-[13px] text-left text-[13px] text-muted hover:border-terracotta hover:text-terracotta transition-colors">
+                  ＋ Aucun repas prévu — ajouter
+                </button>
+              )}
+            </div>
+          ))
+        })}
+      </div>
+    </>
+  )
+
+  // Serveur + 1er rendu client : statique, sans @dnd-kit (rendu identique).
+  if (!dndReady) {
+    return (
+      <div>
+        {layout(
+          (id, className, render) => <div key={id} className={className}>{render(false)}</div>,
+          (m, showDate) => <MealCard key={m.id} meal={m} showDate={showDate} {...cardProps} />,
+        )}
+      </div>
+    )
   }
 
   return (
-    <div>
-      <div className="mb-[14px] flex items-center justify-end gap-[6px]">
-        {([['list', 'Liste', '☰'], ['grouped', 'Par date', '🗓️']] as const).map(([mode, label, icon]) => (
-          <button key={mode} onClick={() => setLayout(mode)} aria-label={label} title={label}
-            className={`rounded-[10px] px-[11px] py-[7px] text-[14px] transition-colors ${
-              layout === mode ? 'bg-ink text-white' : 'bg-track text-[#6b665c]'
-            }`}>
-            {icon}
-          </button>
-        ))}
-      </div>
-
-      {layout === 'list' ? (
-        <div className="flex flex-col gap-[11px]">
-          {meals.map((meal) => <MealCard key={meal.id} meal={meal} {...cardProps} />)}
-        </div>
-      ) : (
-        <div className="flex flex-col gap-[18px]">
-          {groupByDate(meals).map((group) => (
-            <div key={group.key}>
-              <div className="mb-[9px] flex items-center gap-2">
-                <h3 className="text-[12px] font-bold uppercase tracking-[0.8px] text-muted-2 capitalize">
-                  {group.label}
-                </h3>
-                <span className="h-px flex-1 bg-line-2" />
-              </div>
-              <div className="flex flex-col gap-[11px]">
-                {group.meals.map((meal) => <MealCard key={meal.id} meal={meal} {...cardProps} />)}
-              </div>
-            </div>
-          ))}
-        </div>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={pointerWithin}
+      onDragStart={(e: DragStartEvent) => setActiveId(String(e.active.id))}
+      onDragCancel={() => setActiveId(null)}
+      onDragEnd={handleDragEnd}
+    >
+      {layout(
+        (id, className, render) => <DropZone key={id} id={id} className={className}>{render}</DropZone>,
+        (m, showDate) => <DraggableMeal key={m.id} meal={m} showDate={showDate} {...cardProps} />,
       )}
+      <DragOverlay>
+        {activeMeal ? <MealCardOverlay meal={activeMeal} ownersOf={cardProps.ownersOf} pseudoOf={cardProps.pseudoOf} /> : null}
+      </DragOverlay>
+    </DndContext>
+  )
+}
+
+// Zone de dépôt générique (jour ou pool). children = (isOver) => JSX.
+function DropZone({ id, className, children }: {
+  id: string
+  className?: string
+  children: (isOver: boolean) => React.ReactNode
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id })
+  return <div ref={setNodeRef} className={className}>{children(isOver)}</div>
+}
+
+// Carte repas déplaçable : le drag est porté par l'en-tête lui-même
+// (clic = plier/déplier, appui long = déplacer). Indice visuel ⠿.
+function DraggableMeal({ meal, showDate, ...cardProps }: { meal: Meal; showDate: boolean } & CardProps) {
+  const { setNodeRef, listeners, attributes, isDragging } = useDraggable({ id: meal.id })
+  return (
+    <div ref={setNodeRef} className={isDragging ? 'opacity-40' : ''}>
+      <MealCard meal={meal} showDate={showDate} dragProps={{ attributes, listeners }} {...cardProps} />
     </div>
   )
 }
 
-// Regroupe les repas par date (datés triés croissant, « Sans date » en dernier).
-function groupByDate(meals: Meal[]): { key: string; label: string; meals: Meal[] }[] {
-  const buckets = new Map<string, Meal[]>()
-  for (const meal of meals) {
-    const key = meal.meal_date ?? '__none__'
-    const arr = buckets.get(key) ?? []
-    arr.push(meal)
-    buckets.set(key, arr)
-  }
-  const keys = [...buckets.keys()].sort((a, b) => {
-    if (a === '__none__') return 1
-    if (b === '__none__') return -1
-    return a < b ? -1 : 1
-  })
-  return keys.map((key) => ({
-    key,
-    label: key === '__none__' ? 'Sans date' : mealDateLabel(key),
-    meals: buckets.get(key)!,
-  }))
+// Aperçu léger qui suit le curseur pendant le drag.
+function MealCardOverlay({ meal, ownersOf, pseudoOf }: {
+  meal: Meal
+  ownersOf: (mealId: string) => MealOwner[]
+  pseudoOf: (id: string) => string
+}) {
+  return (
+    <div className="flex w-full items-center gap-2 rounded-[18px] border-[1.5px] border-terracotta bg-card px-[16px] py-[13px] shadow-[0_8px_24px_rgba(60,45,20,0.18)] cursor-grabbing">
+      <span className="text-[15px] leading-none text-disabled-2">⠿</span>
+      <span className="truncate text-[15.5px] font-bold text-ink">🍽️ {meal.label}</span>
+      {ownersOf(meal.id).map((o) => (
+        <span key={o.id} className="shrink-0 rounded-full bg-soft px-[8px] py-[2px] text-[11px] font-medium text-body">
+          👤 {pseudoOf(o.participant_id)}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function DaySep({ label }: { label: string }) {
+  return (
+    <div className="mb-[9px] flex items-center gap-2">
+      <h3 className="text-[12px] font-bold uppercase tracking-[0.8px] text-muted-2 capitalize">{label}</h3>
+      <span className="h-px flex-1 bg-line-2" />
+    </div>
+  )
 }
 
 function MealCard({
-  meal, productsOf, ownersOf, pseudoOf, participantId, canPickDate,
-  onDeleteMeal, onAddProductTo, onToggle, onToggleOwner, onPickDate,
-}: {
+  meal, showDate, dragProps, productsOf, ownersOf, pseudoOf, participantId,
+  onDeleteMeal, onAddProductTo, onToggleOwner, onPickDate,
+}: CardProps & {
   meal: Meal
-  productsOf: (mealId: string | null) => Product[]
-  ownersOf: (mealId: string) => MealOwner[]
-  pseudoOf: (id: string) => string
-  participantId: string
-  canPickDate: boolean
-  onDeleteMeal: (id: string) => void
-  onAddProductTo: (mealId: string) => void
-  onToggle: (p: Product) => void
-  onToggleOwner: (mealId: string) => void
-  onPickDate: (mealId: string) => void
+  showDate: boolean
+  dragProps?: { attributes: DraggableAttributes; listeners: DraggableSyntheticListeners }
 }) {
+  const [open, setOpen] = useState(false)
   const items = productsOf(meal.id)
   const mealOwners = ownersOf(meal.id)
   const isOwner = mealOwners.some((o) => o.participant_id === participantId)
   return (
     <div className="bg-card border-[1.5px] border-line-2 rounded-[18px] overflow-hidden shadow-[0_2px_8px_rgba(60,45,20,0.04)]">
-      <div className="flex items-center justify-between gap-2 px-[16px] pt-[14px] pb-[8px]">
-        <p className="text-[15.5px] font-bold text-ink">🍽️ {meal.label}</p>
-        <button onClick={() => onDeleteMeal(meal.id)}
-          className="text-[12px] text-muted hover:text-prune transition-colors shrink-0">🗑</button>
-      </div>
-
-      {/* Date (tag) + responsables */}
-      <div className="px-[16px] pb-[10px] flex flex-wrap items-center gap-1.5">
-        {canPickDate ? (
-          <button onClick={() => onPickDate(meal.id)}
-            className={`rounded-full px-[9px] py-[3px] text-[11.5px] font-semibold transition-colors ${
-              meal.meal_date
-                ? 'bg-olive-soft text-olive-text-dk'
-                : 'border-[1.5px] border-dashed border-[var(--color-dashed)] text-muted'
-            }`}>
-            📅 {meal.meal_date ? mealDateLabel(meal.meal_date) : 'ajouter une date'}
-          </button>
-        ) : meal.meal_date ? (
-          <span className="rounded-full bg-olive-soft px-[9px] py-[3px] text-[11.5px] font-semibold text-olive-text-dk">
-            📅 {mealDateLabel(meal.meal_date)}
-          </span>
-        ) : null}
-        {mealOwners.map((o) => (
-          <span key={o.id} className="rounded-full bg-soft px-[9px] py-[3px] text-[11.5px] font-medium text-body">
-            👤 {pseudoOf(o.participant_id)}
-          </span>
-        ))}
-        <button onClick={() => onToggleOwner(meal.id)}
-          className={`rounded-full px-[9px] py-[3px] text-[11.5px] font-semibold transition-colors ${
-            isOwner
-              ? 'bg-terracotta-soft text-terracotta'
-              : 'border-[1.5px] border-dashed border-[var(--color-dashed)] text-muted'
-          }`}>
-          {isOwner ? '✓ je gère' : '＋ je gère'}
+      {/* En-tête : clic = plier/déplier, appui long = déplacer (drag) */}
+      <div className="flex items-center gap-2 px-[16px] py-[13px]">
+        <button onClick={() => setOpen((o) => !o)} {...dragProps?.attributes} {...dragProps?.listeners}
+          className="flex flex-1 min-w-0 items-center gap-2 text-left" aria-expanded={open}>
+          {dragProps && (
+            <span aria-hidden className="shrink-0 text-[13px] leading-none text-disabled-2 cursor-grab active:cursor-grabbing">⠿</span>
+          )}
+          <span className={`shrink-0 text-[11px] text-muted transition-transform ${open ? 'rotate-90' : ''}`}>▶</span>
+          <span className="shrink-0 text-[15.5px] font-bold text-ink truncate">🍽️ {meal.label}</span>
+          {mealOwners.length > 0 && (
+            <span className="flex flex-wrap items-center gap-1">
+              {mealOwners.map((o) => (
+                <span key={o.id} className="rounded-full bg-soft px-[8px] py-[2px] text-[11px] font-medium text-body">
+                  👤 {pseudoOf(o.participant_id)}
+                </span>
+              ))}
+            </span>
+          )}
+          {!open && items.length > 0 && (
+            <span className="shrink-0 text-[11.5px] text-muted-2">· {items.length}</span>
+          )}
         </button>
+        <button onClick={() => onDeleteMeal(meal.id)}
+          className="shrink-0 text-[12px] text-muted hover:text-prune transition-colors">🗑</button>
       </div>
 
-      <div className="px-[16px] pb-[14px] flex flex-col gap-1.5">
-        {items.length === 0 && (
-          <p className="text-[12.5px] text-muted italic">Pas encore de produit.</p>
-        )}
-        {items.map((p) => (
-          <button key={p.id} onClick={() => onToggle(p)} className="flex items-center gap-2 text-left">
-            <CheckBox checked={p.checked} />
-            <span className={`text-[14px] ${p.checked ? 'text-muted line-through' : 'text-ink'}`}>{p.name}</span>
-            <Qty p={p} />
-          </button>
-        ))}
-        <button onClick={() => onAddProductTo(meal.id)}
-          className="mt-1 self-start text-[13px] text-terracotta font-semibold">＋ produit</button>
-      </div>
+      {open && (
+        <>
+          {/* Date (uniquement section « Sans date ») + bouton « je gère » */}
+          <div className="px-[16px] pb-[10px] flex flex-wrap items-center gap-1.5">
+            {showDate && (
+              <button onClick={() => onPickDate(meal.id)}
+                className="rounded-full px-[9px] py-[3px] text-[11.5px] font-semibold border-[1.5px] border-dashed border-[var(--color-dashed)] text-muted transition-colors">
+                📅 ajouter une date
+              </button>
+            )}
+            <button onClick={() => onToggleOwner(meal.id)}
+              className={`rounded-full px-[9px] py-[3px] text-[11.5px] font-semibold transition-colors ${
+                isOwner
+                  ? 'bg-terracotta-soft text-terracotta'
+                  : 'border-[1.5px] border-dashed border-[var(--color-dashed)] text-muted'
+              }`}>
+              {isOwner ? '✓ je gère' : '＋ je gère'}
+            </button>
+          </div>
+
+          <div className="px-[16px] pb-[14px] flex flex-col gap-1.5">
+            {items.length === 0 && (
+              <p className="text-[12.5px] text-muted italic">Pas encore de produit.</p>
+            )}
+            {items.map((p) => (
+              <div key={p.id} className="flex items-center gap-2">
+                <span className="text-disabled-2 text-[14px] leading-none">•</span>
+                <span className="text-[14px] text-ink">{p.name}</span>
+                <Qty p={p} />
+              </div>
+            ))}
+            <button onClick={() => onAddProductTo(meal.id)}
+              className="mt-1 self-start text-[13px] text-terracotta font-semibold">＋ ingrédient</button>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -575,126 +776,182 @@ function QtyUnit({
     <div className="flex gap-2 shrink-0">
       <input type="number" min="0" step="any" inputMode="decimal" value={qty}
         onChange={(e) => onQty(e.target.value)} aria-label="Quantité"
-        className="w-[64px] bg-card border-[1.5px] border-line rounded-[13px] p-[13px] text-[14.5px] text-ink text-center outline-none focus:border-terracotta" />
+        className="w-[58px] bg-card border-[1.5px] border-line rounded-[13px] p-[13px] text-[14.5px] text-ink text-center outline-none focus:border-terracotta" />
       <select value={unit} onChange={(e) => onUnit(e.target.value)} aria-label="Unité"
-        className="bg-card border-[1.5px] border-line rounded-[13px] px-[10px] text-[14px] text-ink outline-none focus:border-terracotta">
+        className="w-[100px] bg-card border-[1.5px] border-line rounded-[13px] px-[10px] text-[14px] text-ink outline-none focus:border-terracotta">
         {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
       </select>
     </div>
   )
 }
 
-type DraftItem = { name: string; quantity: number | null; unit: string }
+/* ---------------- Modale d'ajout (produit / repas unifiés) ----------------
+   L'onglet « Repas » EST l'onglet « Produit » + (nom du repas, date). Un seul
+   composant, un seul state → on bascule d'un onglet à l'autre sans rien perdre. */
+type Row = { name: string; qty: string; unit: string }
+const blankRow = (): Row => ({ name: '', qty: '1', unit: 'unité' })
 
-function MealForm({
-  eventDays, onSubmit,
-}: {
-  eventDays: string[]
-  onSubmit: (label: string, items: DraftItem[], mealDate: string | null) => void
+function rowsToItems(rows: Row[]): DraftItem[] {
+  return rows
+    .map((r) => ({ name: r.name.trim(), quantity: r.qty ? Number(r.qty) : null, unit: r.unit }))
+    .filter((r) => r.name)
+}
+
+const COL = 'text-[10.5px] font-bold uppercase tracking-[0.6px] text-muted-2'
+
+// Lignes éditables (nom + quantité + unité) avec en-têtes de colonnes.
+// `noun` adapte le vocabulaire : « produit » ou « ingrédient ».
+function ItemRows({ rows, setRows, noun }: {
+  rows: Row[]
+  setRows: React.Dispatch<React.SetStateAction<Row[]>>
+  noun: 'produit' | 'ingrédient'
 }) {
-  const [label, setLabel] = useState('')
-  const [items, setItems] = useState<DraftItem[]>([])
-  const [mealDate, setMealDate] = useState<string | null>(null)
-  const [pname, setPname] = useState('')
-  const [pqty, setPqty] = useState('1')
-  const [punit, setPunit] = useState('unité')
+  const inputs = useRef<(HTMLInputElement | null)[]>([])
+  const pendingFocus = useRef(false)
+  const update = (i: number, patch: Partial<Row>) =>
+    setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)))
 
-  function addItem() {
-    if (!pname.trim()) return
-    setItems((xs) => [...xs, { name: pname.trim(), quantity: pqty ? Number(pqty) : null, unit: punit }])
-    setPname(''); setPqty('1'); setPunit('unité')
-  }
+  // Focus l'input de la ligne fraîchement ajoutée.
+  useEffect(() => {
+    if (!pendingFocus.current) return
+    pendingFocus.current = false
+    inputs.current[rows.length - 1]?.focus()
+  }, [rows.length])
 
+  const removable = rows.length > 1
   return (
-    <form onSubmit={(e) => { e.preventDefault(); if (label.trim()) onSubmit(label.trim(), items, mealDate) }}
-      className="flex flex-col gap-3">
-      <h3 className="font-serif text-[20px] text-ink">Nouveau repas</h3>
-      <input autoFocus value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60}
-        placeholder="ex : Dîner samedi, Apéro vendredi…" className={INPUT} />
-
-      {eventDays.length > 0 && (
-        <div>
-          <p className="text-[12px] font-bold uppercase tracking-[0.8px] text-muted-2 mb-2">
-            Quel jour&nbsp;? <span className="font-medium normal-case tracking-normal text-muted">(optionnel)</span>
-          </p>
-          <DateCalendar
-            eventDays={eventDays}
-            value={mealDate}
-            onSelect={(iso) => setMealDate((cur) => (cur === iso ? null : iso))}
-          />
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <span className={`flex-1 min-w-0 ${COL}`}>{noun === 'ingrédient' ? 'Ingrédient' : 'Produit'}</span>
+        <div className="flex gap-2 shrink-0">
+          <span className={`w-[58px] text-center ${COL}`}>Quantité</span>
+          <span className={`w-[100px] ${COL}`}>Unité</span>
         </div>
-      )}
-
-      <p className="text-[12px] font-bold uppercase tracking-[0.8px] text-muted-2">Produits</p>
-      {items.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          {items.map((it, i) => (
-            <div key={i} className="flex items-center gap-2 rounded-[11px] bg-soft px-[12px] py-[9px]">
-              <span className="text-[14px] text-ink flex-1">{it.name}</span>
-              <span className="text-[12px] text-muted">{qtyLabel(it)}</span>
-              <button type="button" onClick={() => setItems((xs) => xs.filter((_, j) => j !== i))}
-                className="text-[13px] text-muted hover:text-prune">✕</button>
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="flex gap-2">
-        <input value={pname} onChange={(e) => setPname(e.target.value)} maxLength={60}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem() } }}
-          placeholder="ex : Pâtes" className={INPUT} />
-        <QtyUnit qty={pqty} unit={punit} onQty={setPqty} onUnit={setPunit} />
+        {removable && <span className="w-[18px] shrink-0" aria-hidden />}
       </div>
-      <button type="button" onClick={addItem} disabled={!pname.trim()}
-        className="self-start text-[13px] text-terracotta font-semibold disabled:opacity-40">＋ ajouter à la liste</button>
-
-      <button type="submit" disabled={!label.trim()}
-        className="mt-1 w-full rounded-[15px] bg-terracotta p-[15px] font-bold text-white shadow-[0_4px_0_var(--color-terracotta-dk)] active:translate-y-1 active:shadow-none transition-all disabled:opacity-50">
-        Créer le repas{items.length > 0 ? ` (${items.length})` : ''}
-      </button>
-    </form>
+      {rows.map((row, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <input ref={(el) => { inputs.current[i] = el }}
+            value={row.name} onChange={(e) => update(i, { name: e.target.value })} maxLength={60}
+            placeholder="ex : Pâtes" className={`${INPUT} flex-1 min-w-0`} />
+          <QtyUnit qty={row.qty} unit={row.unit} onQty={(v) => update(i, { qty: v })} onUnit={(v) => update(i, { unit: v })} />
+          {removable && (
+            <button type="button" onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}
+              aria-label={`Retirer ce ${noun}`} className="shrink-0 w-[18px] text-[14px] text-muted hover:text-prune">✕</button>
+          )}
+        </div>
+      ))}
+      <button type="button" onClick={() => { pendingFocus.current = true; setRows((rs) => [...rs, blankRow()]) }}
+        className="self-start text-[13px] text-terracotta font-semibold">＋ ajouter un autre {noun}</button>
+    </div>
   )
 }
 
-function ProductForm({
-  meals, presetMeal, onSubmit,
+function AddForm({
+  initialMode, lockedDate, presetMeal, meals, eventDays, onCreateMeal, onAddProducts,
 }: {
-  meals: Meal[]
+  initialMode: 'product' | 'meal'
+  lockedDate: string | null
   presetMeal: string | null
-  onSubmit: (name: string, opts: { quantity: number | null; unit: string; tags: string[]; mealId: string | null }) => void
+  meals: Meal[]
+  eventDays: string[]
+  onCreateMeal: (label: string, items: DraftItem[], mealDate: string | null) => void
+  onAddProducts: (items: DraftItem[], mealId: string | null) => void
 }) {
-  const [name, setName] = useState('')
-  const [qty, setQty] = useState('1')
-  const [unit, setUnit] = useState('unité')
-  const [mealId, setMealId] = useState<string>(presetMeal ?? '')
+  const locked = lockedDate != null
+  // Ajout depuis un repas (« ＋ ingrédient ») : produit forcé, pas d'onglets.
+  const forcedProduct = !locked && presetMeal != null
+  const [mode, setMode] = useState<'product' | 'meal'>(locked ? 'meal' : forcedProduct ? 'product' : initialMode)
+  const [rows, setRows] = useState<Row[]>([blankRow()])
+  const [mealLabel, setMealLabel] = useState('')
+  const [mealDate, setMealDate] = useState<string | null>(lockedDate)
+  const [showCal, setShowCal] = useState(false)
+
+  const targetMeal = presetMeal ? meals.find((m) => m.id === presetMeal) ?? null : null
+  const items = rowsToItems(rows)
+  // Dans un repas, on parle d'« ingrédient » ; en ajout libre, de « produit ».
+  const noun: 'produit' | 'ingrédient' = mode === 'product' && !forcedProduct ? 'produit' : 'ingrédient'
+  const canSubmit = mode === 'meal' ? mealLabel.trim().length > 0 : items.length > 0
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) return
-    // Plus de tags libres : le seul tag est le repas associé (s'il y en a un),
-    // comme pour les produits saisis directement dans un repas.
-    const mealLabel = meals.find((m) => m.id === mealId)?.label
-    const tags = mealLabel ? [mealLabel] : []
-    onSubmit(name.trim(), { quantity: qty ? Number(qty) : null, unit, tags, mealId: mealId || null })
+    if (mode === 'meal') {
+      if (mealLabel.trim()) onCreateMeal(mealLabel.trim(), items, mealDate)
+    } else if (items.length) {
+      onAddProducts(items, presetMeal)
+    }
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-3">
-      <h3 className="font-serif text-[20px] text-ink">Nouveau produit</h3>
-      <div className="flex gap-2">
-        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} maxLength={60}
-          placeholder="ex : Pâtes, Bière…" className={INPUT} />
-        <QtyUnit qty={qty} unit={unit} onQty={setQty} onUnit={setUnit} />
-      </div>
-      <div>
-        <p className="text-[12px] font-bold uppercase tracking-[0.8px] text-muted-2 mb-2">Rattacher à un repas&nbsp;?</p>
-        <select value={mealId} onChange={(e) => setMealId(e.target.value)} className={INPUT}>
-          <option value="">Aucun (juste la liste de courses)</option>
-          {meals.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-        </select>
-      </div>
-      <button type="submit" disabled={!name.trim()}
+    <form onSubmit={submit} className="flex flex-col gap-4">
+      {locked ? (
+        <h3 className="font-serif text-[20px] text-ink">Nouveau repas</h3>
+      ) : forcedProduct ? (
+        <h3 className="font-serif text-[20px] text-ink">Ajouter un ingrédient</h3>
+      ) : (
+        <div className="bg-track rounded-[13px] p-[5px] flex gap-[4px]">
+          {([['product', '🛒 Produit'], ['meal', '🍽️ Repas']] as const).map(([t, label]) => (
+            <button type="button" key={t} onClick={() => setMode(t)}
+              className={`flex-1 text-center rounded-[9px] py-[9px] text-[13px] transition-colors ${
+                mode === t ? 'bg-ink text-white font-bold' : 'text-[#6b665c]'
+              }`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {mode === 'meal' && (
+        <div className="flex flex-col gap-3">
+          {locked ? (
+            <span className="self-start rounded-full bg-olive-soft px-[11px] py-[5px] text-[12.5px] font-semibold text-olive-text-dk">
+              📅 {mealDateLabel(lockedDate!)}
+            </span>
+          ) : eventDays.length > 0 ? (
+            <div>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => setShowCal((s) => !s)}
+                  className={`rounded-full px-[11px] py-[5px] text-[12.5px] font-semibold transition-colors ${
+                    mealDate
+                      ? 'bg-olive-soft text-olive-text-dk'
+                      : 'border-[1.5px] border-dashed border-[var(--color-dashed)] text-muted'
+                  }`}>
+                  📅 {mealDate ? mealDateLabel(mealDate) : 'Choisir un jour'}
+                </button>
+                {mealDate && (
+                  <button type="button" onClick={() => { setMealDate(null); setShowCal(false) }}
+                    className="text-[12px] text-muted hover:text-prune font-semibold">Retirer</button>
+                )}
+              </div>
+              {showCal && (
+                <div className="mt-3">
+                  <DateCalendar eventDays={eventDays} value={mealDate}
+                    onSelect={(iso) => { setMealDate((cur) => (cur === iso ? null : iso)); setShowCal(false) }} />
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          <input autoFocus value={mealLabel} onChange={(e) => setMealLabel(e.target.value)} maxLength={60}
+            placeholder="ex : Risotto, Gratin, Apéro, Dîner…" className={INPUT} />
+        </div>
+      )}
+
+      {mode === 'product' && targetMeal && (
+        <span className="self-start rounded-full bg-soft px-[11px] py-[5px] text-[12.5px] font-medium text-body">
+          🍽️ Pour {targetMeal.label}
+        </span>
+      )}
+
+      <ItemRows rows={rows} setRows={setRows} noun={noun} />
+
+      <button type="submit" disabled={!canSubmit}
         className="mt-1 w-full rounded-[15px] bg-terracotta p-[15px] font-bold text-white shadow-[0_4px_0_var(--color-terracotta-dk)] active:translate-y-1 active:shadow-none transition-all disabled:opacity-50">
-        Ajouter le produit
+        {mode === 'meal'
+          ? 'Créer le repas'
+          : items.length > 1
+            ? `Ajouter les ${noun === 'ingrédient' ? 'ingrédients' : 'produits'} (${items.length})`
+            : `Ajouter ${noun === 'ingrédient' ? "l'ingrédient" : 'le produit'}`}
       </button>
     </form>
   )

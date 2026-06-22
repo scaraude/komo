@@ -13,6 +13,9 @@ import { ensureUser } from '@/lib/auth'
 
 type NewItem = { name: string; quantity?: number | null; unit?: string }
 
+// Renvoie les ids réels créés en DB pour que le client réconcilie son état
+// optimiste (sinon « je gère »/toggle produit partiraient avec un id temporaire
+// inexistant en base → échec FK).
 export async function createMeal(
   slug: string,
   eventId: string,
@@ -20,7 +23,7 @@ export async function createMeal(
   label: string,
   items: NewItem[] = [],
   mealDate: string | null = null,
-) {
+): Promise<{ mealId: string; productIds: string[] }> {
   const clean = label.trim()
   if (!clean) throw new Error('Nom du repas requis.')
   const { supabase } = await ensureUser()
@@ -48,12 +51,16 @@ export async function createMeal(
       tags: [clean],
       created_by: participantId,
     }))
+  let productIds: string[] = []
   if (rows.length) {
-    const { error: itemsError } = await supabase.from('products').insert(rows)
+    // RETURNING renvoie les lignes dans l'ordre du VALUES inséré.
+    const { data, error: itemsError } = await supabase.from('products').insert(rows).select('id')
     if (itemsError) console.error('createMeal items insert failed', itemsError)
+    productIds = (data ?? []).map((d) => d.id)
   }
 
   revalidatePath(`/e/${slug}`)
+  return { mealId: meal.id, productIds }
 }
 
 export async function setMealDate(slug: string, mealId: string, mealDate: string | null) {
@@ -100,10 +107,14 @@ export async function toggleMealOwner(
   revalidatePath(`/e/${slug}`)
 }
 
-export async function deleteMeal(slug: string, mealId: string) {
+export async function deleteMeal(slug: string, mealId: string, deleteProducts = false) {
   const { supabase } = await ensureUser()
-  // Les produits rattachés deviennent libres (meal_id → null via FK on delete
-  // set null), ils restent dans la liste de courses.
+  // deleteProducts=true → on supprime aussi les produits du repas.
+  // Sinon ils deviennent libres (meal_id → null via FK on delete set null) et
+  // restent dans la liste de courses.
+  if (deleteProducts) {
+    await supabase.from('products').delete().eq('meal_id', mealId)
+  }
   await supabase.from('meals').delete().eq('id', mealId)
   revalidatePath(`/e/${slug}`)
 }
@@ -113,12 +124,12 @@ export async function addProduct(
   eventId: string,
   participantId: string,
   input: { name: string; quantity?: number | null; unit?: string; tags?: string[]; mealId?: string | null },
-) {
+): Promise<string> {
   const name = input.name.trim()
   if (!name) throw new Error('Nom du produit requis.')
   const tags = (input.tags ?? []).map((t) => t.trim()).filter(Boolean)
   const { supabase } = await ensureUser()
-  const { error } = await supabase.from('products').insert({
+  const { data, error } = await supabase.from('products').insert({
     event_id: eventId,
     name,
     quantity: input.quantity ?? null,
@@ -126,12 +137,13 @@ export async function addProduct(
     tags,
     meal_id: input.mealId ?? null,
     created_by: participantId,
-  })
-  if (error) {
+  }).select('id').single()
+  if (error || !data) {
     console.error('addProduct insert failed', error)
     throw new Error("Impossible d'ajouter ce produit.")
   }
   revalidatePath(`/e/${slug}`)
+  return data.id
 }
 
 export async function toggleProduct(slug: string, productId: string, checked: boolean) {
