@@ -253,6 +253,13 @@ export function BouffePanel({
 
   const checkedCount = products.filter((p) => p.checked).length
 
+  const addButton = (
+    <button onClick={() => setSheet({ kind: 'add', tab: 'product', presetMeal: null })}
+      className="w-full rounded-[16px] bg-terracotta p-[15px] text-center text-[15px] font-bold text-white shadow-[0_4px_0_var(--color-terracotta-dk)] active:translate-y-1 active:shadow-none transition-all">
+      ＋ Ajouter
+    </button>
+  )
+
   return (
     <section>
       <div className="bg-track rounded-[13px] p-[5px] flex gap-[4px] mb-[16px]">
@@ -277,6 +284,7 @@ export function BouffePanel({
           ownersOf={ownersOf}
           pseudoOf={pseudoOf}
           participantId={participantId}
+          addButton={addButton}
           onDeleteMeal={requestDeleteMeal}
           onAddProductTo={(mealId) => setSheet({ kind: 'add', tab: 'product', presetMeal: mealId })}
           onAddMealAt={(date) => setSheet({ kind: 'mealAt', date })}
@@ -285,18 +293,17 @@ export function BouffePanel({
           onMoveMeal={handleSetMealDate}
         />
       ) : (
-        <ShoppingView
-          products={products}
-          mealLabel={(id) => meals.find((m) => m.id === id)?.label ?? null}
-          onToggle={handleToggle}
-          onDelete={handleDeleteProduct}
-        />
+        <>
+          {/* Onglet Produits : bouton en haut, avant la liste. */}
+          <div className="mb-[16px]">{addButton}</div>
+          <ShoppingView
+            products={products}
+            mealLabel={(id) => meals.find((m) => m.id === id)?.label ?? null}
+            onToggle={handleToggle}
+            onDelete={handleDeleteProduct}
+          />
+        </>
       )}
-
-      <button onClick={() => setSheet({ kind: 'add', tab: 'product', presetMeal: null })}
-        className="mt-[14px] w-full rounded-[16px] bg-terracotta p-[15px] text-center text-[15px] font-bold text-white shadow-[0_4px_0_var(--color-terracotta-dk)] active:translate-y-1 active:shadow-none transition-all">
-        ＋ Ajouter
-      </button>
 
       {sheet?.kind === 'add' && (
         <Sheet onClose={() => setSheet(null)}>
@@ -390,10 +397,11 @@ type CardProps = {
 }
 
 function MealsView({
-  meals, eventDays, onAddMealAt, onMoveMeal, ...cardProps
+  meals, eventDays, addButton, onAddMealAt, onMoveMeal, ...cardProps
 }: CardProps & {
   meals: Meal[]
   eventDays: string[]
+  addButton: React.ReactNode
   onAddMealAt: (date: string) => void
   onMoveMeal: (mealId: string, date: string | null) => void
 }) {
@@ -429,15 +437,21 @@ function MealsView({
   if (!canPickDate) {
     if (meals.length === 0) {
       return (
-        <p className="text-muted text-[13px] py-6 text-center">
-          Aucun repas pour l&apos;instant. Ajoute un dîner, un apéro…
-        </p>
+        <>
+          <p className="text-muted text-[13px] py-6 text-center">
+            Aucun repas pour l&apos;instant. Ajoute un dîner, un apéro…
+          </p>
+          {addButton}
+        </>
       )
     }
     return (
-      <div className="flex flex-col gap-[11px]">
-        {meals.map((meal) => <MealCard key={meal.id} meal={meal} showDate={false} {...cardProps} />)}
-      </div>
+      <>
+        <div className="flex flex-col gap-[11px]">
+          {meals.map((meal) => <MealCard key={meal.id} meal={meal} showDate={false} {...cardProps} />)}
+        </div>
+        <div className="mt-[14px]">{addButton}</div>
+      </>
     )
   }
 
@@ -468,6 +482,9 @@ function MealsView({
           )}
         </div>
       ))}
+
+      {/* Bouton d'ajout : juste sous l'accordéon « Tous les repas ». */}
+      <div className="mb-[18px]">{addButton}</div>
 
       <div className="flex flex-col gap-[14px]">
         {eventDays.map((day) => {
