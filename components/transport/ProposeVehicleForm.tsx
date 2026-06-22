@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { createLeg } from '@/lib/actions/transport'
+import { Sheet } from '@/components/ui/Sheet'
 import { PointField } from './PointField'
 
 const MODES = [
@@ -82,10 +83,8 @@ export function ProposeVehicleForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-4">
-      <div className="absolute inset-0 bg-ink/40" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-paper rounded-[22px] shadow-[0_8px_40px_rgba(60,45,20,0.18)] p-6 max-h-[90vh] overflow-y-auto">
-        <h3 className="font-serif text-[22px] text-ink mb-5">
+    <Sheet onClose={onClose} labelledBy="propose-trip-title">
+        <h3 id="propose-trip-title" className="font-serif text-[22px] text-ink mb-5">
           Je propose un trajet {direction === 'aller' ? '→' : '←'}
         </h3>
 
@@ -245,7 +244,6 @@ export function ProposeVehicleForm({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Sheet>
   )
 }

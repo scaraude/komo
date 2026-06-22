@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Sheet } from '@/components/ui/Sheet'
 
 const AVATAR_COLORS = ['#c4602f', '#5f7a3e', '#9a8a6a', '#3a7ca5', '#9a5a6e']
 
@@ -52,10 +53,8 @@ export function ParticipantsBadge({
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center px-4 pb-4 sm:items-center">
-          <div className="absolute inset-0 bg-ink/40" onClick={() => setOpen(false)} />
-          <div className="relative w-full max-w-md rounded-[22px] bg-paper p-6 shadow-[0_8px_40px_rgba(60,45,20,0.18)]">
-            <h3 className="mb-4 font-serif text-[22px] text-ink">
+        <Sheet onClose={() => setOpen(false)} labelledBy="participants-title">
+            <h3 id="participants-title" className="mb-4 font-serif text-[22px] text-ink">
               Les {participants.length} potes
             </h3>
             <div className="flex max-h-[60vh] flex-col gap-2 overflow-y-auto">
@@ -81,8 +80,7 @@ export function ParticipantsBadge({
             >
               Fermer
             </button>
-          </div>
-        </div>
+        </Sheet>
       )}
     </>
   )

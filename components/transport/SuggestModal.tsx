@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { suggestAssignments, applyAssignments } from '@/lib/actions/transport'
+import { Sheet } from '@/components/ui/Sheet'
 import type { Assignment } from '@/lib/transport/solver'
 import type { Database } from '@/lib/database.types'
 
@@ -55,10 +56,8 @@ export function SuggestModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-4">
-      <div className="absolute inset-0 bg-ink/40" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-paper rounded-[22px] shadow-[0_8px_40px_rgba(60,45,20,0.18)] p-6">
-        <h3 className="font-serif text-[22px] text-ink mb-1">✨ Auto-affecter</h3>
+    <Sheet onClose={onClose} labelledBy="suggest-title">
+        <h3 id="suggest-title" className="font-serif text-[22px] text-ink mb-1">✨ Auto-affecter</h3>
         <p className="text-[13px] text-muted mb-5">
           Le solveur cherche la meilleure répartition selon les villes de départ.
         </p>
@@ -107,7 +106,6 @@ export function SuggestModal({
             </div>
           </>
         )}
-      </div>
-    </div>
+    </Sheet>
   )
 }

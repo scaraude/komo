@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { Sheet } from '@/components/ui/Sheet'
 
 export function ShareSheet({ slug, title }: { slug: string; title: string }) {
   const [open, setOpen] = useState(false)
@@ -10,15 +11,6 @@ export function ShareSheet({ slug, title }: { slug: string; title: string }) {
   // donc hydraté) → pas de mismatch SSR et plus de flash « komo.app/… ».
   const fullUrl = typeof window !== 'undefined' ? `${window.location.origin}/e/${slug}` : ''
   const url = fullUrl.replace(/^https?:\/\//, '')
-
-  useEffect(() => {
-    if (!open) return
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open])
 
   async function copy() {
     try {
@@ -43,16 +35,9 @@ export function ShareSheet({ slug, title }: { slug: string; title: string }) {
       </button>
 
       {open && (
-        <div
-          onClick={() => setOpen(false)}
-          className="animate-fade-in fixed inset-0 z-50 flex items-end justify-center bg-[rgba(25,20,12,0.45)]"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="animate-sheet-up w-full max-w-[440px] rounded-t-[28px] bg-sheet px-[22px] pb-[30px] pt-6"
-          >
-            <div className="mx-auto mb-5 h-[5px] w-[42px] rounded-full bg-line-3" />
-            <h2 className="mb-1 font-serif text-[23px] text-ink">Partage le Komo</h2>
+        <Sheet variant="bottom" onClose={() => setOpen(false)} labelledBy="share-title">
+          <div className="mx-auto mb-5 h-[5px] w-[42px] rounded-full bg-line-3" />
+          <h2 id="share-title" className="mb-1 font-serif text-[23px] text-ink">Partage le Komo</h2>
             <p className="mb-5 text-[14px] text-muted">
               N&apos;importe qui avec le lien peut se déclarer. Aucun compte requis.
             </p>
@@ -83,8 +68,7 @@ export function ShareSheet({ slug, title }: { slug: string; title: string }) {
             >
               Fermer
             </button>
-          </div>
-        </div>
+        </Sheet>
       )}
     </>
   )
