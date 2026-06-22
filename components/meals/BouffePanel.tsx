@@ -523,10 +523,7 @@ function ShoppingView({
                 <span className={`text-[14.5px] ${p.checked ? 'text-muted line-through' : 'text-ink font-medium'}`}>{p.name}</span>
                 <Qty p={p} />
               </span>
-              <span className="flex items-center gap-1.5 mt-0.5">
-                {ml && <span className="text-[11px] text-muted">🍽️ {ml}</span>}
-                <Tags tags={p.tags} />
-              </span>
+              {ml && <span className="mt-0.5 block text-[11px] text-muted">🍽️ {ml}</span>}
             </button>
             <button onClick={() => onDelete(p.id)}
               className="shrink-0 text-[12px] text-muted hover:text-prune transition-colors">🗑</button>
@@ -552,17 +549,6 @@ function Qty({ p }: { p: Product }) {
   const label = qtyLabel(p)
   if (!label) return null
   return <span className="shrink-0 rounded-full bg-soft px-[7px] py-[1px] text-[11px] font-semibold text-body">{label}</span>
-}
-
-function Tags({ tags }: { tags: string[] }) {
-  if (!tags.length) return null
-  return (
-    <span className="flex flex-wrap gap-1">
-      {tags.map((t) => (
-        <span key={t} className="rounded-full bg-soft px-[7px] py-[1px] text-[10.5px] font-medium text-body">{t}</span>
-      ))}
-    </span>
-  )
 }
 
 function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
@@ -679,13 +665,15 @@ function ProductForm({
   const [name, setName] = useState('')
   const [qty, setQty] = useState('1')
   const [unit, setUnit] = useState('unité')
-  const [tagsRaw, setTagsRaw] = useState('')
   const [mealId, setMealId] = useState<string>(presetMeal ?? '')
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) return
-    const tags = tagsRaw.split(',').map((t) => t.trim()).filter(Boolean)
+    // Plus de tags libres : le seul tag est le repas associé (s'il y en a un),
+    // comme pour les produits saisis directement dans un repas.
+    const mealLabel = meals.find((m) => m.id === mealId)?.label
+    const tags = mealLabel ? [mealLabel] : []
     onSubmit(name.trim(), { quantity: qty ? Number(qty) : null, unit, tags, mealId: mealId || null })
   }
 
@@ -697,8 +685,6 @@ function ProductForm({
           placeholder="ex : Pâtes, Bière…" className={INPUT} />
         <QtyUnit qty={qty} unit={unit} onQty={setQty} onUnit={setUnit} />
       </div>
-      <input value={tagsRaw} onChange={(e) => setTagsRaw(e.target.value)} maxLength={80}
-        placeholder="Tags séparés par des virgules (goûter, apéro…)" className={INPUT} />
       <div>
         <p className="text-[12px] font-bold uppercase tracking-[0.8px] text-muted-2 mb-2">Rattacher à un repas&nbsp;?</p>
         <select value={mealId} onChange={(e) => setMealId(e.target.value)} className={INPUT}>
