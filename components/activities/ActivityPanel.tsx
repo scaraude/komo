@@ -61,7 +61,10 @@ export function ActivityPanel({
   const [, startTransition] = useTransition()
   // Ids des activités ajoutées en optimiste (temp uuid) en attente de leur ligne
   // réelle via realtime — sert à remplacer le placeholder au lieu de doublonner.
+  // Ref (lu dans le handler realtime et handleToggle, hors render) + state miroir
+  // pour le rendu (désactiver l'inscription tant que la carte n'est pas persistée).
   const optimisticActivityIds = useRef<Set<string>>(new Set())
+  const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set())
 
   // Realtime : la liste et les inscriptions se mettent à jour sans recharger.
   useEffect(() => {
@@ -120,6 +123,9 @@ export function ActivityPanel({
   }
 
   function handleToggle(activity: Activity) {
+    // L'activité n'est pas encore persistée (id temporaire) : s'inscrire ferait
+    // échouer la FK activity_signups.activity_id. On attend la vraie ligne.
+    if (optimisticActivityIds.current.has(activity.id)) return
     const joined = isSignedUp(activity.id)
     const count = signupsFor(activity.id).length
     if (!joined && activity.max_participants != null && count >= activity.max_participants) return
@@ -148,8 +154,9 @@ export function ActivityPanel({
   }
 
   function handlePropose(input: ActivityInput) {
+    const tempId = randomId()
     const optimistic: Activity = {
-      id: randomId(),
+      id: tempId,
       event_id: eventId,
       label: input.label.trim(),
       activity_date: input.activityDate || null,
@@ -163,10 +170,37 @@ export function ActivityPanel({
       created_by: participantId,
       created_at: new Date().toISOString(),
     }
-    optimisticActivityIds.current.add(optimistic.id)
+    optimisticActivityIds.current.add(tempId)
+    setPendingIds((s) => new Set(s).add(tempId))
     setActivities((prev) => [...prev, optimistic])
     setShowForm(false)
-    startTransition(() => proposeActivity(slug, eventId, participantId, input))
+    const clearPending = () => {
+      optimisticActivityIds.current.delete(tempId)
+      setPendingIds((s) => {
+        const next = new Set(s)
+        next.delete(tempId)
+        return next
+      })
+    }
+    startTransition(async () => {
+      try {
+        // On remplace la carte optimiste par la vraie ligne (vrai id) dès le retour
+        // serveur — plus fiable que d'attendre le realtime, et l'inscription peut
+        // alors viser un activity_id qui existe vraiment.
+        const row = normalizeActivity(await proposeActivity(slug, eventId, participantId, input))
+        clearPending()
+        setActivities((prev) => {
+          const withoutTemp = prev.filter((a) => a.id !== tempId)
+          // Si le realtime a déjà inséré la vraie ligne, on évite le doublon.
+          if (withoutTemp.some((a) => a.id === row.id)) return withoutTemp
+          return [...withoutTemp, row]
+        })
+      } catch {
+        // Échec : on retire la carte optimiste.
+        clearPending()
+        setActivities((prev) => prev.filter((a) => a.id !== tempId))
+      }
+    })
   }
 
   const sorted = [...activities].sort((a, b) => signupsFor(b.id).length - signupsFor(a.id).length)
@@ -184,6 +218,7 @@ export function ActivityPanel({
           <ActivityCard
             key={a.id}
             activity={a}
+            pending={pendingIds.has(a.id)}
             signedPeople={signupsFor(a.id).map((s) => participants.find((p) => p.id === s.participant_id)).filter(Boolean) as Person[]}
             mine={isSignedUp(a.id)}
             canDelete={isAdmin || a.created_by === participantId}
@@ -210,6 +245,7 @@ export function ActivityPanel({
 // ============================================================
 function ActivityCard({
   activity,
+  pending,
   signedPeople,
   mine,
   canDelete,
@@ -217,6 +253,7 @@ function ActivityCard({
   onDelete,
 }: {
   activity: Activity
+  pending: boolean
   signedPeople: Person[]
   mine: boolean
   canDelete: boolean
@@ -322,16 +359,16 @@ function ActivityCard({
       <div className="flex items-center gap-2 px-4 py-3">
         <button
           onClick={onToggle}
-          disabled={full}
+          disabled={full || pending}
           className={`flex-1 rounded-full border-[1.5px] py-2 text-sm font-bold transition-colors ${
             mine
               ? 'border-ink bg-ink text-paper'
-              : full
+              : full || pending
                 ? 'cursor-not-allowed border-line bg-card text-disabled'
                 : 'border-line-3 bg-card hover:border-terracotta hover:text-terracotta'
           }`}
         >
-          {mine ? '✓ Inscrit' : full ? 'Complet' : "Je m'inscris"}
+          {pending ? 'Création…' : mine ? '✓ Inscrit' : full ? 'Complet' : "Je m'inscris"}
         </button>
         {activity.booking_url && (
           <a
@@ -360,10 +397,11 @@ function ActivityForm({
   onCancel: () => void
   onSubmit: (input: ActivityInput) => void
 }) {
-  const [priceMode, setPriceMode] = useState<'none' | 'total' | 'per_person' | 'per_group'>('none')
+  const [priceMode, setPriceMode] = useState<'none' | 'total' | 'per_person'>('none')
 
-  const inputCls =
-    'w-full rounded-[13px] border-[1.5px] border-line bg-card px-3 py-2.5 text-sm focus:border-terracotta focus:outline-none'
+  const inputBase =
+    'rounded-[13px] border-[1.5px] border-line bg-card px-3 py-2.5 text-sm focus:border-terracotta focus:outline-none'
+  const inputCls = `w-full ${inputBase}`
 
   return (
     <form
@@ -380,8 +418,6 @@ function ActivityForm({
           startTime: fd.get('start_time')?.toString() || null,
           price: priceMode === 'none' ? null : num('price'),
           priceType: priceMode === 'none' ? null : priceMode,
-          groupSize: priceMode === 'per_group' ? num('group_size') : null,
-          minParticipants: num('min_participants'),
           maxParticipants: num('max_participants'),
           bookingUrl: fd.get('booking_url')?.toString() || null,
         })
@@ -398,12 +434,11 @@ function ActivityForm({
       {/* Prix + mode de découpage */}
       <div className="rounded-[13px] border-[1.5px] border-line-2 p-3">
         <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-muted">Prix</label>
-        <div className="mb-2 grid grid-cols-2 gap-1.5">
+        <div className="mb-2 grid grid-cols-3 gap-1.5">
           {([
             ['none', 'Gratuit'],
             ['total', 'Total à diviser'],
             ['per_person', 'Par personne'],
-            ['per_group', 'Par groupe'],
           ] as const).map(([val, lbl]) => (
             <button
               key={val}
@@ -418,20 +453,12 @@ function ActivityForm({
           ))}
         </div>
         {priceMode !== 'none' && (
-          <div className="flex gap-2">
-            <input name="price" type="number" min="0" step="0.01" required placeholder={priceMode === 'per_person' ? '€ / pers' : priceMode === 'per_group' ? '€ / groupe' : '€ total'} className={`${inputCls} flex-1`} />
-            {priceMode === 'per_group' && (
-              <input name="group_size" type="number" min="2" step="1" required placeholder="par (ex 2)" className={`${inputCls} w-28`} />
-            )}
-          </div>
+          <input name="price" type="number" min="0" step="0.01" required placeholder={priceMode === 'per_person' ? '€ par personne' : '€ total à diviser'} className={inputCls} />
         )}
       </div>
 
-      {/* Capacité */}
-      <div className="flex gap-2">
-        <input name="min_participants" type="number" min="0" step="1" placeholder="min (optionnel)" aria-label="Minimum de participants" className={`${inputCls} flex-1`} />
-        <input name="max_participants" type="number" min="1" step="1" placeholder="max / places" aria-label="Maximum de participants (places)" className={`${inputCls} flex-1`} />
-      </div>
+      {/* Nombre max de participants (places) */}
+      <input name="max_participants" type="number" min="1" step="1" placeholder="Nombre max de participants (optionnel)" aria-label="Nombre maximum de participants" className={inputCls} />
 
       <input name="booking_url" type="url" placeholder="Lien de réservation (optionnel)" className={inputCls} />
 

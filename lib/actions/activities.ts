@@ -50,7 +50,7 @@ export async function proposeActivity(
   }
 
   const { supabase } = await ensureUser()
-  const { error } = await supabase.from('activities').insert({
+  const { data, error } = await supabase.from('activities').insert({
     event_id: eventId,
     label,
     activity_date: input.activityDate || null,
@@ -62,12 +62,13 @@ export async function proposeActivity(
     max_participants: max,
     booking_url: safeHttpUrl(input.bookingUrl),
     created_by: participantId,
-  })
-  if (error) {
+  }).select().single()
+  if (error || !data) {
     console.error('proposeActivity insert failed', error)
     throw new Error("Impossible de proposer cette activité.")
   }
   revalidatePath(`/e/${slug}`)
+  return data
 }
 
 // Inscription : on s'inscrit / se désinscrit soi-même (toggle sur soi).
