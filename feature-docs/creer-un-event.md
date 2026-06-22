@@ -4,26 +4,33 @@
 
 ## Ce que l'utilisateur peut faire
 
-Créer un event en 2 étapes : choisir le type, puis remplir les détails (titre, destination, dates). Obtenir un lien court à partager sur WhatsApp.
+Créer un event en un seul écran (la landing `/`) : nom, destination (autocomplete
+Geoapify), dates, vibe facultative, email facultatif. Obtenir un lien court à
+partager sur WhatsApp.
 
-## Étape 1 — Sélection du type
+## Formulaire unique — `app/LandingForm.tsx`
 
-Grille 2×3 de cards. Le type choisi influe sur le wording dans toute l'app.
+Un seul écran, pas d'étape de sélection de type au préalable. Champs :
+
+- **Nom du Komo** — requis.
+- **Où ça ?** — destination, requis, via `PlaceAutocomplete` (proxy `/api/places`).
+- **Quand** — deux champs date. Toggle « Pas encore de date ? » → masque les
+  dates, pose `sondage=1` ; `createEvent` stocke `date_start`/`date_end` à `null`.
+  La page event bascule alors en mode sondage (tab « Dates 📅 » au lieu de « Présence »).
+- **Une vibe ? · facultatif** — chips ; aucune sélection ⇒ `event_type = 'autre'`.
+- **Ton email · facultatif** — affiché seulement si l'identité n'a pas déjà un email
+  lié (`showEmail`). Sert à retrouver ses Komos.
+
+La vibe influe sur le wording dans toute l'app :
 
 | Type | Eyebrow sur la page event | Question présence |
 |---|---|---|
-| Week-end 🏕️ | Komo · week-end | tu viens ? |
+| Week-end 🏔️ | Komo · week-end | tu viens ? |
 | Soirée 🎉 | Komo · soirée | tu viens ? |
-| Concert 🎵 | Komo · concert | tu y vas ? |
+| Concert 🎸 | Komo · concert | tu y vas ? |
 | Road trip 🚗 | Komo · road trip | t'embarques ? |
 | Sport ⚽ | Komo · sport | tu joues ? |
-| Autre ✨ | Komo · ton event | tu es… |
-
-## Étape 2 — Formulaire détails
-
-Champs : titre, destination (placeholder adapté au type), dates début/fin.
-
-**Mode sondage** : toggle "Pas sûr des dates ?" → les champs date disparaissent, `date_start` et `date_end` sont stockés `null`. La page event bascule automatiquement en mode sondage (tab "Dates 📅" à la place de "Présence").
+| Autre ✨ | Komo · ton event | tu es là ? |
 
 ## Après soumission
 
@@ -46,8 +53,9 @@ Server Component. Vérifie le cookie session → redirige vers `/join` si absent
 
 ## Fichiers
 
-- `app/new/NewEventForm.tsx` — Client Component 2 étapes
-- `app/new/page.tsx`
+- `app/LandingForm.tsx` — Client Component, formulaire unique (landing `/`)
+- `app/page.tsx` — rend `LandingForm`
+- `app/DestinationField.tsx` — wrapper autocomplete destination
 - `lib/actions/events.ts` — `createEvent`, `updateDeadline`
 - `app/e/[slug]/page.tsx` — page principale
 - `app/e/[slug]/layout.tsx` — metadata + OG
