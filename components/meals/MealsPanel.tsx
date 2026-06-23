@@ -43,7 +43,7 @@ type SheetState =
   | { kind: 'add'; tab: 'product' | 'meal'; presetMeal: string | null }
   | { kind: 'mealAt'; date: string }
 
-export function BouffePanel({
+export function MealsPanel({
   slug,
   eventId,
   participantId,

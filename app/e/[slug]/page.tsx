@@ -11,7 +11,7 @@ import { DatePoll } from '@/components/dates/DatePoll'
 import { Avatar } from '@/components/ui/Avatar'
 import { formatEventDates } from '@/lib/format'
 import { AccommodationSection } from '@/components/accommodation/AccommodationSection'
-import { BouffePanel } from '@/components/meals/BouffePanel'
+import { MealsPanel } from '@/components/meals/MealsPanel'
 import { ActivityPanel } from '@/components/activities/ActivityPanel'
 import { RecapButton } from '@/components/event/RecapButton'
 import { promoteParticipant } from '@/lib/actions/participants'
@@ -85,17 +85,17 @@ export default async function EventPage({
   const wording = EVENT_TYPE_WORDING[event.event_type as keyof typeof EVENT_TYPE_WORDING] ?? EVENT_TYPE_WORDING.autre
   const vibe = VIBE[event.event_type as keyof typeof VIBE] ?? VIBE.autre
 
-  const isSondage = !event.date_start
+  const isPoll = !event.date_start
   const pendingCount = participants.filter((p) => !p.presence_status).length
-  const isMultiDay = !isSondage && event.date_start !== event.date_end
+  const isMultiDay = !isPoll && event.date_start !== event.date_end
 
   // Navigation : pas de tab valide → hub. tab valide → écran module.
-  const presenceTabName = isSondage ? 'dates' : 'presence'
+  const presenceTabName = isPoll ? 'dates' : 'presence'
   const activeTab = tab && MODULE_TABS.has(tab) ? tab : null
   const showHub = activeTab === null
 
   // Date proposals (sondage mode)
-  const { data: dateProposals } = isSondage
+  const { data: dateProposals } = isPoll
     ? await supabase.from('date_proposals').select('*').eq('event_id', event.id).order('proposed_date')
     : { data: [] }
 
@@ -131,7 +131,7 @@ export default async function EventPage({
       const taken = (occupants ?? []).filter((o) => o.leg_id === l.id).length
       return acc + Math.max(0, (l.total_seats ?? 0) - taken)
     }, 0)
-  const bouffeCount = (products ?? []).length
+  const groceryCount = (products ?? []).length
   const activityCount = (activities ?? []).length
   const dateProposalCount = (dateProposals ?? []).length
   const rsvpLabel = participant.presence_status ? RSVP_LABEL[participant.presence_status] : 'à déclarer'
@@ -147,7 +147,7 @@ export default async function EventPage({
           </div>
           <h1 className="font-serif text-[27px] leading-[1.1] text-on-dark">{event.title}</h1>
           <div className="mt-[7px] text-[13px] text-on-dark-2">
-            {isSondage ? 'Dates à définir' : formatEventDates(event.date_start, event.date_end)}
+            {isPoll ? 'Dates à définir' : formatEventDates(event.date_start, event.date_end)}
             {event.destination ? ` · ${event.destination}` : ''}
           </div>
           <ParticipantsBadge
@@ -168,7 +168,7 @@ export default async function EventPage({
 
         {/* Grille modules 2×2 */}
         <div className="mb-[18px] grid grid-cols-2 gap-[12px]">
-          {isSondage ? (
+          {isPoll ? (
             <ModuleTile href="?tab=dates" emoji="📅" title="Dates"
               subtitle={`${dateProposalCount} proposition${dateProposalCount > 1 ? 's' : ''}`} />
           ) : (
@@ -178,7 +178,7 @@ export default async function EventPage({
           <ModuleTile href="?tab=transport" emoji="🚗" title="Transport"
             subtitle={freeSeats > 0 ? `${freeSeats} place${freeSeats > 1 ? 's' : ''} libre${freeSeats > 1 ? 's' : ''}` : 'à organiser'} />
           <ModuleTile href="?tab=bouffe" emoji="🛒" title="Bouffe"
-            subtitle={bouffeCount > 0 ? `${bouffeCount} produit${bouffeCount > 1 ? 's' : ''}` : 'rien encore'} />
+            subtitle={groceryCount > 0 ? `${groceryCount} produit${groceryCount > 1 ? 's' : ''}` : 'rien encore'} />
           <ModuleTile href="?tab=activites" emoji="🎟️" title="Activités"
             subtitle={activityCount > 0 ? `${activityCount} activité${activityCount > 1 ? 's' : ''}` : 'rien encore'} />
           <div className="flex h-[94px] flex-col justify-between rounded-[19px] border-[1.5px] border-dashed border-[#ddd1bd] bg-soft p-[17px]">
@@ -224,7 +224,7 @@ export default async function EventPage({
         <section>
           <h1 className="mb-[18px] font-serif text-[30px] text-ink">{wording.presenceQ}</h1>
 
-          {!isSondage && <DeadlineBar
+          {!isPoll && <DeadlineBar
             slug={slug}
             deadline={event.presence_deadline}
             pendingCount={pendingCount}
@@ -321,7 +321,7 @@ export default async function EventPage({
 
       {/* Bouffe */}
       {activeTab === 'bouffe' && (
-        <BouffePanel
+        <MealsPanel
           slug={slug}
           eventId={event.id}
           participantId={participant.id}
