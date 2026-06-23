@@ -91,7 +91,7 @@ export function LandingForm({ showEmail }: { showEmail: boolean }) {
       {pollMode ? (
         <div className="mb-[18px] rounded-[15px] border-[1.5px] border-dashed border-terracotta bg-terracotta-soft px-4 py-[14px] text-[13.5px] font-medium leading-[1.45] text-terracotta-dk">
           📅 On vote pour les dates — chacun coche ce qui l&apos;arrange, tu fixeras la meilleure.
-          <input type="hidden" name="sondage" value="1" />
+          <input type="hidden" name="poll" value="1" />
         </div>
       ) : (
         <div className="mb-[18px] flex gap-[10px]">
