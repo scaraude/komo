@@ -276,7 +276,7 @@ export default async function EventPage({
                   }`}>
                   <div className="flex items-center gap-2">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-xs font-bold text-paper">
-                      {p.pseudo[0].toUpperCase()}
+                      {p.pseudo[0]?.toUpperCase() ?? '?'}
                     </div>
                     <div>
                       <span className="text-sm font-semibold">

@@ -50,8 +50,8 @@ export function Sheet({
       if (e.key === 'Tab' && panel) {
         const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE))
         if (items.length === 0) return
-        const first = items[0]
-        const last = items[items.length - 1]
+        const first = items[0]!
+        const last = items[items.length - 1]!
         if (e.shiftKey && document.activeElement === first) {
           e.preventDefault()
           last.focus()

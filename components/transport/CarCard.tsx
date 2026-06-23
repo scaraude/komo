@@ -157,7 +157,7 @@ export function CarCard({
             return (
               <div key={o.id} className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-full bg-ink text-white text-xs font-bold flex items-center justify-center shrink-0">
-                  {p?.pseudo[0].toUpperCase() ?? '?'}
+                  {p?.pseudo[0]?.toUpperCase() ?? '?'}
                 </div>
                 <span className="text-[14px] font-medium text-ink">{p?.pseudo ?? '…'}</span>
                 {o.is_driver && <span className="text-[12px] text-muted ml-auto">conducteur·ice</span>}
