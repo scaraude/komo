@@ -24,6 +24,7 @@ export function CarCard({
   participants,
   currentParticipantId,
   eventDestination,
+  onEdit,
 }: {
   slug: string
   leg: Leg
@@ -31,6 +32,7 @@ export function CarCard({
   participants: Participant[]
   currentParticipantId: string
   eventDestination: string
+  onEdit: () => void
 }) {
   const [localOccupants, setLocalOccupants] = useState(occupants)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
@@ -212,26 +214,29 @@ export function CarCard({
           </div>
         </div>
       ) : (
-        (leg.link_url || isAuthor || (isMember && !myOccupant?.is_driver)) && (
-          <div className="px-[16px] py-[10px] border-t border-line-2 flex items-center justify-between gap-3">
-            {leg.link_url ? (
-              <a href={leg.link_url} target="_blank" rel="noopener noreferrer" className="text-[12px] text-terracotta font-semibold underline">
-                {isBillet ? 'Lien / billet →' : 'Lien résa →'}
-              </a>
-            ) : <span />}
-            <div className="flex items-center gap-4 shrink-0">
-              {isMember && !myOccupant?.is_driver && (
-                <button onClick={handleLeave} className="text-[12px] text-muted hover:text-terracotta transition-colors">Quitter</button>
-              )}
-              {isAuthor && (
-                <button onClick={() => setConfirmingDelete(true)}
-                  className="text-[12px] text-muted hover:text-prune transition-colors inline-flex items-center gap-1">
-                  <span aria-hidden>🗑</span> Supprimer
-                </button>
-              )}
-            </div>
+        /* Barre d'actions : toujours affichée — l'édition est ouverte à tout membre. */
+        <div className="px-[16px] py-[10px] border-t border-line-2 flex items-center justify-between gap-3">
+          {leg.link_url ? (
+            <a href={leg.link_url} target="_blank" rel="noopener noreferrer" className="text-[12px] text-terracotta font-semibold underline">
+              {isBillet ? 'Lien / billet →' : 'Lien résa →'}
+            </a>
+          ) : <span />}
+          <div className="flex items-center gap-4 shrink-0">
+            <button onClick={onEdit}
+              className="text-[12px] text-muted hover:text-olive transition-colors inline-flex items-center gap-1">
+              <span aria-hidden>✎</span> Modifier
+            </button>
+            {isMember && !myOccupant?.is_driver && (
+              <button onClick={handleLeave} className="text-[12px] text-muted hover:text-terracotta transition-colors">Quitter</button>
+            )}
+            {isAuthor && (
+              <button onClick={() => setConfirmingDelete(true)}
+                className="text-[12px] text-muted hover:text-prune transition-colors inline-flex items-center gap-1">
+                <span aria-hidden>🗑</span> Supprimer
+              </button>
+            )}
           </div>
-        )
+        </div>
       )}
     </div>
   )

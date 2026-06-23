@@ -39,6 +39,7 @@ export function TransportPanel({
   const [direction, setDirection] = useState<'aller' | 'retour'>(initialDirection)
   const [showForm, setShowForm] = useState(false)
   const [showSuggest, setShowSuggest] = useState(false)
+  const [editingLeg, setEditingLeg] = useState<Leg | null>(null)
 
   const directionLegs = legs.filter((l) => l.direction === direction)
   const assignedIds = new Set(
@@ -75,6 +76,7 @@ export function TransportPanel({
             participants={participants}
             currentParticipantId={participantId}
             eventDestination={eventDestination}
+            onEdit={() => setEditingLeg(leg)}
           />
         ))}
       </div>
@@ -102,6 +104,12 @@ export function TransportPanel({
           direction={direction} eventDestination={eventDestination}
           eventDateStart={eventDateStart} eventDateEnd={eventDateEnd}
           onClose={() => setShowForm(false)} />
+      )}
+      {editingLeg && (
+        <ProposeVehicleForm slug={slug} eventId={eventId} participantId={participantId}
+          direction={editingLeg.direction as 'aller' | 'retour'} eventDestination={eventDestination}
+          eventDateStart={eventDateStart} eventDateEnd={eventDateEnd}
+          initial={editingLeg} onClose={() => setEditingLeg(null)} />
       )}
       {showSuggest && (
         <SuggestModal slug={slug} eventId={eventId} direction={direction}

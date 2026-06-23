@@ -13,15 +13,20 @@ import type { Assignment } from '@/lib/transport/solver'
 // rejetterait (INSERT → erreur 42501 ; DELETE/UPDATE → 0 ligne silencieuse).
 // Les lectures pures restent sur createClient() (policies select publiques).
 
-export async function createLeg(
-  slug: string,
-  eventId: string,
-  participantId: string,
-  direction: 'aller' | 'retour',
-  formData: FormData
-) {
-  const { supabase } = await ensureUser()
+type SupabaseClient = Awaited<ReturnType<typeof ensureUser>>['supabase']
 
+// Parse + normalise le FormData d'un trajet en colonnes DB. Partagé entre
+// création (createLeg) et édition (updateLeg) : une seule source de vérité sur
+// la logique mode / places / horaires.
+//  - `fields` : les colonnes de transport_legs (hors event_id / created_by).
+//  - `isDriver` : le proposeur est-il chauffeur·euse (voiture/loc only).
+//  - `addSelf` : faut-il inscrire le proposeur comme occupant (création seule).
+async function parseLegForm(
+  supabase: SupabaseClient,
+  eventId: string,
+  direction: 'aller' | 'retour',
+  formData: FormData,
+) {
   const mode = formData.get('mode')?.toString() as 'car' | 'rental' | 'train' | 'bus' | 'navette'
   const label = formData.get('label')?.toString().trim() ?? ''
   // Géométrie du leg : le formulaire soumet directement départ + arrivée selon
@@ -66,23 +71,39 @@ export async function createLeg(
   const departureTimeEnd = baseDate && rawTimeEnd ? `${baseDate}T${rawTimeEnd}:00` : null
   const arrivalTime = baseDate && rawArrival ? `${baseDate}T${rawArrival}:00` : null
 
+  const fields = {
+    direction,
+    mode,
+    label,
+    departure_city: departureCity,
+    arrival_city: arrivalCity,
+    vehicle_ref: vehicleRef,
+    departure_time: departureTime,
+    departure_time_end: departureTimeEnd,
+    arrival_time: arrivalTime,
+    total_seats: totalSeats,
+    trunk_size: trunkSize,
+    link_url: linkUrl,
+    comment,
+  }
+  return { fields, isDriver, addSelf, tracksSeats }
+}
+
+export async function createLeg(
+  slug: string,
+  eventId: string,
+  participantId: string,
+  direction: 'aller' | 'retour',
+  formData: FormData
+) {
+  const { supabase } = await ensureUser()
+  const { fields, isDriver, addSelf } = await parseLegForm(supabase, eventId, direction, formData)
+
   const { data: leg, error } = await supabase
     .from('transport_legs')
     .insert({
       event_id: eventId,
-      direction,
-      mode,
-      label,
-      departure_city: departureCity,
-      arrival_city: arrivalCity,
-      vehicle_ref: vehicleRef,
-      departure_time: departureTime,
-      departure_time_end: departureTimeEnd,
-      arrival_time: arrivalTime,
-      total_seats: totalSeats,
-      trunk_size: trunkSize,
-      link_url: linkUrl,
-      comment,
+      ...fields,
       driver_id: isDriver ? participantId : null,
       created_by: participantId,
     })
@@ -101,6 +122,47 @@ export async function createLeg(
   }
 
   // Rafraîchit le Server Component pour afficher le nouveau trajet sans reload.
+  revalidatePath(`/e/${slug}`)
+}
+
+// Édition d'un trajet : tout membre peut modifier (RLS legs_update_member).
+// On ne touche ni created_by ni l'inscription du proposeur (déjà occupant).
+export async function updateLeg(
+  slug: string,
+  eventId: string,
+  legId: string,
+  direction: 'aller' | 'retour',
+  formData: FormData,
+) {
+  const { supabase } = await ensureUser()
+  const { fields, tracksSeats } = await parseLegForm(supabase, eventId, direction, formData)
+
+  // Réduction de capacité : refuser si le nouveau total passe sous le nombre
+  // d'occupants déjà inscrits (on n'évince personne automatiquement).
+  if (fields.total_seats != null) {
+    const { count } = await supabase
+      .from('transport_occupants')
+      .select('id', { count: 'exact', head: true })
+      .eq('leg_id', legId)
+    if ((count ?? 0) > fields.total_seats) {
+      throw new Error('Trop de passagers déjà inscrits pour réduire les places.')
+    }
+  }
+
+  // Passage vers un mode sans places (ex : voiture → train) : on libère le rôle
+  // chauffeur·euse, les occupants restent à bord comme simples passagers.
+  if (!tracksSeats) {
+    await supabase.from('transport_occupants').update({ is_driver: false }).eq('leg_id', legId)
+  }
+
+  const { data, error } = await supabase
+    .from('transport_legs')
+    .update({ ...fields, driver_id: tracksSeats ? undefined : null })
+    .eq('id', legId)
+    .select('id')
+  if (error) throw new Error('Impossible de modifier ce trajet.')
+  if (!data || data.length === 0) throw new Error('Modification impossible.')
+
   revalidatePath(`/e/${slug}`)
 }
 

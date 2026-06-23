@@ -1,9 +1,12 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { createLeg } from '@/lib/actions/transport'
+import { createLeg, updateLeg } from '@/lib/actions/transport'
 import { Sheet } from '@/components/ui/Sheet'
 import { PointField } from './PointField'
+import type { Database } from '@/lib/database.types'
+
+type Leg = Database['public']['Tables']['transport_legs']['Row']
 
 const MODES = [
   { value: 'car', label: '🚗 Voiture' },
@@ -27,6 +30,7 @@ export function ProposeVehicleForm({
   eventDestination,
   eventDateStart,
   eventDateEnd,
+  initial,
   onClose,
 }: {
   slug: string
@@ -36,12 +40,20 @@ export function ProposeVehicleForm({
   eventDestination: string
   eventDateStart: string | null
   eventDateEnd: string | null
+  initial?: Leg
   onClose: () => void
 }) {
-  const [mode, setMode] = useState<Mode>('car')
-  const [seats, setSeats] = useState(4)
-  const [isDriver, setIsDriver] = useState(true)
-  const [rangeMode, setRangeMode] = useState(false) // false = heure fixe, true = plage
+  const isEdit = initial != null
+  // Places passagers : total_seats inclut la place chauffeur·euse (+1) quand un
+  // conducteur est défini → on retire ce +1 pour réafficher les seules places passagers.
+  const initialSeats =
+    initial?.total_seats != null ? Math.max(1, initial.total_seats - (initial.driver_id != null ? 1 : 0)) : 4
+  const [mode, setMode] = useState<Mode>((initial?.mode as Mode) ?? 'car')
+  const [seats, setSeats] = useState(initialSeats)
+  const [isDriver, setIsDriver] = useState(initial ? initial.driver_id != null : true)
+  // false = heure fixe, true = plage (un trajet avec heure de fin = plage).
+  const [rangeMode, setRangeMode] = useState(initial?.departure_time_end != null)
+  const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   // Seules voiture/location ont des places (+ chauffeur·euse + plage horaire).
@@ -61,8 +73,9 @@ export function ProposeVehicleForm({
   const arrLabel = `${departureIsHome ? 'Point' : noun} d'arrivée`
   const cityPlaceholder = hasBillet ? 'ex : Gare de Lyon' : 'ex : Lyon'
 
-  // Date pré-remplie : début de l'event pour un aller, fin pour un retour.
-  const defaultDate = (direction === 'retour' ? eventDateEnd : eventDateStart) ?? ''
+  // Date pré-remplie : celle du trajet en édition, sinon début (aller) / fin (retour).
+  const defaultDate =
+    initial?.departure_time?.slice(0, 10) ?? (direction === 'retour' ? eventDateEnd : eventDateStart) ?? ''
   const useRange = hasSeats && rangeMode
 
   function handleSubmit(formData: FormData) {
@@ -76,16 +89,25 @@ export function ProposeVehicleForm({
       const modeLabel = MODES.find((m) => m.value === mode)?.label.replace(/^\S+\s/, '') ?? 'Trajet'
       formData.set('label', from && to ? `${from} → ${to}` : from || to || modeLabel)
     }
+    setError(null)
     startTransition(async () => {
-      await createLeg(slug, eventId, participantId, direction, formData)
-      onClose()
+      try {
+        if (isEdit) {
+          await updateLeg(slug, eventId, initial.id, direction, formData)
+        } else {
+          await createLeg(slug, eventId, participantId, direction, formData)
+        }
+        onClose()
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Une erreur est survenue.')
+      }
     })
   }
 
   return (
     <Sheet onClose={onClose} labelledBy="propose-trip-title">
         <h3 id="propose-trip-title" className="font-serif text-[22px] text-ink mb-5">
-          Je propose un trajet {direction === 'aller' ? '→' : '←'}
+          {isEdit ? 'Je modifie le trajet' : 'Je propose un trajet'} {direction === 'aller' ? '→' : '←'}
         </h3>
 
         <form action={handleSubmit} className="flex flex-col gap-4">
@@ -112,7 +134,7 @@ export function ProposeVehicleForm({
           </div>
 
           {/* Label — optionnel : déduit du trajet si laissé vide */}
-          <input name="label" type="text" maxLength={60}
+          <input name="label" type="text" maxLength={60} defaultValue={initial?.label ?? undefined}
             placeholder={hasBillet ? 'Nom (ex : TGV 8h12) — optionnel' : 'Nom du trajet (optionnel)'}
             className={INPUT_CLASS} />
 
@@ -122,12 +144,14 @@ export function ProposeVehicleForm({
             label={depLabel}
             placeholder={cityPlaceholder}
             defaultValue={departureIsHome ? undefined : eventDestination}
+            editValue={initial?.departure_city}
           />
           <PointField
             name="arrival_city"
             label={arrLabel}
             placeholder={cityPlaceholder}
             defaultValue={departureIsHome ? eventDestination : undefined}
+            editValue={initial?.arrival_city}
           />
 
           {/* Date + heure(s) */}
@@ -155,22 +179,22 @@ export function ProposeVehicleForm({
               {useRange ? (
                 <div className="flex items-center gap-2">
                   <input name="departure_time" type="time" aria-label="Heure de début"
-                    className={INPUT_CLASS} />
+                    defaultValue={initial?.departure_time?.slice(11, 16) ?? undefined} className={INPUT_CLASS} />
                   <span aria-hidden className="shrink-0 text-muted text-[14px]">→</span>
                   <input name="departure_time_end" type="time" aria-label="Heure de fin"
-                    className={INPUT_CLASS} />
+                    defaultValue={initial?.departure_time_end?.slice(11, 16) ?? undefined} className={INPUT_CLASS} />
                 </div>
               ) : hasArrival ? (
                 <div className="flex items-center gap-2">
                   <input name="departure_time" type="time" aria-label="Heure de départ"
-                    className={INPUT_CLASS} />
+                    defaultValue={initial?.departure_time?.slice(11, 16) ?? undefined} className={INPUT_CLASS} />
                   <span aria-hidden className="shrink-0 text-muted text-[14px]">→</span>
                   <input name="arrival_time" type="time" aria-label="Heure d'arrivée"
-                    className={INPUT_CLASS} />
+                    defaultValue={initial?.arrival_time?.slice(11, 16) ?? undefined} className={INPUT_CLASS} />
                 </div>
               ) : (
                 <input name="departure_time" type="time" aria-label="Heure de départ"
-                  className={INPUT_CLASS} />
+                  defaultValue={initial?.departure_time?.slice(11, 16) ?? undefined} className={INPUT_CLASS} />
               )}
             </div>
           </div>
@@ -209,19 +233,19 @@ export function ProposeVehicleForm({
 
           {/* N° de train */}
           {hasTrainNumber && (
-            <input name="vehicle_ref" type="text" maxLength={20}
+            <input name="vehicle_ref" type="text" maxLength={20} defaultValue={initial?.vehicle_ref ?? undefined}
               placeholder="N° du train (ex : 6612) — optionnel"
               className={INPUT_CLASS} />
           )}
 
           {/* Lien (train / bus / navette) */}
           {hasLink && (
-            <input name="link_url" type="url" placeholder="Lien (optionnel)"
+            <input name="link_url" type="url" defaultValue={initial?.link_url ?? undefined} placeholder="Lien (optionnel)"
               className={INPUT_CLASS} />
           )}
 
           {/* Commentaire (tous modes) */}
-          <textarea name="comment" maxLength={200} rows={2}
+          <textarea name="comment" maxLength={200} rows={2} defaultValue={initial?.comment ?? undefined}
             placeholder="Commentaire (optionnel) — ex : je peux faire un détour par…"
             className={`${INPUT_CLASS} resize-none`} />
 
@@ -232,6 +256,10 @@ export function ProposeVehicleForm({
             </div>
           )}
 
+          {error && (
+            <p className="rounded-[13px] bg-prune-soft px-[14px] py-[11px] text-[13px] text-prune">{error}</p>
+          )}
+
           {/* Boutons */}
           <div className="flex gap-3 mt-1">
             <button type="button" onClick={onClose}
@@ -240,7 +268,7 @@ export function ProposeVehicleForm({
             </button>
             <button type="submit" disabled={isPending}
               className="flex-[1.5] rounded-[15px] bg-terracotta text-white p-[16px] text-center font-bold shadow-[0_4px_0_var(--color-terracotta-dk)] active:translate-y-1 active:shadow-none transition-all disabled:opacity-60">
-              {isPending ? '…' : 'Proposer →'}
+              {isPending ? '…' : isEdit ? 'Enregistrer →' : 'Proposer →'}
             </button>
           </div>
         </form>

@@ -63,6 +63,80 @@ export async function createMeal(
   return { mealId: meal.id, productIds }
 }
 
+// Édition complète d'un repas en un seul aller-retour :
+//  1. renomme le repas ;
+//  2. re-tague ses produits (remplace l'ancien label par le nouveau) ;
+//  3. supprime les ingrédients retirés (du repas ET de la liste de courses) ;
+//  4. ajoute les nouveaux ingrédients (taggés avec le nouveau label).
+// Les ingrédients existants ne sont pas modifiables en place — on les retire et
+// on les ré-ajoute. Renvoie les ids réels des produits ajoutés (réconciliation).
+export async function editMeal(
+  slug: string,
+  eventId: string,
+  participantId: string,
+  mealId: string,
+  label: string,
+  removedProductIds: string[] = [],
+  newItems: NewItem[] = [],
+): Promise<{ productIds: string[] }> {
+  const clean = label.trim()
+  if (!clean) throw new Error('Nom du repas requis.')
+  const { supabase } = await ensureUser()
+
+  // Ancien label pour le re-tag.
+  const { data: meal } = await supabase.from('meals').select('label').eq('id', mealId).single()
+  const oldLabel = meal?.label ?? null
+
+  // 1. Renomme.
+  const { error: upErr } = await supabase.from('meals').update({ label: clean }).eq('id', mealId)
+  if (upErr) {
+    console.error('editMeal rename failed', upErr)
+    throw new Error('Impossible de modifier ce repas.')
+  }
+
+  // 2. Re-tague les produits du repas (remplace l'ancien label dans tags[]).
+  if (oldLabel && oldLabel !== clean) {
+    const { data: prods } = await supabase.from('products').select('id, tags').eq('meal_id', mealId)
+    for (const p of prods ?? []) {
+      const tags = p.tags ?? []
+      if (tags.includes(oldLabel)) {
+        await supabase
+          .from('products')
+          .update({ tags: tags.map((t) => (t === oldLabel ? clean : t)) })
+          .eq('id', p.id)
+      }
+    }
+  }
+
+  // 3. Supprime les ingrédients retirés.
+  if (removedProductIds.length) {
+    await supabase.from('products').delete().in('id', removedProductIds)
+  }
+
+  // 4. Ajoute les nouveaux ingrédients, taggés avec le nouveau label.
+  const rows = newItems
+    .map((it) => ({ ...it, name: it.name.trim() }))
+    .filter((it) => it.name)
+    .map((it) => ({
+      event_id: eventId,
+      meal_id: mealId,
+      name: it.name,
+      quantity: it.quantity ?? null,
+      unit: it.unit || 'unité',
+      tags: [clean],
+      created_by: participantId,
+    }))
+  let productIds: string[] = []
+  if (rows.length) {
+    const { data, error: insErr } = await supabase.from('products').insert(rows).select('id')
+    if (insErr) console.error('editMeal items insert failed', insErr)
+    productIds = (data ?? []).map((d) => d.id)
+  }
+
+  revalidatePath(`/e/${slug}`)
+  return { productIds }
+}
+
 export async function setMealDate(slug: string, mealId: string, mealDate: string | null) {
   const { supabase } = await ensureUser()
   const { error } = await supabase.from('meals').update({ meal_date: mealDate }).eq('id', mealId)

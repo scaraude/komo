@@ -29,12 +29,10 @@ export type ActivityInput = {
   bookingUrl?: string | null
 }
 
-export async function proposeActivity(
-  slug: string,
-  eventId: string,
-  participantId: string,
-  input: ActivityInput,
-) {
+// Normalise et valide un ActivityInput en colonnes DB. Partagé entre création
+// (proposeActivity) et édition (updateActivity) pour garder une seule source de
+// vérité sur les règles prix / capacité / URL.
+function normalizeActivityInput(input: ActivityInput) {
   const label = input.label.trim()
   if (!label) throw new Error("Nom de l'activité requis.")
 
@@ -49,9 +47,7 @@ export async function proposeActivity(
     throw new Error('Le minimum ne peut pas dépasser le maximum.')
   }
 
-  const { supabase } = await ensureUser()
-  const { data, error } = await supabase.from('activities').insert({
-    event_id: eventId,
+  return {
     label,
     activity_date: input.activityDate || null,
     start_time: input.startTime || null,
@@ -61,12 +57,46 @@ export async function proposeActivity(
     min_participants: min,
     max_participants: max,
     booking_url: safeHttpUrl(input.bookingUrl),
+  }
+}
+
+export async function proposeActivity(
+  slug: string,
+  eventId: string,
+  participantId: string,
+  input: ActivityInput,
+) {
+  const fields = normalizeActivityInput(input)
+  const { supabase } = await ensureUser()
+  const { data, error } = await supabase.from('activities').insert({
+    event_id: eventId,
+    ...fields,
     created_by: participantId,
   }).select().single()
   if (error || !data) {
     console.error('proposeActivity insert failed', error)
     throw new Error("Impossible de proposer cette activité.")
   }
+  revalidatePath(`/e/${slug}`)
+  return data
+}
+
+// Édition : tout membre de l'event peut modifier (RLS activities_update_member).
+// On garde created_by intact (jamais modifié). 0 ligne renvoyée = refus RLS.
+export async function updateActivity(slug: string, activityId: string, input: ActivityInput) {
+  const fields = normalizeActivityInput(input)
+  const { supabase } = await ensureUser()
+  const { data, error } = await supabase
+    .from('activities')
+    .update(fields)
+    .eq('id', activityId)
+    .select()
+    .single()
+  if (error) {
+    console.error('updateActivity failed', error)
+    throw new Error("Impossible de modifier cette activité.")
+  }
+  if (!data) throw new Error('Modification impossible.')
   revalidatePath(`/e/${slug}`)
   return data
 }
