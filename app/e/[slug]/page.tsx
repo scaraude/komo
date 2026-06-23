@@ -64,20 +64,50 @@ export default async function EventPage({
 
   const supabase = await createClient()
 
-  const { data: event } = await supabase.from('events').select('*').eq('slug', slug).single()
+  const [{ data: event }, userId] = await Promise.all([
+    supabase.from('events').select('*').eq('slug', slug).single(),
+    getUserId(),
+  ])
   if (!event) notFound()
-
-  const userId = await getUserId()
   if (!userId) redirect(`/e/${slug}/join`)
 
-  const { data: participant } = await supabase
-    .from('participants').select('*')
-    .eq('event_id', event.id).eq('user_id', userId).maybeSingle()
-  if (!participant) redirect(`/e/${slug}/join`)
+  const isPoll = !event.date_start
+  const isMultiDay = !isPoll && event.date_start !== event.date_end
 
-  const { data: allParticipants } = await supabase
-    .from('participants').select('*')
-    .eq('event_id', event.id).order('joined_at', { ascending: true })
+  const [
+    { data: participant },
+    { data: allParticipants },
+    { data: dateProposals },
+    { data: accommodationOptions },
+    { data: meals },
+    { data: products },
+    { data: mealOwners },
+    { data: activities },
+    { data: activitySignups },
+    { legs, occupants },
+  ] = await Promise.all([
+    supabase.from('participants').select('*').eq('event_id', event.id).eq('user_id', userId).maybeSingle(),
+    supabase.from('participants').select('*').eq('event_id', event.id).order('joined_at', { ascending: true }),
+    isPoll
+      ? supabase.from('date_proposals').select('*').eq('event_id', event.id).order('proposed_date')
+      : Promise.resolve({ data: [] }),
+    isMultiDay
+      ? supabase.from('accommodation_options').select('*').eq('event_id', event.id).order('created_at')
+      : Promise.resolve({ data: [] }),
+    supabase.from('meals').select('*').eq('event_id', event.id).order('created_at'),
+    supabase.from('products').select('*').eq('event_id', event.id).order('created_at'),
+    supabase.from('meal_owners').select('*').eq('event_id', event.id),
+    supabase.from('activities').select('*').eq('event_id', event.id).order('created_at'),
+    supabase.from('activity_signups').select('*').eq('event_id', event.id),
+    (async () => {
+      const { data: legs } = await supabase.from('transport_legs').select('*').eq('event_id', event.id)
+      const { data: occupants } = await supabase
+        .from('transport_occupants').select('*')
+        .in('leg_id', (legs ?? []).map((l) => l.id))
+      return { legs, occupants }
+    })(),
+  ])
+  if (!participant) redirect(`/e/${slug}/join`)
   const participants = allParticipants ?? []
 
   const isCreator = event.created_by === userId
@@ -85,40 +115,11 @@ export default async function EventPage({
   const wording = EVENT_TYPE_WORDING[event.event_type as keyof typeof EVENT_TYPE_WORDING] ?? EVENT_TYPE_WORDING.autre
   const vibe = VIBE[event.event_type as keyof typeof VIBE] ?? VIBE.autre
 
-  const isPoll = !event.date_start
   const pendingCount = participants.filter((p) => !p.presence_status).length
-  const isMultiDay = !isPoll && event.date_start !== event.date_end
 
-  // Navigation : pas de tab valide → hub. tab valide → écran module.
   const presenceTabName = isPoll ? 'dates' : 'presence'
   const activeTab = tab && MODULE_TABS.has(tab) ? tab : null
   const showHub = activeTab === null
-
-  // Date proposals (sondage mode)
-  const { data: dateProposals } = isPoll
-    ? await supabase.from('date_proposals').select('*').eq('event_id', event.id).order('proposed_date')
-    : { data: [] }
-
-  // Accommodation options (multi-day events)
-  const { data: accommodationOptions } = isMultiDay
-    ? await supabase.from('accommodation_options').select('*').eq('event_id', event.id).order('created_at')
-    : { data: [] }
-
-  // Bouffe : repas + produits + responsables
-  const { data: meals } = await supabase.from('meals').select('*').eq('event_id', event.id).order('created_at')
-  const { data: products } = await supabase.from('products').select('*').eq('event_id', event.id).order('created_at')
-  const { data: mealOwners } = await supabase.from('meal_owners').select('*').eq('event_id', event.id)
-
-  // Activités : propositions + inscriptions
-  const { data: activities } = await supabase.from('activities').select('*').eq('event_id', event.id).order('created_at')
-  const { data: activitySignups } = await supabase.from('activity_signups').select('*').eq('event_id', event.id)
-
-  // Transport data
-  const { data: legs } = await supabase
-    .from('transport_legs').select('*').eq('event_id', event.id)
-  const { data: occupants } = await supabase
-    .from('transport_occupants').select('*')
-    .in('leg_id', (legs ?? []).map((l) => l.id))
 
   // ---- Counts pour les tuiles du hub ----
   const hotCount = participants.filter((p) => p.presence_status === 'hot').length
