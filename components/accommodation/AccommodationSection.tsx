@@ -90,7 +90,14 @@ export function AccommodationSection({
                   </button>
                 </div>
               </div>
-              <div className="h-1 bg-line mx-4 mb-3 rounded-full overflow-hidden">
+              <div
+                className="h-1 bg-line mx-4 mb-3 rounded-full overflow-hidden"
+                role="progressbar"
+                aria-label={`${count} vote${count > 1 ? 's' : ''} sur ${totalParticipants}`}
+                aria-valuenow={count}
+                aria-valuemin={0}
+                aria-valuemax={totalParticipants}
+              >
                 <div className="h-full bg-olive rounded-full transition-all" style={{ width: `${pct}%` }} />
               </div>
             </div>

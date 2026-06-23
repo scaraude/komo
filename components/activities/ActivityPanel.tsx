@@ -351,12 +351,12 @@ function ActivityCard({
         </div>
         <div className="flex shrink-0 items-center gap-2.5">
           {canEdit && (
-            <button onClick={onEdit} className="text-xs text-muted transition-colors hover:text-olive" title="Modifier">
+            <button onClick={onEdit} className="text-xs text-muted transition-colors hover:text-olive" aria-label="Modifier l'activité" title="Modifier">
               ✎
             </button>
           )}
           {canDelete && (
-            <button onClick={onDelete} className="text-xs text-muted transition-colors hover:text-terracotta" title="Supprimer">
+            <button onClick={onDelete} className="text-xs text-muted transition-colors hover:text-terracotta" aria-label="Supprimer l'activité" title="Supprimer">
               ✕
             </button>
           )}
@@ -375,7 +375,14 @@ function ActivityCard({
           )}
         </div>
         {max != null && (
-          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-line">
+          <div
+            className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-line"
+            role="progressbar"
+            aria-label={`${count} inscrit${count > 1 ? 's' : ''} sur ${max} places`}
+            aria-valuenow={count}
+            aria-valuemin={0}
+            aria-valuemax={max}
+          >
             <div className="h-full rounded-full bg-olive transition-all" style={{ width: `${Math.min(100, (count / max) * 100)}%` }} />
           </div>
         )}
@@ -496,7 +503,7 @@ function ActivityForm({
       {/* Prix + mode de découpage */}
       <div className="rounded-[13px] border-[1.5px] border-line-2 p-3">
         <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-muted">Prix</label>
-        <div className="mb-2 grid grid-cols-3 gap-1.5">
+        <div className="mb-2 grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Mode de prix">
           {([
             ['none', 'Gratuit'],
             ['total', 'Total à diviser'],
@@ -505,6 +512,8 @@ function ActivityForm({
             <button
               key={val}
               type="button"
+              role="radio"
+              aria-checked={priceMode === val}
               onClick={() => setPriceMode(val)}
               className={`rounded-full border-[1.5px] py-1.5 text-xs font-bold transition-colors ${
                 priceMode === val ? 'border-ink bg-ink text-paper' : 'border-line-2 text-muted hover:border-line-3'
