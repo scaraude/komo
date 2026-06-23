@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { suggestAssignments, applyAssignments } from '@/lib/actions/transport'
 import { Sheet } from '@/components/ui/Sheet'
+import { Button } from '@/components/ui/Button'
 import type { Assignment } from '@/lib/transport/solver'
 import type { Database } from '@/lib/database.types'
 
@@ -63,13 +64,9 @@ export function SuggestModal({
         </p>
 
         {assignments === null ? (
-          <button
-            onClick={handleSuggest}
-            disabled={isPending}
-            className="w-full rounded-[15px] bg-terracotta text-white p-[16px] text-center font-bold shadow-[0_4px_0_var(--color-terracotta-dk)] active:translate-y-1 active:shadow-none transition-all disabled:opacity-60"
-          >
+          <Button onClick={handleSuggest} disabled={isPending} className="w-full rounded-[15px] p-[16px]">
             {isPending ? 'Calcul…' : 'Calculer les suggestions'}
-          </button>
+          </Button>
         ) : (
           <>
             {assignments.length === 0 && unresolved.length === 0 ? (
@@ -95,13 +92,9 @@ export function SuggestModal({
                 Annuler
               </button>
               {assignments.length > 0 && (
-                <button
-                  onClick={handleConfirm}
-                  disabled={isPending}
-                  className="flex-[1.5] rounded-[15px] bg-terracotta text-white p-[16px] text-center font-bold shadow-[0_4px_0_var(--color-terracotta-dk)] active:translate-y-1 active:shadow-none transition-all disabled:opacity-60"
-                >
+                <Button onClick={handleConfirm} disabled={isPending} className="flex-[1.5] rounded-[15px] p-[16px]">
                   {isPending ? '…' : 'Confirmer →'}
-                </button>
+                </Button>
               )}
             </div>
           </>

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { requestLoginLink } from '@/lib/actions/auth'
+import { Button } from '@/components/ui/Button'
 
 export default function ConnexionPage() {
   const [email, setEmail] = useState('')
@@ -67,13 +68,9 @@ export default function ConnexionPage() {
             className="mb-[18px] w-full rounded-[15px] border-[1.5px] border-line bg-card p-4 text-[15px] text-ink outline-none placeholder:text-disabled focus:border-terracotta"
           />
 
-          <button
-            type="submit"
-            disabled={pending}
-            className="mt-auto rounded-[17px] bg-terracotta p-[18px] text-center text-[16px] font-bold text-white shadow-[0_4px_0_var(--color-terracotta-dk)] transition-all active:translate-y-1 active:shadow-none disabled:opacity-60"
-          >
+          <Button type="submit" disabled={pending} className="mt-auto rounded-[17px] p-[18px] text-[16px]">
             {pending ? 'Envoi…' : 'Recevoir le lien →'}
-          </button>
+          </Button>
           <Link href="/" className="mt-[14px] text-center text-[13px] text-muted-2">
             ← Créer un nouveau Komo
           </Link>

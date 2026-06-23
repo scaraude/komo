@@ -5,6 +5,7 @@ import { CarCard } from './CarCard'
 import { UnassignedZone } from './UnassignedZone'
 import { ProposeVehicleForm } from './ProposeVehicleForm'
 import { SuggestModal } from './SuggestModal'
+import { DashedAddButton } from '@/components/ui/DashedAddButton'
 import type { Database } from '@/lib/database.types'
 
 type Leg = Database['public']['Tables']['transport_legs']['Row']
@@ -82,10 +83,10 @@ export function TransportPanel({
       </div>
 
       <div className="mt-[11px] flex gap-2">
-        <button onClick={() => setShowForm(true)}
-          className="flex-1 border-[1.5px] border-dashed border-[var(--color-dashed)] rounded-[18px] p-[16px] text-center text-muted font-semibold hover:border-terracotta hover:text-terracotta transition-colors">
+        <DashedAddButton onClick={() => setShowForm(true)}
+          className="flex-1 rounded-[18px] p-[16px] text-center">
           ＋ Je propose un trajet
-        </button>
+        </DashedAddButton>
         {isCreator && unassigned.length > 0 && (
           <button onClick={() => setShowSuggest(true)}
             aria-label="Auto-affecter les trajets"

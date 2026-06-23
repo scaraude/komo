@@ -8,6 +8,7 @@ import { DeadlineBar } from '@/components/presence/DeadlineBar'
 import { LiveCounter } from '@/components/presence/LiveCounter'
 import { TransportPanel } from '@/components/transport/TransportPanel'
 import { DatePoll } from '@/components/dates/DatePoll'
+import { Avatar } from '@/components/ui/Avatar'
 import { AccommodationSection } from '@/components/accommodation/AccommodationSection'
 import { BouffePanel } from '@/components/meals/BouffePanel'
 import { ActivityPanel } from '@/components/activities/ActivityPanel'
@@ -275,9 +276,7 @@ export default async function EventPage({
                     p.id === participant.id ? 'border-terracotta' : 'border-line-2'
                   }`}>
                   <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-xs font-bold text-paper">
-                      {p.pseudo[0]?.toUpperCase() ?? '?'}
-                    </div>
+                    <Avatar pseudo={p.pseudo} className="h-8 w-8 bg-ink text-xs text-paper" />
                     <div>
                       <span className="text-sm font-semibold">
                         {p.pseudo}

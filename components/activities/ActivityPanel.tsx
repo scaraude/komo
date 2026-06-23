@@ -6,6 +6,9 @@ import { proposeActivity, updateActivity, toggleActivitySignup, deleteActivity, 
 import type { Database } from '@/lib/database.types'
 import { randomId } from '@/lib/uuid'
 import { perPerson, totalCost, formatEuro } from '@/lib/activities/cost'
+import { Button } from '@/components/ui/Button'
+import { DashedAddButton } from '@/components/ui/DashedAddButton'
+import { Avatar } from '@/components/ui/Avatar'
 
 type Activity = Database['public']['Tables']['activities']['Row']
 type Signup = Database['public']['Tables']['activity_signups']['Row']
@@ -275,12 +278,13 @@ export function ActivityPanel({
       {showForm ? (
         <ActivityForm dateStart={dateStart} dateEnd={dateEnd} onCancel={() => setShowForm(false)} onSubmit={handlePropose} />
       ) : (
-        <button
+        <DashedAddButton
+          accent="olive"
           onClick={() => setShowForm(true)}
-          className="w-full rounded-[18px] border-[1.5px] border-dashed border-[var(--color-dashed)] py-3 text-sm font-semibold text-muted transition-colors hover:border-olive hover:text-olive"
+          className="w-full rounded-[18px] py-3 text-sm"
         >
           + Proposer une activité
-        </button>
+        </DashedAddButton>
       )}
     </section>
   )
@@ -378,9 +382,7 @@ function ActivityCard({
         {signedPeople.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {signedPeople.map((p) => (
-              <span key={p.id} className="flex h-6 w-6 items-center justify-center rounded-full bg-ink text-[10px] font-bold text-paper" title={p.pseudo}>
-                {p.pseudo[0]?.toUpperCase() ?? '?'}
-              </span>
+              <Avatar key={p.id} pseudo={p.pseudo} className="h-6 w-6 bg-ink text-[10px] text-paper" title={p.pseudo} />
             ))}
           </div>
         )}
@@ -526,9 +528,9 @@ function ActivityForm({
         <button type="button" onClick={onCancel} className="flex-1 rounded-[15px] border-[1.5px] border-line-3 bg-card py-2.5 text-sm font-bold">
           Annuler
         </button>
-        <button type="submit" className="flex-1 rounded-[15px] bg-terracotta py-2.5 text-sm font-bold text-white shadow-[0_4px_0_var(--color-terracotta-dk)] active:translate-y-1 active:shadow-none transition-all">
+        <Button type="submit" className="flex-1 rounded-[15px] py-2.5 text-sm">
           {isEdit ? 'Enregistrer →' : 'Proposer →'}
-        </button>
+        </Button>
       </div>
     </form>
   )

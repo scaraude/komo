@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { createEvent } from '@/lib/actions/events'
+import { Button } from '@/components/ui/Button'
 import { DestinationField } from './DestinationField'
 
 const VIBES = [
@@ -145,12 +146,9 @@ export function LandingForm({ showEmail }: { showEmail: boolean }) {
       )}
 
       {/* CTA */}
-      <button
-        type="submit"
-        className="mt-[22px] rounded-[17px] bg-terracotta p-[18px] text-center text-[16px] font-bold text-white shadow-[0_4px_0_var(--color-terracotta-dk)] transition-all active:translate-y-1 active:shadow-none"
-      >
+      <Button type="submit" className="mt-[22px] rounded-[17px] p-[18px] text-[16px]">
         Créer le plan →
-      </button>
+      </Button>
       <p className="mt-[14px] text-center text-[12.5px] text-muted-2">
         Pas de mot de passe · <a href="/connexion" className="font-semibold text-terracotta">déjà un Komo ?</a>
       </p>

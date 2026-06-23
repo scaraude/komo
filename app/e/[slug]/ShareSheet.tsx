@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Sheet } from '@/components/ui/Sheet'
+import { Button } from '@/components/ui/Button'
 
 export function ShareSheet({ slug, title }: { slug: string; title: string }) {
   const [open, setOpen] = useState(false)
@@ -26,13 +27,9 @@ export function ShareSheet({ slug, title }: { slug: string; title: string }) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="w-full rounded-[17px] bg-ink p-[17px] text-center text-[15px] font-bold text-white shadow-[0_4px_0_rgba(0,0,0,0.25)] transition-all active:translate-y-1 active:shadow-none"
-      >
+      <Button type="button" tone="ink" onClick={() => setOpen(true)} className="w-full rounded-[17px] p-[17px] text-[15px]">
         🔗 Partager le lien
-      </button>
+      </Button>
 
       {open && (
         <Sheet variant="bottom" onClose={() => setOpen(false)} labelledBy="share-title">
