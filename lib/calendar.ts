@@ -5,7 +5,11 @@
 // décalages de jour en fuseau négatif (le parsing nu `new Date('yyyy-mm-dd')`
 // interprète minuit UTC → jour précédent à l'ouest de Greenwich).
 
-export const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+// Initiales lundi→dimanche. `as const` : tuple readonly figé (constante
+// partagée par tous les calendriers — pas de mutation accidentelle).
+// NB : 'M' apparaît deux fois (mardi/mercredi) → indexer par position, jamais
+// utiliser la valeur comme clé React.
+export const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'] as const
 
 export type CalendarMonth = {
   key: string
