@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { mustSucceed } from '@/lib/actions/assert'
 
 export async function proposeDateOption(
   slug: string,
@@ -44,10 +45,13 @@ export async function fixDate(slug: string, eventId: string, proposalId: string)
     .from('date_proposals').select('proposed_date').eq('id', proposalId).single()
   if (!proposal) throw new Error('Proposition introuvable.')
 
-  await supabase.from('events').update({
-    date_start: proposal.proposed_date,
-    date_end: proposal.proposed_date,
-  }).eq('id', eventId)
+  mustSucceed(
+    await supabase.from('events').update({
+      date_start: proposal.proposed_date,
+      date_end: proposal.proposed_date,
+    }).eq('id', eventId).select('id'),
+    "Seul un organisateur peut fixer la date.",
+  )
 
   await supabase.from('date_proposals').delete().eq('event_id', eventId)
 
