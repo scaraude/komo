@@ -14,22 +14,31 @@ const LABEL_CLASS = 'text-[12px] font-bold uppercase tracking-[0.8px] text-muted
  * - Avec `defaultValue` (= lieu de l'event) → côté event : pill pré-remplie
  *   (✕ pour personnaliser → autocomplete + « ↩ Remettre {défaut} »). Soumet ''
  *   tant qu'on garde le défaut → null en DB → hérite de events.destination.
+ *
+ * `editValue` (mode édition) = valeur déjà stockée pour ce point en DB :
+ *  - côté participant : pré-remplit l'input éditable.
+ *  - côté event : si non-null/non-vide → c'est un override → pill custom ;
+ *    null/vide → on garde l'héritage du lieu de l'event.
  */
 export function PointField({
   name,
   label,
   defaultValue,
   placeholder,
+  editValue,
 }: {
   name: string
   label: string
   defaultValue?: string
   placeholder?: string
+  editValue?: string | null
 }) {
   const hasDefault = !!defaultValue
-  const [text, setText] = useState('') // texte courant de l'input
-  const [override, setOverride] = useState<string | null>(null) // valeur custom validée (côté event)
-  const [editing, setEditing] = useState(!hasDefault) // côté participant démarre en saisie
+  const initialOverride = hasDefault && editValue ? editValue : null
+  const [text, setText] = useState(!hasDefault && editValue ? editValue : '') // texte courant de l'input
+  const [override, setOverride] = useState<string | null>(initialOverride) // valeur custom validée (côté event)
+  // Côté participant démarre en saisie. Côté event : pill (override ou défaut).
+  const [editing, setEditing] = useState(!hasDefault)
 
   // Côté participant : l'input porte le name (soumis directement).
   // Côté event : un input caché porte le name (vide tant qu'on garde le défaut).

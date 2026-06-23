@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { proposeActivity, toggleActivitySignup, deleteActivity, type ActivityInput } from '@/lib/actions/activities'
+import { proposeActivity, updateActivity, toggleActivitySignup, deleteActivity, type ActivityInput } from '@/lib/actions/activities'
 import type { Database } from '@/lib/database.types'
 import { randomId } from '@/lib/uuid'
 import { perPerson, totalCost, formatEuro } from '@/lib/activities/cost'
@@ -58,6 +58,7 @@ export function ActivityPanel({
   const [activities, setActivities] = useState(() => initialActivities.map(normalizeActivity))
   const [signups, setSignups] = useState(initialSignups)
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [, startTransition] = useTransition()
   // Ids des activités ajoutées en optimiste (temp uuid) en attente de leur ligne
   // réelle via realtime — sert à remplacer le placeholder au lieu de doublonner.
@@ -203,6 +204,36 @@ export function ActivityPanel({
     })
   }
 
+  function handleUpdate(activityId: string, input: ActivityInput) {
+    const prev = activities
+    // Patch optimiste : l'id existe déjà, pas de réconciliation, juste un rollback.
+    setActivities((list) =>
+      list.map((a) =>
+        a.id === activityId
+          ? {
+              ...a,
+              label: input.label.trim(),
+              activity_date: input.activityDate || null,
+              start_time: input.startTime || null,
+              price: input.price && input.price > 0 ? input.price : null,
+              price_type: input.price && input.price > 0 ? (input.priceType ?? 'total') : null,
+              max_participants: input.maxParticipants ?? null,
+              booking_url: input.bookingUrl?.trim() || null,
+            }
+          : a,
+      ),
+    )
+    setEditingId(null)
+    startTransition(async () => {
+      try {
+        const row = normalizeActivity(await updateActivity(slug, activityId, input))
+        setActivities((list) => list.map((a) => (a.id === activityId ? row : a)))
+      } catch {
+        setActivities(prev)
+      }
+    })
+  }
+
   const sorted = [...activities].sort((a, b) => signupsFor(b.id).length - signupsFor(a.id).length)
 
   return (
@@ -214,18 +245,31 @@ export function ActivityPanel({
         {sorted.length === 0 && (
           <p className="py-6 text-center text-sm text-muted">Aucune activité proposée pour l&apos;instant.</p>
         )}
-        {sorted.map((a) => (
-          <ActivityCard
-            key={a.id}
-            activity={a}
-            pending={pendingIds.has(a.id)}
-            signedPeople={signupsFor(a.id).map((s) => participants.find((p) => p.id === s.participant_id)).filter(Boolean) as Person[]}
-            mine={isSignedUp(a.id)}
-            canDelete={isAdmin || a.created_by === participantId}
-            onToggle={() => handleToggle(a)}
-            onDelete={() => handleDelete(a.id)}
-          />
-        ))}
+        {sorted.map((a) =>
+          editingId === a.id ? (
+            <ActivityForm
+              key={a.id}
+              initial={a}
+              dateStart={dateStart}
+              dateEnd={dateEnd}
+              onCancel={() => setEditingId(null)}
+              onSubmit={(input) => handleUpdate(a.id, input)}
+            />
+          ) : (
+            <ActivityCard
+              key={a.id}
+              activity={a}
+              pending={pendingIds.has(a.id)}
+              signedPeople={signupsFor(a.id).map((s) => participants.find((p) => p.id === s.participant_id)).filter(Boolean) as Person[]}
+              mine={isSignedUp(a.id)}
+              canDelete={isAdmin || a.created_by === participantId}
+              canEdit={!pendingIds.has(a.id)}
+              onToggle={() => handleToggle(a)}
+              onDelete={() => handleDelete(a.id)}
+              onEdit={() => setEditingId(a.id)}
+            />
+          ),
+        )}
       </div>
 
       {showForm ? (
@@ -249,16 +293,20 @@ function ActivityCard({
   signedPeople,
   mine,
   canDelete,
+  canEdit,
   onToggle,
   onDelete,
+  onEdit,
 }: {
   activity: Activity
   pending: boolean
   signedPeople: Person[]
   mine: boolean
   canDelete: boolean
+  canEdit: boolean
   onToggle: () => void
   onDelete: () => void
+  onEdit: () => void
 }) {
   const count = signedPeople.length
   const max = activity.max_participants
@@ -297,11 +345,18 @@ function ActivityCard({
             {priced && <span className="font-semibold text-ink">{priceTypeLabel(activity)}</span>}
           </div>
         </div>
-        {canDelete && (
-          <button onClick={onDelete} className="shrink-0 text-xs text-muted transition-colors hover:text-terracotta" title="Supprimer">
-            ✕
-          </button>
-        )}
+        <div className="flex shrink-0 items-center gap-2.5">
+          {canEdit && (
+            <button onClick={onEdit} className="text-xs text-muted transition-colors hover:text-olive" title="Modifier">
+              ✎
+            </button>
+          )}
+          {canDelete && (
+            <button onClick={onDelete} className="text-xs text-muted transition-colors hover:text-terracotta" title="Supprimer">
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Inscrits + capacité */}
@@ -387,17 +442,22 @@ function ActivityCard({
 
 // ============================================================
 function ActivityForm({
+  initial,
   dateStart,
   dateEnd,
   onCancel,
   onSubmit,
 }: {
+  initial?: Activity
   dateStart: string | null
   dateEnd: string | null
   onCancel: () => void
   onSubmit: (input: ActivityInput) => void
 }) {
-  const [priceMode, setPriceMode] = useState<'none' | 'total' | 'per_person'>('none')
+  const isEdit = initial != null
+  const [priceMode, setPriceMode] = useState<'none' | 'total' | 'per_person'>(() =>
+    initial?.price_type === 'per_person' ? 'per_person' : initial?.price_type ? 'total' : 'none',
+  )
 
   const inputBase =
     'rounded-[13px] border-[1.5px] border-line bg-card px-3 py-2.5 text-sm focus:border-terracotta focus:outline-none'
@@ -424,11 +484,11 @@ function ActivityForm({
       }}
       className="flex flex-col gap-3 rounded-[18px] border-[1.5px] border-line-2 bg-card p-4 shadow-[0_2px_8px_rgba(60,45,20,0.04)]"
     >
-      <input name="label" type="text" required maxLength={80} placeholder="Padel, accrobranche, resto…" className={inputCls} autoFocus />
+      <input name="label" type="text" required maxLength={80} defaultValue={initial?.label ?? ''} placeholder="Padel, accrobranche, resto…" className={inputCls} autoFocus />
 
       <div className="flex gap-2">
-        <input name="activity_date" type="date" min={dateStart ?? undefined} max={dateEnd ?? undefined} className={`${inputCls} flex-1`} />
-        <input name="start_time" type="time" className={`${inputCls} w-32`} />
+        <input name="activity_date" type="date" min={dateStart ?? undefined} max={dateEnd ?? undefined} defaultValue={initial?.activity_date ?? undefined} className={`${inputCls} flex-1`} />
+        <input name="start_time" type="time" defaultValue={initial?.start_time?.slice(0, 5) ?? undefined} className={`${inputCls} w-32`} />
       </div>
 
       {/* Prix + mode de découpage */}
@@ -453,21 +513,21 @@ function ActivityForm({
           ))}
         </div>
         {priceMode !== 'none' && (
-          <input name="price" type="number" min="0" step="0.01" required placeholder={priceMode === 'per_person' ? '€ par personne' : '€ total à diviser'} className={inputCls} />
+          <input name="price" type="number" min="0" step="0.01" required defaultValue={initial?.price ?? undefined} placeholder={priceMode === 'per_person' ? '€ par personne' : '€ total à diviser'} className={inputCls} />
         )}
       </div>
 
       {/* Nombre max de participants (places) */}
-      <input name="max_participants" type="number" min="1" step="1" placeholder="Nombre max de participants (optionnel)" aria-label="Nombre maximum de participants" className={inputCls} />
+      <input name="max_participants" type="number" min="1" step="1" defaultValue={initial?.max_participants ?? undefined} placeholder="Nombre max de participants (optionnel)" aria-label="Nombre maximum de participants" className={inputCls} />
 
-      <input name="booking_url" type="url" placeholder="Lien de réservation (optionnel)" className={inputCls} />
+      <input name="booking_url" type="url" defaultValue={initial?.booking_url ?? undefined} placeholder="Lien de réservation (optionnel)" className={inputCls} />
 
       <div className="flex gap-2">
         <button type="button" onClick={onCancel} className="flex-1 rounded-[15px] border-[1.5px] border-line-3 bg-card py-2.5 text-sm font-bold">
           Annuler
         </button>
         <button type="submit" className="flex-1 rounded-[15px] bg-terracotta py-2.5 text-sm font-bold text-white shadow-[0_4px_0_var(--color-terracotta-dk)] active:translate-y-1 active:shadow-none transition-all">
-          Proposer →
+          {isEdit ? 'Enregistrer →' : 'Proposer →'}
         </button>
       </div>
     </form>
