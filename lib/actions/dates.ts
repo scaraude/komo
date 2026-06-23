@@ -38,8 +38,6 @@ export async function voteDate(
 }
 
 export async function fixDate(slug: string, eventId: string, proposalId: string) {
-  // Authz RLS : events_update_creator (created_by = auth.uid()) pour fixer la
-  // date ; le delete des propositions passe par la policy permissive du module.
   const supabase = await createClient()
 
   const { data: proposal } = await supabase
