@@ -706,7 +706,7 @@ function DateCalendar({
         <div key={m.key}>
           <div className="text-center text-[14px] font-bold text-ink mb-[12px] capitalize">{m.label}</div>
           <div className="grid grid-cols-7 gap-[4px] text-[11px] text-disabled font-bold text-center mb-1">
-            {WEEKDAYS.map((w, i) => <div key={i}>{w}</div>)}
+            {WEEKDAYS.map((w) => <div key={w.key}>{w.label}</div>)}
           </div>
           <div className="grid grid-cols-7 gap-[6px]">
             {m.cells.map((iso, idx) => {

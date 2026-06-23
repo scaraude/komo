@@ -29,10 +29,11 @@ describe('buildMonths', () => {
     const [month] = buildMonths(getDaysBetween('2026-07-01', '2026-07-03'))
     expect(month).toBeDefined()
     expect(month!.key).toBe('2026-07')
-    // 1er juillet 2026 = mercredi → index 2 → 2 cellules de padding
-    expect(month!.cells.slice(0, 3)).toEqual([null, null, '2026-07-01'])
-    // 31 jours + 2 de padding
-    expect(month!.cells.length).toBe(33)
+
+    const julyFirstWeekdayIndex = 2 // lundi=0 → mercredi
+    const daysInJuly = 31
+    expect(month!.cells.slice(0, julyFirstWeekdayIndex + 1)).toEqual([null, null, '2026-07-01'])
+    expect(month!.cells.length).toBe(julyFirstWeekdayIndex + daysInJuly)
   })
 
   it('produit une grille par mois traversé', () => {

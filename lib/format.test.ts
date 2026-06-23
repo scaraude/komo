@@ -25,7 +25,6 @@ describe('formatEventDates', () => {
   })
 
   it("n'est pas décalé par le fuseau (ancrage midi)", () => {
-    // Sans ancrage T12:00:00, un fuseau négatif renverrait « 4 » au lieu de « 5 ».
     expect(formatEventDates('2026-07-05', '2026-07-05')).toBe('5 juillet')
   })
 })

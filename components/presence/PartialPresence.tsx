@@ -50,8 +50,8 @@ export function PartialPresence({
             </div>
 
             <div className="grid grid-cols-7 gap-[4px] text-[11px] text-disabled font-bold text-center mb-1">
-              {WEEKDAYS.map((w, i) => (
-                <div key={i}>{w}</div>
+              {WEEKDAYS.map((w) => (
+                <div key={w.key}>{w.label}</div>
               ))}
             </div>
 
