@@ -8,7 +8,10 @@ import { ensureUser, siteOrigin } from '@/lib/auth'
 export async function createEvent(formData: FormData) {
   const title = formData.get('title')?.toString().trim()
   const destination = formData.get('destination')?.toString().trim()
-  const eventType = (formData.get('event_type')?.toString() ?? 'autre') as 'weekend' | 'soiree' | 'concert' | 'road_trip' | 'sport' | 'autre'
+  const eventTypeRaw = formData.get('event_type')?.toString() ?? 'autre'
+  const eventType = (['weekend', 'soiree', 'concert', 'road_trip', 'sport', 'autre'].includes(eventTypeRaw)
+    ? eventTypeRaw
+    : 'autre') as 'weekend' | 'soiree' | 'concert' | 'road_trip' | 'sport' | 'autre'
   const poll = formData.get('poll') === '1'
   const dateStart = poll ? null : (formData.get('date_start')?.toString() || null)
   const dateEnd = poll ? null : (formData.get('date_end')?.toString() || null)

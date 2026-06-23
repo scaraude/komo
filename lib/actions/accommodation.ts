@@ -13,7 +13,8 @@ export async function proposeAccommodation(
   if (!label) throw new Error('Label requis.')
   const url = formData.get('url')?.toString().trim() || null
   const priceRaw = formData.get('price_per_night')?.toString()
-  const price_per_night = priceRaw ? parseFloat(priceRaw) : null
+  const parsedPrice = priceRaw ? parseFloat(priceRaw) : null
+  const price_per_night = parsedPrice != null && Number.isFinite(parsedPrice) ? parsedPrice : null
 
   const supabase = await createClient()
   const { error } = await supabase.from('accommodation_options').insert({

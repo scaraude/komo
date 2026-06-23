@@ -28,7 +28,11 @@ async function parseLegForm(
   direction: 'aller' | 'retour',
   formData: FormData,
 ) {
-  const mode = formData.get('mode')?.toString() as 'car' | 'rental' | 'train' | 'bus' | 'navette'
+  const modeRaw = formData.get('mode')?.toString() ?? ''
+  if (!['car', 'rental', 'train', 'bus', 'navette'].includes(modeRaw)) {
+    throw new Error('Mode de transport invalide.')
+  }
+  const mode = modeRaw as 'car' | 'rental' | 'train' | 'bus' | 'navette'
   const label = formData.get('label')?.toString().trim() ?? ''
   // Géométrie du leg : le formulaire soumet directement départ + arrivée selon
   // la direction. Le côté event vaut '' quand non personnalisé → null → hérite
@@ -40,8 +44,12 @@ async function parseLegForm(
   const rawTime = formData.get('departure_time')?.toString() || null
   const rawTimeEnd = formData.get('departure_time_end')?.toString() || null
   const rawArrival = formData.get('arrival_time')?.toString() || null
-  const seatsInput = parseInt(formData.get('total_seats')?.toString() ?? '4', 10)
-  const trunkSize = (formData.get('trunk_size')?.toString() || null) as 'small' | 'medium' | 'large' | null
+  const parsedSeats = parseInt(formData.get('total_seats')?.toString() ?? '4', 10)
+  const seatsInput = Number.isFinite(parsedSeats) && parsedSeats > 0 ? parsedSeats : 4
+  const trunkRaw = formData.get('trunk_size')?.toString() || null
+  const trunkSize = trunkRaw && ['small', 'medium', 'large'].includes(trunkRaw)
+    ? (trunkRaw as 'small' | 'medium' | 'large')
+    : null
   const linkUrl = formData.get('link_url')?.toString().trim() || null
   const comment = formData.get('comment')?.toString().trim() || null
 
