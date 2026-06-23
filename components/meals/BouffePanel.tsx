@@ -9,6 +9,8 @@ import {
 } from '@dnd-kit/core'
 import { createMeal, deleteMeal, addProduct, toggleProduct, deleteProduct, setMealDate, toggleMealOwner, editMeal } from '@/lib/actions/meals'
 import { Sheet } from '@/components/ui/Sheet'
+import { Button } from '@/components/ui/Button'
+import { DashedAddButton } from '@/components/ui/DashedAddButton'
 import { randomId } from '@/lib/uuid'
 import type { Database } from '@/lib/database.types'
 
@@ -298,10 +300,10 @@ export function BouffePanel({
   const checkedCount = products.filter((p) => p.checked).length
 
   const addButton = (
-    <button onClick={() => setSheet({ kind: 'add', tab: 'product', presetMeal: null })}
-      className="w-full rounded-[16px] bg-terracotta p-[15px] text-center text-[15px] font-bold text-white shadow-[0_4px_0_var(--color-terracotta-dk)] active:translate-y-1 active:shadow-none transition-all">
+    <Button onClick={() => setSheet({ kind: 'add', tab: 'product', presetMeal: null })}
+      className="w-full rounded-[16px] p-[15px] text-[15px]">
       ＋ Ajouter
-    </button>
+    </Button>
   )
 
   return (
@@ -558,10 +560,10 @@ function MealsView({
                   {dayMeals.map((m) => meal(m, false))}
                 </div>
               ) : (
-                <button onClick={() => onAddMealAt(day)}
-                  className="w-full rounded-[14px] border-[1.5px] border-dashed border-[var(--color-dashed)] px-[14px] py-[13px] text-left text-[13px] text-muted hover:border-terracotta hover:text-terracotta transition-colors">
+                <DashedAddButton onClick={() => onAddMealAt(day)}
+                  className="w-full rounded-[14px] px-[14px] py-[13px] text-left text-[13px]">
                   ＋ Aucun repas prévu — ajouter
-                </button>
+                </DashedAddButton>
               )}
             </div>
           ))
@@ -1018,14 +1020,13 @@ function AddForm({
 
       <ItemRows rows={rows} setRows={setRows} noun={noun} />
 
-      <button type="submit" disabled={!canSubmit}
-        className="mt-1 w-full rounded-[15px] bg-terracotta p-[15px] font-bold text-white shadow-[0_4px_0_var(--color-terracotta-dk)] active:translate-y-1 active:shadow-none transition-all disabled:opacity-50">
+      <Button type="submit" disabled={!canSubmit} className="mt-1 w-full rounded-[15px] p-[15px]">
         {mode === 'meal'
           ? 'Créer le repas'
           : items.length > 1
             ? `Ajouter les ${noun === 'ingrédient' ? 'ingrédients' : 'produits'} (${items.length})`
             : `Ajouter ${noun === 'ingrédient' ? "l'ingrédient" : 'le produit'}`}
-      </button>
+      </Button>
     </form>
   )
 }
@@ -1084,10 +1085,9 @@ function EditMealForm({ label, ingredients, onCancel, onSave }: {
       <div className="flex gap-2">
         <button type="button" onClick={onCancel}
           className="flex-1 rounded-[15px] border-[1.5px] border-line-3 bg-card p-[14px] font-bold text-ink">Annuler</button>
-        <button type="submit" disabled={!name.trim()}
-          className="flex-1 rounded-[15px] bg-terracotta p-[14px] font-bold text-white shadow-[0_4px_0_var(--color-terracotta-dk)] active:translate-y-1 active:shadow-none transition-all disabled:opacity-50">
+        <Button type="submit" disabled={!name.trim()} className="flex-1 rounded-[15px] p-[14px]">
           Enregistrer
-        </button>
+        </Button>
       </div>
     </form>
   )

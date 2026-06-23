@@ -2,10 +2,7 @@
 
 import { useState } from 'react'
 import { PlaceAutocomplete } from '@/components/PlaceAutocomplete'
-
-const INPUT_CLASS =
-  'w-full bg-card border-[1.5px] border-line rounded-[13px] p-[14px] text-[14.5px] text-ink outline-none focus:border-terracotta placeholder:text-disabled'
-const LABEL_CLASS = 'text-[12px] font-bold uppercase tracking-[0.8px] text-muted-2 mb-2'
+import { INPUT_CLASS, LABEL_CLASS } from '@/components/ui/form'
 
 /**
  * Un point d'un trajet (départ ou arrivée), avec autocomplete Geoapify.

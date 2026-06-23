@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react'
 import { proposeAccommodation, voteAccommodation } from '@/lib/actions/accommodation'
 import type { Database } from '@/lib/database.types'
 import { randomId } from '@/lib/uuid'
+import { Button } from '@/components/ui/Button'
+import { DashedAddButton } from '@/components/ui/DashedAddButton'
 
 type Option = Database['public']['Tables']['accommodation_options']['Row']
 
@@ -125,15 +127,14 @@ export function AccommodationSection({
           <div className="flex gap-2">
             <button type="button" onClick={() => setShowForm(false)}
               className="flex-1 py-2.5 border-[1.5px] border-line-3 bg-card rounded-[15px] text-sm font-bold">Annuler</button>
-            <button type="submit"
-              className="flex-1 py-2.5 bg-terracotta text-white rounded-[15px] text-sm font-bold shadow-[0_4px_0_var(--color-terracotta-dk)] active:translate-y-1 active:shadow-none transition-all">Proposer →</button>
+            <Button type="submit" className="flex-1 rounded-[15px] py-2.5 text-sm">Proposer →</Button>
           </div>
         </form>
       ) : (
-        <button onClick={() => setShowForm(true)}
-          className="w-full py-3 border-[1.5px] border-dashed border-[var(--color-dashed)] rounded-[18px] text-sm font-semibold text-muted hover:border-olive hover:text-olive transition-colors">
+        <DashedAddButton accent="olive" onClick={() => setShowForm(true)}
+          className="w-full rounded-[18px] py-3 text-sm">
           + Proposer un logement
-        </button>
+        </DashedAddButton>
       )}
     </div>
   )

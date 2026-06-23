@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { deleteLeg, joinLeg, leaveLeg } from '@/lib/actions/transport'
 import type { Database } from '@/lib/database.types'
 import { randomId } from '@/lib/uuid'
+import { Avatar } from '@/components/ui/Avatar'
 
 type Leg = Database['public']['Tables']['transport_legs']['Row']
 type Occupant = Database['public']['Tables']['transport_occupants']['Row']
@@ -156,9 +157,7 @@ export function CarCard({
             const p = participantFor(o.participant_id)
             return (
               <div key={o.id} className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-ink text-white text-xs font-bold flex items-center justify-center shrink-0">
-                  {p?.pseudo[0]?.toUpperCase() ?? '?'}
-                </div>
+                <Avatar pseudo={p?.pseudo ?? ''} className="h-7 w-7 bg-ink text-xs text-white" />
                 <span className="text-[14px] font-medium text-ink">{p?.pseudo ?? '…'}</span>
                 {o.is_driver && <span className="text-[12px] text-muted ml-auto">conducteur·ice</span>}
               </div>

@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react'
 import { proposeDateOption, voteDate, fixDate } from '@/lib/actions/dates'
 import type { Database } from '@/lib/database.types'
 import { randomId } from '@/lib/uuid'
+import { Button } from '@/components/ui/Button'
+import { DashedAddButton } from '@/components/ui/DashedAddButton'
 
 type Proposal = Database['public']['Tables']['date_proposals']['Row']
 
@@ -144,13 +146,9 @@ export function DatePoll({
             onChange={(e) => setNewDate(e.target.value)}
             className="flex-1 border-[1.5px] border-line rounded-[13px] px-3 py-2.5 text-sm bg-card focus:outline-none focus:border-terracotta"
           />
-          <button
-            onClick={handlePropose}
-            disabled={!newDate}
-            className="px-4 py-2.5 bg-terracotta text-white rounded-[13px] text-sm font-bold shadow-[0_3px_0_var(--color-terracotta-dk)] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50"
-          >
+          <Button onClick={handlePropose} disabled={!newDate} className="rounded-[13px] px-4 py-2.5 text-sm">
             Proposer
-          </button>
+          </Button>
           <button
             onClick={() => setShowInput(false)}
             aria-label="Annuler"
@@ -160,12 +158,9 @@ export function DatePoll({
           </button>
         </div>
       ) : (
-        <button
-          onClick={() => setShowInput(true)}
-          className="w-full py-3 border-[1.5px] border-dashed border-[var(--color-dashed)] rounded-[18px] text-sm font-semibold text-muted hover:border-terracotta hover:text-terracotta transition-colors"
-        >
+        <DashedAddButton onClick={() => setShowInput(true)} className="w-full rounded-[18px] py-3 text-sm">
           + Proposer une date
-        </button>
+        </DashedAddButton>
       )}
     </section>
   )

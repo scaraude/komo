@@ -3,6 +3,8 @@
 import { useState, useTransition } from 'react'
 import { createLeg, updateLeg } from '@/lib/actions/transport'
 import { Sheet } from '@/components/ui/Sheet'
+import { Button } from '@/components/ui/Button'
+import { INPUT_CLASS, LABEL_CLASS } from '@/components/ui/form'
 import { PointField } from './PointField'
 import type { Database } from '@/lib/database.types'
 
@@ -17,10 +19,6 @@ const MODES = [
 ] as const
 
 type Mode = (typeof MODES)[number]['value']
-
-const INPUT_CLASS =
-  'w-full bg-card border-[1.5px] border-line rounded-[13px] p-[14px] text-[14.5px] text-ink outline-none focus:border-terracotta placeholder:text-disabled'
-const LABEL_CLASS = 'text-[12px] font-bold uppercase tracking-[0.8px] text-muted-2 mb-2'
 
 export function ProposeVehicleForm({
   slug,
@@ -266,10 +264,9 @@ export function ProposeVehicleForm({
               className="flex-1 bg-card border-[1.5px] border-line-3 rounded-[15px] p-[16px] font-bold text-ink">
               Annuler
             </button>
-            <button type="submit" disabled={isPending}
-              className="flex-[1.5] rounded-[15px] bg-terracotta text-white p-[16px] text-center font-bold shadow-[0_4px_0_var(--color-terracotta-dk)] active:translate-y-1 active:shadow-none transition-all disabled:opacity-60">
+            <Button type="submit" disabled={isPending} className="flex-[1.5] rounded-[15px] p-[16px]">
               {isPending ? '…' : isEdit ? 'Enregistrer →' : 'Proposer →'}
-            </button>
+            </Button>
           </div>
         </form>
     </Sheet>
