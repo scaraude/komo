@@ -11,14 +11,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
   const { data: event } = await supabase
     .from('events').select('id, title, destination, date_start, date_end').eq('slug', slug).single()
 
+  if (!event) return new Response(null, { status: 404 })
+
   const { data: participants } = await supabase
-    .from('participants').select('presence_status').eq('event_id', event?.id ?? '')
+    .from('participants').select('presence_status').eq('event_id', event.id)
 
   const hot = (participants ?? []).filter((p) => p.presence_status === 'hot').length
   const maybe = (participants ?? []).filter((p) => ['maybe', 'unsure'].includes(p.presence_status ?? '')).length
   const total = (participants ?? []).length
 
-  const dateLabel = formatEventDates(event?.date_start ?? null, event?.date_end ?? null, { fallback: 'Date à définir' })
+  const dateLabel = formatEventDates(event.date_start, event.date_end, { fallback: 'Date à définir' })
 
   return new ImageResponse(
     (
@@ -40,7 +42,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <div style={{ fontSize: '72px', fontWeight: 900, lineHeight: 1, color: '#1a1410', marginBottom: '24px' }}>
-            {event?.title ?? 'Event'}
+            {event.title}
           </div>
 
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
@@ -48,7 +50,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
               📅 {dateLabel}
             </span>
             <span style={{ background: '#fff', border: '1.5px solid #d4c9b8', borderRadius: '999px', padding: '8px 16px', fontSize: '18px', color: '#1a1410', fontFamily: 'sans-serif' }}>
-              📍 {event?.destination ?? ''}
+              📍 {event.destination ?? ''}
             </span>
           </div>
         </div>
