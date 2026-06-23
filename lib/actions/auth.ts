@@ -24,3 +24,12 @@ export async function requestLoginLink(email: string) {
   })
   return { ok: true as const }
 }
+
+export type LoginState = { status: 'idle' | 'sent'; email: string }
+
+export async function sendLoginLink(_prev: LoginState, formData: FormData): Promise<LoginState> {
+  const email = (formData.get('email') ?? '').toString().trim()
+  if (!email) return { status: 'idle', email: '' }
+  await requestLoginLink(email)
+  return { status: 'sent', email }
+}
