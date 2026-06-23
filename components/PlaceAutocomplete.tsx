@@ -103,7 +103,8 @@ export function PlaceAutocomplete({
       setActive((a) => Math.max(a - 1, 0))
     } else if (e.key === 'Enter' && active >= 0) {
       e.preventDefault()
-      pick(places[active])
+      const place = places[active]
+      if (place) pick(place)
     } else if (e.key === 'Escape') {
       setOpen(false)
     }

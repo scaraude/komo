@@ -20,7 +20,7 @@ export function UnassignedZone({ participants }: { participants: Participant[] }
           <div key={p.id}
             className="inline-flex items-center gap-1.5 bg-card border-[1.5px] border-[var(--color-terracotta-line)] rounded-[20px] px-[12px] py-[7px] text-[13px] font-medium text-body">
             <div className="w-5 h-5 rounded-full bg-terracotta text-white text-[11px] font-bold flex items-center justify-center shrink-0">
-              {p.pseudo[0].toUpperCase()}
+              {p.pseudo[0]?.toUpperCase() ?? '?'}
             </div>
             {p.pseudo}
             {p.departure_city && <span className="text-muted text-[12px]">· {p.departure_city}</span>}

@@ -85,7 +85,7 @@ export function ActivityPanel({
                 (a) => optimisticActivityIds.current.has(a.id) && a.created_by === row.created_by && a.label === row.label,
               )
               if (idx === -1) return [...prev, row]
-              optimisticActivityIds.current.delete(prev[idx].id)
+              optimisticActivityIds.current.delete(prev[idx]!.id)
               const next = [...prev]
               next[idx] = row
               return next
@@ -379,7 +379,7 @@ function ActivityCard({
           <div className="mt-2 flex flex-wrap gap-1">
             {signedPeople.map((p) => (
               <span key={p.id} className="flex h-6 w-6 items-center justify-center rounded-full bg-ink text-[10px] font-bold text-paper" title={p.pseudo}>
-                {p.pseudo[0].toUpperCase()}
+                {p.pseudo[0]?.toUpperCase() ?? '?'}
               </span>
             ))}
           </div>
