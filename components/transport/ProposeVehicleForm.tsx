@@ -202,10 +202,10 @@ export function ProposeVehicleForm({
             <div className="bg-card border-[1.5px] border-line rounded-[13px] py-[11px] px-[14px] flex items-center justify-between">
               <div className="text-[14.5px] text-ink font-semibold">Places passagers</div>
               <div className="flex items-center gap-[16px]">
-                <button type="button" onClick={() => setSeats(Math.max(1, seats - 1))}
+                <button type="button" onClick={() => setSeats(Math.max(1, seats - 1))} aria-label="Une place de moins"
                   className="w-[32px] h-[32px] rounded-full border-[1.5px] border-line-3 flex items-center justify-center text-[18px] leading-none">−</button>
                 <span className="text-[16px] font-bold min-w-[14px] text-center">{seats}</span>
-                <button type="button" onClick={() => setSeats(Math.min(8, seats + 1))}
+                <button type="button" onClick={() => setSeats(Math.min(8, seats + 1))} aria-label="Une place de plus"
                   className="w-[32px] h-[32px] rounded-full border-[1.5px] border-line-3 flex items-center justify-center text-[18px] leading-none">+</button>
               </div>
             </div>

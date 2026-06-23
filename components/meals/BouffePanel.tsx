@@ -645,7 +645,7 @@ function MealCard({
         </button>
         <button onClick={() => onEditMeal(meal.id)} aria-label="Modifier le repas"
           className="shrink-0 text-[12px] text-muted hover:text-olive transition-colors">✎</button>
-        <button onClick={() => onDeleteMeal(meal.id)}
+        <button onClick={() => onDeleteMeal(meal.id)} aria-label="Supprimer le repas"
           className="shrink-0 text-[12px] text-muted hover:text-prune transition-colors">🗑</button>
       </div>
 
@@ -764,7 +764,7 @@ function ShoppingView({
               </span>
               {ml && <span className="mt-0.5 block text-[11px] text-muted">🍽️ {ml}</span>}
             </button>
-            <button onClick={() => onDelete(p.id)}
+            <button onClick={() => onDelete(p.id)} aria-label="Supprimer le produit"
               className="shrink-0 text-[12px] text-muted hover:text-prune transition-colors">🗑</button>
           </div>
         )
