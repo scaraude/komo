@@ -15,11 +15,13 @@ const ACCENT = {
 
 export function DashedAddButton({
   accent = 'terracotta',
+  type = 'button',
   className = '',
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { accent?: keyof typeof ACCENT }) {
   return (
     <button
+      type={type}
       {...props}
       className={`border-[1.5px] border-dashed border-[var(--color-dashed)] font-semibold text-muted transition-colors ${ACCENT[accent]} ${className}`}
     />
