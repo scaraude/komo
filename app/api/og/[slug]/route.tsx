@@ -1,5 +1,6 @@
 import { ImageResponse } from '@vercel/og'
 import { createClient } from '@/lib/supabase/server'
+import { formatEventDates } from '@/lib/format'
 
 export const runtime = 'edge'
 
@@ -17,11 +18,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
   const maybe = (participants ?? []).filter((p) => ['maybe', 'unsure'].includes(p.presence_status ?? '')).length
   const total = (participants ?? []).length
 
-  const dateLabel = !event?.date_start
-    ? 'Date à définir'
-    : event.date_start === event.date_end
-      ? new Date(event.date_start + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
-      : `${new Date(event.date_start + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} → ${new Date((event.date_end ?? event.date_start) + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
+  const dateLabel = formatEventDates(event?.date_start ?? null, event?.date_end ?? null, { fallback: 'Date à définir' })
 
   return new ImageResponse(
     (

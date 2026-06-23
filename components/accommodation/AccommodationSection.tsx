@@ -6,6 +6,7 @@ import type { Database } from '@/lib/database.types'
 import { randomId } from '@/lib/uuid'
 import { Button } from '@/components/ui/Button'
 import { DashedAddButton } from '@/components/ui/DashedAddButton'
+import { countVotes, hasVote, toggleVote } from '@/lib/votes'
 
 type Option = Database['public']['Tables']['accommodation_options']['Row']
 
@@ -27,19 +28,18 @@ export function AccommodationSection({
   const [, startTransition] = useTransition()
 
   function hasVoted(o: Option) {
-    return (o.votes as Record<string, boolean>)[participantId] === true
+    return hasVote(o.votes, participantId)
   }
 
   function voteCount(o: Option) {
-    return Object.values(o.votes as Record<string, boolean>).filter(Boolean).length
+    return countVotes(o.votes)
   }
 
   function handleVote(option: Option) {
-    const voted = hasVoted(option)
     setOptions((prev) =>
       prev.map((o) =>
         o.id === option.id
-          ? { ...o, votes: { ...(o.votes as Record<string, boolean>), [participantId]: !voted } }
+          ? { ...o, votes: toggleVote(o.votes, participantId) }
           : o
       )
     )

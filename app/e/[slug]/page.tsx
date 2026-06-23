@@ -9,6 +9,7 @@ import { LiveCounter } from '@/components/presence/LiveCounter'
 import { TransportPanel } from '@/components/transport/TransportPanel'
 import { DatePoll } from '@/components/dates/DatePoll'
 import { Avatar } from '@/components/ui/Avatar'
+import { formatEventDates } from '@/lib/format'
 import { AccommodationSection } from '@/components/accommodation/AccommodationSection'
 import { BouffePanel } from '@/components/meals/BouffePanel'
 import { ActivityPanel } from '@/components/activities/ActivityPanel'
@@ -47,15 +48,6 @@ const STATUS_CONFIG = {
 
 const RSVP_LABEL: Record<string, string> = {
   hot: 'chaud 🔥', maybe: 'probable 🤔', unsure: 'pas sûr 😬', no: 'pas là ✕',
-}
-
-function heroDateRange(start: string, end: string) {
-  const s = new Date(start + 'T12:00:00')
-  const e = new Date(end + 'T12:00:00')
-  const month = (d: Date) => d.toLocaleDateString('fr-FR', { month: 'long' })
-  if (start === end) return `${s.getDate()} ${month(s)}`
-  if (s.getMonth() === e.getMonth()) return `${s.getDate()} → ${e.getDate()} ${month(e)}`
-  return `${s.getDate()} ${month(s)} → ${e.getDate()} ${month(e)}`
 }
 
 const MODULE_TABS = new Set(['presence', 'dates', 'transport', 'bouffe', 'activites'])
@@ -155,7 +147,7 @@ export default async function EventPage({
           </div>
           <h1 className="font-serif text-[27px] leading-[1.1] text-on-dark">{event.title}</h1>
           <div className="mt-[7px] text-[13px] text-on-dark-2">
-            {isSondage ? 'Dates à définir' : heroDateRange(event.date_start!, event.date_end!)}
+            {isSondage ? 'Dates à définir' : formatEventDates(event.date_start, event.date_end)}
             {event.destination ? ` · ${event.destination}` : ''}
           </div>
           <ParticipantsBadge

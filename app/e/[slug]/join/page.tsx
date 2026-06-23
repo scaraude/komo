@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getAuthUser } from '@/lib/auth'
 import { JoinForm } from './JoinForm'
+import { formatEventDates } from '@/lib/format'
 
 export default async function JoinPage({
   params,
@@ -35,11 +36,7 @@ export default async function JoinPage({
     if (already) redirect(`/e/${slug}`)
   }
 
-  const dateLabel = !event.date_start
-    ? 'Date à définir'
-    : event.date_start === event.date_end
-      ? new Date(event.date_start).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
-      : `${new Date(event.date_start).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} → ${new Date(event.date_end!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
+  const dateLabel = formatEventDates(event.date_start, event.date_end, { fallback: 'Date à définir' })
 
   return (
     <main className="min-h-screen flex items-center justify-center px-4">

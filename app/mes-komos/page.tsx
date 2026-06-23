@@ -1,17 +1,10 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getUserId } from '@/lib/auth'
+import { formatEventDates } from '@/lib/format'
 
 const VIBE_EMOJI: Record<string, string> = {
   weekend: '🏔️', soiree: '🎉', concert: '🎸', road_trip: '🚗', sport: '⚽', autre: '✨',
-}
-
-function dateLabel(start: string | null, end: string | null) {
-  if (!start) return 'Dates à définir'
-  const s = new Date(start + 'T12:00:00')
-  const fmt = (d: Date) => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-  if (!end || start === end) return fmt(s)
-  return `${fmt(s)} → ${fmt(new Date(end + 'T12:00:00'))}`
 }
 
 export default async function MesKomosPage() {
@@ -90,7 +83,7 @@ export default async function MesKomosPage() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[15.5px] font-bold text-ink">{ev.title}</p>
                   <p className="truncate text-[13px] text-muted">
-                    {dateLabel(ev.date_start, ev.date_end)}
+                    {formatEventDates(ev.date_start, ev.date_end, { month: 'short' })}
                     {ev.destination ? ` · ${ev.destination}` : ''}
                   </p>
                 </div>
