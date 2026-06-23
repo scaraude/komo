@@ -34,12 +34,10 @@ export async function voteAccommodation(
   participantId: string,
 ) {
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('accommodation_options').select('votes').eq('id', optionId).single()
-  if (!data) return // option optimiste pas encore en DB
-
-  const votes = { ...(data.votes as Record<string, boolean>) }
-  votes[participantId] = !votes[participantId]
-  await supabase.from('accommodation_options').update({ votes }).eq('id', optionId)
+  const { error } = await supabase.rpc('toggle_accommodation_vote', {
+    p_option: optionId,
+    p_participant: participantId,
+  })
+  if (error) throw new Error('Vote impossible.')
   revalidatePath(`/e/${slug}`)
 }

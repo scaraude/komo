@@ -27,13 +27,11 @@ export async function voteDate(
   vote: boolean,
 ) {
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('date_proposals').select('votes').eq('id', proposalId).single()
-  if (!data) return // proposition optimiste pas encore en DB
-
-  const votes = { ...(data.votes as Record<string, boolean>), [participantId]: vote }
-  const { error } = await supabase
-    .from('date_proposals').update({ votes }).eq('id', proposalId)
+  const { error } = await supabase.rpc('set_date_vote', {
+    p_proposal: proposalId,
+    p_participant: participantId,
+    p_vote: vote,
+  })
   if (error) throw new Error('Vote impossible.')
   revalidatePath(`/e/${slug}`)
 }
