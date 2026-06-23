@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { ensureUser } from '@/lib/auth'
+import { mustSucceed } from '@/lib/actions/assert'
 import { computeSuggestions } from '@/lib/transport/solver'
 import type { Assignment } from '@/lib/transport/solver'
 
@@ -274,8 +275,12 @@ export async function updateDepartureInfo(
   luggageSize: 'light' | 'medium' | 'large' | null
 ) {
   const { supabase } = await ensureUser()
-  await supabase
-    .from('participants')
-    .update({ departure_city: city, luggage_size: luggageSize })
-    .eq('id', participantId)
+  mustSucceed(
+    await supabase
+      .from('participants')
+      .update({ departure_city: city, luggage_size: luggageSize })
+      .eq('id', participantId)
+      .select('id'),
+    'Impossible de mettre à jour tes infos de départ.',
+  )
 }
