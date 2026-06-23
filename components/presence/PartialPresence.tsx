@@ -2,63 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { updatePartialDays } from '@/lib/actions/presence'
-
-function getDaysBetween(start: string, end: string): string[] {
-  const days: string[] = []
-  const current = new Date(start)
-  const last = new Date(end)
-  while (current <= last) {
-    days.push(current.toISOString().slice(0, 10))
-    current.setDate(current.getDate() + 1)
-  }
-  return days
-}
-
-const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
-
-// Index lundi=0 … dimanche=6 à partir d'une date ISO (yyyy-mm-dd)
-function isoWeekdayIndex(iso: string): number {
-  const js = new Date(`${iso}T00:00:00`).getDay() // 0=dim … 6=sam
-  return (js + 6) % 7
-}
-
-type CalendarMonth = {
-  key: string
-  label: string
-  // cellules de la grille : null = case vide (padding), sinon date ISO
-  cells: (string | null)[]
-}
-
-// Construit les grilles calendaires (1 par mois) couvrant les jours de l'event.
-function buildMonths(eventDays: string[]): CalendarMonth[] {
-  const months: CalendarMonth[] = []
-  const seen = new Map<string, CalendarMonth>()
-
-  for (const iso of eventDays) {
-    const monthKey = iso.slice(0, 7) // yyyy-mm
-    if (seen.has(monthKey)) continue
-
-    const first = new Date(`${monthKey}-01T00:00:00`)
-    const year = first.getFullYear()
-    const month = first.getMonth()
-    const daysInMonth = new Date(year, month + 1, 0).getDate()
-
-    const cells: (string | null)[] = []
-    // padding initial pour aligner le 1er sur lundi→dimanche
-    const firstIso = `${monthKey}-01`
-    for (let i = 0; i < isoWeekdayIndex(firstIso); i++) cells.push(null)
-    for (let d = 1; d <= daysInMonth; d++) {
-      cells.push(`${monthKey}-${String(d).padStart(2, '0')}`)
-    }
-
-    const label = first.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
-    const cal: CalendarMonth = { key: monthKey, label, cells }
-    seen.set(monthKey, cal)
-    months.push(cal)
-  }
-
-  return months
-}
+import { WEEKDAYS, getDaysBetween, buildMonths } from '@/lib/calendar'
 
 export function PartialPresence({
   slug,

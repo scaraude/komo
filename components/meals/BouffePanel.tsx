@@ -12,6 +12,7 @@ import { Sheet } from '@/components/ui/Sheet'
 import { Button } from '@/components/ui/Button'
 import { DashedAddButton } from '@/components/ui/DashedAddButton'
 import { randomId } from '@/lib/uuid'
+import { WEEKDAYS, getDaysBetween, buildMonths, formatDayLabel } from '@/lib/calendar'
 import type { Database } from '@/lib/database.types'
 
 type Meal = Database['public']['Tables']['meals']['Row']
@@ -24,8 +25,6 @@ const UNITS = ['unité', 'g', 'kg', 'L', 'cl', 'paquet', 'bouteille'] as const
 const INPUT =
   'w-full bg-card border-[1.5px] border-line rounded-[13px] p-[13px] text-[14.5px] text-ink outline-none focus:border-terracotta placeholder:text-disabled'
 
-const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
-
 // useSyncExternalStore sans mises à jour (sert juste à détecter le client).
 const subscribeNoop = () => () => {}
 
@@ -34,50 +33,6 @@ function qtyLabel(p: { quantity: number | null; unit: string }) {
   return p.unit === 'unité' ? `×${p.quantity}` : `${p.quantity} ${p.unit}`
 }
 
-// Libellé compact d'une date ISO pour le tag : « sam. 12 juil. »
-function mealDateLabel(iso: string) {
-  return new Date(`${iso}T12:00:00`)
-    .toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
-}
-
-// Jours de l'event (ISO yyyy-mm-dd) entre start et end inclus.
-function getDaysBetween(start: string, end: string): string[] {
-  const days: string[] = []
-  const current = new Date(`${start}T12:00:00`)
-  const last = new Date(`${end}T12:00:00`)
-  while (current <= last) {
-    days.push(current.toISOString().slice(0, 10))
-    current.setDate(current.getDate() + 1)
-  }
-  return days
-}
-
-// Index lundi=0 … dimanche=6 à partir d'une date ISO.
-function isoWeekdayIndex(iso: string): number {
-  const js = new Date(`${iso}T00:00:00`).getDay() // 0=dim … 6=sam
-  return (js + 6) % 7
-}
-
-type CalendarMonth = { key: string; label: string; cells: (string | null)[] }
-
-// Grilles calendaires (1 par mois) couvrant les jours de l'event.
-function buildMonths(eventDays: string[]): CalendarMonth[] {
-  const months: CalendarMonth[] = []
-  const seen = new Set<string>()
-  for (const iso of eventDays) {
-    const monthKey = iso.slice(0, 7)
-    if (seen.has(monthKey)) continue
-    seen.add(monthKey)
-    const first = new Date(`${monthKey}-01T00:00:00`)
-    const daysInMonth = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate()
-    const cells: (string | null)[] = []
-    for (let i = 0; i < isoWeekdayIndex(`${monthKey}-01`); i++) cells.push(null)
-    for (let d = 1; d <= daysInMonth; d++) cells.push(`${monthKey}-${String(d).padStart(2, '0')}`)
-    const label = first.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
-    months.push({ key: monthKey, label, cells })
-  }
-  return months
-}
 
 type DraftItem = { name: string; quantity: number | null; unit: string }
 
@@ -554,7 +509,7 @@ function MealsView({
           const dayMeals = mealsOn(day)
           return zone(`day:${day}`, undefined, (isOver) => (
             <div className={`rounded-[14px] py-1 transition-colors ${isOver ? 'bg-terracotta-soft/50' : ''}`}>
-              <DaySep label={mealDateLabel(day)} />
+              <DaySep label={formatDayLabel(day)} />
               {dayMeals.length > 0 ? (
                 <div className="flex flex-col gap-[11px]">
                   {dayMeals.map((m) => meal(m, false))}
@@ -980,7 +935,7 @@ function AddForm({
         <div className="flex flex-col gap-3">
           {locked ? (
             <span className="self-start rounded-full bg-olive-soft px-[11px] py-[5px] text-[12.5px] font-semibold text-olive-text-dk">
-              📅 {mealDateLabel(lockedDate!)}
+              📅 {formatDayLabel(lockedDate!)}
             </span>
           ) : eventDays.length > 0 ? (
             <div>
@@ -991,7 +946,7 @@ function AddForm({
                       ? 'bg-olive-soft text-olive-text-dk'
                       : 'border-[1.5px] border-dashed border-[var(--color-dashed)] text-muted'
                   }`}>
-                  📅 {mealDate ? mealDateLabel(mealDate) : 'Choisir un jour'}
+                  📅 {mealDate ? formatDayLabel(mealDate) : 'Choisir un jour'}
                 </button>
                 {mealDate && (
                   <button type="button" onClick={() => { setMealDate(null); setShowCal(false) }}

@@ -9,6 +9,7 @@ import { perPerson, totalCost, formatEuro } from '@/lib/activities/cost'
 import { Button } from '@/components/ui/Button'
 import { DashedAddButton } from '@/components/ui/DashedAddButton'
 import { Avatar } from '@/components/ui/Avatar'
+import { formatDayLabel } from '@/lib/calendar'
 
 type Activity = Database['public']['Tables']['activities']['Row']
 type Signup = Database['public']['Tables']['activity_signups']['Row']
@@ -33,8 +34,7 @@ function formatTime(t: string | null): string | null {
 }
 
 function formatDate(d: string | null): string | null {
-  if (!d) return null
-  return new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+  return d ? formatDayLabel(d) : null
 }
 
 export function ActivityPanel({

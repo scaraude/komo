@@ -6,6 +6,7 @@ import type { Database } from '@/lib/database.types'
 import { randomId } from '@/lib/uuid'
 import { Button } from '@/components/ui/Button'
 import { DashedAddButton } from '@/components/ui/DashedAddButton'
+import { countVotes, hasVote, toggleVote } from '@/lib/votes'
 
 type Proposal = Database['public']['Tables']['date_proposals']['Row']
 
@@ -36,20 +37,19 @@ export function DatePoll({
   const [, startTransition] = useTransition()
 
   function getVoteCount(p: Proposal) {
-    return Object.values(p.votes as Record<string, boolean>).filter(Boolean).length
+    return countVotes(p.votes)
   }
 
   function hasVoted(p: Proposal) {
-    return (p.votes as Record<string, boolean>)[participantId] === true
+    return hasVote(p.votes, participantId)
   }
 
   function handleVote(proposal: Proposal) {
-    const currentVote = hasVoted(proposal)
-    const newVote = !currentVote
+    const newVote = !hasVoted(proposal)
     setProposals((prev) =>
       prev.map((p) =>
         p.id === proposal.id
-          ? { ...p, votes: { ...(p.votes as Record<string, boolean>), [participantId]: newVote } }
+          ? { ...p, votes: toggleVote(p.votes, participantId) }
           : p
       )
     )
@@ -79,8 +79,7 @@ export function DatePoll({
   }
 
   const sorted = [...proposals].sort((a, b) => {
-    const diff = Object.values(b.votes as Record<string, boolean>).filter(Boolean).length
-      - Object.values(a.votes as Record<string, boolean>).filter(Boolean).length
+    const diff = countVotes(b.votes) - countVotes(a.votes)
     return diff !== 0 ? diff : a.proposed_date.localeCompare(b.proposed_date)
   })
 
