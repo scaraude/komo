@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { mustSucceed } from '@/lib/actions/assert'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ensureUser, siteOrigin } from '@/lib/auth'
 
@@ -104,6 +105,7 @@ export async function promoteParticipant(
 ) {
   // Authz déléguée à la RLS (participants_update_own_or_org : orga de l'event).
   const supabase = await createClient()
-  await supabase.from('participants').update({ role: newRole }).eq('id', targetId)
+  const result = await supabase.from('participants').update({ role: newRole }).eq('id', targetId).select('id')
+  mustSucceed(result, "Promotion impossible : tu n'es pas organisateur de cet event.")
   revalidatePath(`/e/${slug}`)
 }
