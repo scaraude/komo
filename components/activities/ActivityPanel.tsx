@@ -263,7 +263,7 @@ export function ActivityPanel({
               key={a.id}
               activity={a}
               pending={pendingIds.has(a.id)}
-              signedPeople={signupsFor(a.id).map((s) => participants.find((p) => p.id === s.participant_id)).filter(Boolean) as Person[]}
+              signedPeople={signupsFor(a.id).map((s) => participants.find((p) => p.id === s.participant_id)).filter((p): p is Person => p != null)}
               mine={isSignedUp(a.id)}
               canDelete={isAdmin || a.created_by === participantId}
               canEdit={!pendingIds.has(a.id)}
