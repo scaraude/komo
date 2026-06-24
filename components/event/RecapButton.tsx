@@ -1,11 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { Database } from '@/lib/database.types'
-
-type Participant = Database['public']['Tables']['participants']['Row']
-type Leg = Database['public']['Tables']['transport_legs']['Row']
-type Occupant = Database['public']['Tables']['transport_occupants']['Row']
+import type { Participant, Leg, Occupant } from '@/lib/types'
 
 type Props = {
   event: {

@@ -6,9 +6,7 @@ import { Sheet } from '@/components/ui/Sheet'
 import { Button } from '@/components/ui/Button'
 import { INPUT_CLASS, LABEL_CLASS } from '@/components/ui/form'
 import { PointField } from './PointField'
-import type { Database } from '@/lib/database.types'
-
-type Leg = Database['public']['Tables']['transport_legs']['Row']
+import type { Leg } from '@/lib/types'
 
 const MODES = [
   { value: 'car', label: '🚗 Voiture' },

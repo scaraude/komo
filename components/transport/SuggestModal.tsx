@@ -5,10 +5,7 @@ import { suggestAssignments, applyAssignments } from '@/lib/actions/transport'
 import { Sheet } from '@/components/ui/Sheet'
 import { Button } from '@/components/ui/Button'
 import type { Assignment } from '@/lib/transport/solver'
-import type { Database } from '@/lib/database.types'
-
-type Participant = Database['public']['Tables']['participants']['Row']
-type Leg = Database['public']['Tables']['transport_legs']['Row']
+import type { Participant, Leg } from '@/lib/types'
 
 export function SuggestModal({
   slug,

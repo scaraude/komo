@@ -6,11 +6,7 @@ import { UnassignedZone } from './UnassignedZone'
 import { ProposeVehicleForm } from './ProposeVehicleForm'
 import { SuggestModal } from './SuggestModal'
 import { DashedAddButton } from '@/components/ui/DashedAddButton'
-import type { Database } from '@/lib/database.types'
-
-type Leg = Database['public']['Tables']['transport_legs']['Row']
-type Occupant = Database['public']['Tables']['transport_occupants']['Row']
-type Participant = Database['public']['Tables']['participants']['Row']
+import type { Leg, Occupant, Participant } from '@/lib/types'
 
 export function TransportPanel({
   slug,

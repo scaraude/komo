@@ -17,9 +17,7 @@ import { RecapButton } from '@/components/event/RecapButton'
 import { promoteParticipant } from '@/lib/actions/participants'
 import { ShareSheet } from './ShareSheet'
 import { ParticipantsBadge } from './ParticipantsBadge'
-import type { Database } from '@/lib/database.types'
-
-type Participant = Database['public']['Tables']['participants']['Row']
+import type { Participant } from '@/lib/types'
 
 const EVENT_TYPE_WORDING = {
   weekend:  { eyebrow: 'Komo · week-end',  presenceQ: 'Tu viens ?' },

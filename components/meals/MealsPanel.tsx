@@ -13,12 +13,7 @@ import { Button } from '@/components/ui/Button'
 import { DashedAddButton } from '@/components/ui/DashedAddButton'
 import { randomId } from '@/lib/uuid'
 import { WEEKDAYS, getDaysBetween, buildMonths, formatDayLabel } from '@/lib/calendar'
-import type { Database } from '@/lib/database.types'
-
-type Meal = Database['public']['Tables']['meals']['Row']
-type Product = Database['public']['Tables']['products']['Row']
-type MealOwner = Database['public']['Tables']['meal_owners']['Row']
-type Participant = Database['public']['Tables']['participants']['Row']
+import type { Meal, Product, MealOwner, Participant } from '@/lib/types'
 
 const UNITS = ['unité', 'g', 'kg', 'L', 'cl', 'paquet', 'bouteille'] as const
 

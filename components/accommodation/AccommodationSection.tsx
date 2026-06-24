@@ -2,13 +2,11 @@
 
 import { useState, useTransition } from 'react'
 import { proposeAccommodation, voteAccommodation } from '@/lib/actions/accommodation'
-import type { Database } from '@/lib/database.types'
+import type { AccommodationOption } from '@/lib/types'
 import { randomId } from '@/lib/uuid'
 import { Button } from '@/components/ui/Button'
 import { DashedAddButton } from '@/components/ui/DashedAddButton'
 import { countVotes, hasVote, toggleVote } from '@/lib/votes'
-
-type Option = Database['public']['Tables']['accommodation_options']['Row']
 
 export function AccommodationSection({
   slug,
@@ -20,22 +18,22 @@ export function AccommodationSection({
   slug: string
   eventId: string
   participantId: string
-  initialOptions: Option[]
+  initialOptions: AccommodationOption[]
   totalParticipants: number
 }) {
   const [options, setOptions] = useState(initialOptions)
   const [showForm, setShowForm] = useState(false)
   const [, startTransition] = useTransition()
 
-  function hasVoted(o: Option) {
+  function hasVoted(o: AccommodationOption) {
     return hasVote(o.votes, participantId)
   }
 
-  function voteCount(o: Option) {
+  function voteCount(o: AccommodationOption) {
     return countVotes(o.votes)
   }
 
-  function handleVote(option: Option) {
+  function handleVote(option: AccommodationOption) {
     setOptions((prev) =>
       prev.map((o) =>
         o.id === option.id
@@ -113,7 +111,7 @@ export function AccommodationSection({
             const url = fd.get('url')?.toString().trim() || null
             const priceRaw = fd.get('price_per_night')?.toString()
             const price_per_night = priceRaw ? parseFloat(priceRaw) : null
-            const optimistic: Option = {
+            const optimistic: AccommodationOption = {
               id: randomId(), event_id: eventId, label, url,
               price_per_night, proposed_by: participantId, votes: {}, created_at: new Date().toISOString(),
             }

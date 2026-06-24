@@ -2,13 +2,9 @@
 
 import { useState, useTransition } from 'react'
 import { deleteLeg, joinLeg, leaveLeg } from '@/lib/actions/transport'
-import type { Database } from '@/lib/database.types'
+import type { Leg, Occupant, Participant } from '@/lib/types'
 import { randomId } from '@/lib/uuid'
 import { Avatar } from '@/components/ui/Avatar'
-
-type Leg = Database['public']['Tables']['transport_legs']['Row']
-type Occupant = Database['public']['Tables']['transport_occupants']['Row']
-type Participant = Database['public']['Tables']['participants']['Row']
 
 const MODE_ICONS: Record<string, string> = {
   car: '🚗', rental: '🚙', train: '🚆', bus: '🚌', navette: '🚐',

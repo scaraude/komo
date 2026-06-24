@@ -1,7 +1,5 @@
-import type { Database } from '@/lib/database.types'
+import type { Participant } from '@/lib/types'
 import { Avatar } from '@/components/ui/Avatar'
-
-type Participant = Database['public']['Tables']['participants']['Row']
 
 const LUGGAGE_LABELS: Record<string, string> = {
   light: '🎒', medium: '🧳', large: '🪣',
