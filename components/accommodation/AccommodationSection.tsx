@@ -7,6 +7,7 @@ import { randomId } from '@/lib/uuid'
 import { Button } from '@/components/ui/Button'
 import { DashedAddButton } from '@/components/ui/DashedAddButton'
 import { countVotes, hasVote, toggleVote } from '@/lib/votes'
+import { Card } from '@/components/ui/Card'
 
 export function AccommodationSection({
   slug,
@@ -63,7 +64,7 @@ export function AccommodationSection({
           const count = voteCount(o)
           const pct = totalParticipants > 0 ? (count / totalParticipants) * 100 : 0
           return (
-            <div key={o.id} className="bg-card border-[1.5px] border-line-2 rounded-[18px] overflow-hidden shadow-[0_2px_8px_rgba(60,45,20,0.04)]">
+            <Card key={o.id} className="rounded-[18px] overflow-hidden">
               <div className="px-4 pt-3 pb-2 flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm">{o.label}</p>
@@ -98,7 +99,7 @@ export function AccommodationSection({
               >
                 <div className="h-full bg-olive rounded-full transition-all" style={{ width: `${pct}%` }} />
               </div>
-            </div>
+            </Card>
           )
         })}
       </div>
@@ -119,7 +120,7 @@ export function AccommodationSection({
             setShowForm(false)
             startTransition(() => proposeAccommodation(slug, eventId, participantId, fd))
           }}
-          className="flex flex-col gap-3 bg-card border-[1.5px] border-line-2 rounded-[18px] p-4 shadow-[0_2px_8px_rgba(60,45,20,0.04)]"
+          className="flex flex-col gap-3 bg-card border-[1.5px] border-line-2 rounded-[18px] p-4 shadow-card"
         >
           <input name="label" type="text" required maxLength={80} placeholder="Airbnb Les Calanques, Camping…"
             className="w-full border-[1.5px] border-line rounded-[13px] px-3 py-2.5 text-sm bg-card focus:outline-none focus:border-terracotta" />

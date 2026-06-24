@@ -7,6 +7,7 @@ import { randomId } from '@/lib/uuid'
 import { Button } from '@/components/ui/Button'
 import { DashedAddButton } from '@/components/ui/DashedAddButton'
 import { countVotes, hasVote, toggleVote } from '@/lib/votes'
+import { Card } from '@/components/ui/Card'
 
 function formatDate(d: string) {
   return new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', {
@@ -97,7 +98,7 @@ export function DatePoll({
           const voted = hasVoted(p)
           const pct = totalParticipants > 0 ? (count / totalParticipants) * 100 : 0
           return (
-            <div key={p.id} className="bg-card border-[1.5px] border-line-2 rounded-[18px] overflow-hidden shadow-[0_2px_8px_rgba(60,45,20,0.04)]">
+            <Card key={p.id} className="rounded-[18px] overflow-hidden">
               <div className="px-4 pt-3 pb-2 flex items-center justify-between gap-3">
                 <div>
                   <p className="font-semibold text-sm capitalize">{formatDate(p.proposed_date)}</p>
@@ -137,7 +138,7 @@ export function DatePoll({
                   style={{ width: `${pct}%` }}
                 />
               </div>
-            </div>
+            </Card>
           )
         })}
       </div>

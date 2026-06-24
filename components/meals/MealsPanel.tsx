@@ -11,6 +11,7 @@ import { createMeal, deleteMeal, addProduct, toggleProduct, deleteProduct, setMe
 import { Sheet } from '@/components/ui/Sheet'
 import { Button } from '@/components/ui/Button'
 import { DashedAddButton } from '@/components/ui/DashedAddButton'
+import { Card } from '@/components/ui/Card'
 import { randomId } from '@/lib/uuid'
 import { WEEKDAYS, getDaysBetween, buildMonths, formatDayLabel } from '@/lib/calendar'
 import type { Meal, Product, MealOwner, Participant } from '@/lib/types'
@@ -615,7 +616,7 @@ function MealCard({
   const mealOwners = ownersOf(meal.id)
   const isOwner = mealOwners.some((o) => o.participant_id === participantId)
   return (
-    <div className="bg-card border-[1.5px] border-line-2 rounded-[18px] overflow-hidden shadow-[0_2px_8px_rgba(60,45,20,0.04)]">
+    <Card className="rounded-[18px] overflow-hidden">
       {/* En-tête : clic = plier/déplier, appui long = déplacer (drag) */}
       <div className="flex items-center gap-2 px-[16px] py-[13px]">
         <button onClick={() => setOpen((o) => !o)} {...dragProps?.attributes} {...dragProps?.listeners}
@@ -680,7 +681,7 @@ function MealCard({
           </div>
         </>
       )}
-    </div>
+    </Card>
   )
 }
 

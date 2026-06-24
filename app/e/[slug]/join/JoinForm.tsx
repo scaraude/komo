@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react'
 import { joinEvent, type JoinState } from '@/lib/actions/participants'
+import { Card } from '@/components/ui/Card'
 
 export function JoinForm({ slug, showEmail }: { slug: string; showEmail: boolean }) {
   const action = joinEvent.bind(null, slug)
@@ -11,18 +12,18 @@ export function JoinForm({ slug, showEmail }: { slug: string; showEmail: boolean
 
   if (state.status === 'verify') {
     return (
-      <div className="bg-card border-[1.5px] border-line-2 rounded-[18px] p-6 shadow-[0_2px_8px_rgba(60,45,20,0.04)]">
+      <Card className="rounded-[18px] p-6">
         <p className="font-semibold text-lg mb-1">Vérifie tes mails 📬</p>
         <p className="text-muted text-sm">
           Cet email a déjà un compte Komo. On t&apos;a envoyé un lien pour te
           reconnecter et rejoindre l&apos;event — ça t&apos;évite un doublon.
         </p>
-      </div>
+      </Card>
     )
   }
 
   return (
-    <div className="bg-card border-[1.5px] border-line-2 rounded-[18px] p-6 shadow-[0_2px_8px_rgba(60,45,20,0.04)]">
+    <Card className="rounded-[18px] p-6">
       <p className="font-semibold text-lg mb-1">Tu es invité·e 🎉</p>
       <p className="text-muted text-sm mb-5">Choisis un pseudo pour rejoindre.</p>
 
@@ -64,6 +65,6 @@ export function JoinForm({ slug, showEmail }: { slug: string; showEmail: boolean
           {pending ? 'Un instant…' : 'Rejoindre l’event →'}
         </button>
       </form>
-    </div>
+    </Card>
   )
 }

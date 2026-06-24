@@ -77,7 +77,7 @@ export default async function MesKomosPage() {
               <Link
                 key={ev.id}
                 href={`/e/${ev.slug}`}
-                className="flex items-center gap-3 rounded-[18px] border-[1.5px] border-line-2 bg-card p-[15px] shadow-[0_2px_8px_rgba(60,45,20,0.04)]"
+                className="flex items-center gap-3 rounded-[18px] border-[1.5px] border-line-2 bg-card p-[15px] shadow-card"
               >
                 <span className="text-[26px]">{VIBE_EMOJI[ev.event_type] ?? '✨'}</span>
                 <div className="min-w-0 flex-1">
