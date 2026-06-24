@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { Database } from '@/lib/database.types'
-
-type Participant = Database['public']['Tables']['participants']['Row']
+import type { Participant } from '@/lib/types'
 
 function computeCounts(participants: Participant[]) {
   return {

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { proposeActivity, updateActivity, toggleActivitySignup, deleteActivity, type ActivityInput } from '@/lib/actions/activities'
-import type { Database } from '@/lib/database.types'
+import type { Activity, ActivitySignup } from '@/lib/types'
 import { randomId } from '@/lib/uuid'
 import { perPerson, totalCost, formatEuro } from '@/lib/activities/cost'
 import { Button } from '@/components/ui/Button'
@@ -11,8 +11,6 @@ import { DashedAddButton } from '@/components/ui/DashedAddButton'
 import { Avatar } from '@/components/ui/Avatar'
 import { formatDayLabel } from '@/lib/calendar'
 
-type Activity = Database['public']['Tables']['activities']['Row']
-type Signup = Database['public']['Tables']['activity_signups']['Row']
 type Person = { id: string; pseudo: string }
 
 // Postgres `numeric` revient en string via PostgREST (précision préservée) :
@@ -52,7 +50,7 @@ export function ActivityPanel({
   eventId: string
   participantId: string
   initialActivities: Activity[]
-  initialSignups: Signup[]
+  initialSignups: ActivitySignup[]
   participants: Person[]
   isAdmin: boolean
   dateStart: string | null
@@ -104,7 +102,7 @@ export function ActivityPanel({
         { event: '*', schema: 'public', table: 'activity_signups', filter: `event_id=eq.${eventId}` },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            const row = payload.new as Signup
+            const row = payload.new as ActivitySignup
             // Réconcilie sur la clé métier (activity_id, participant_id) : remplace
             // toute ligne optimiste (id temporaire) par la vraie, sans doublonner.
             setSignups((prev) => [
@@ -112,7 +110,7 @@ export function ActivityPanel({
               row,
             ])
           } else if (payload.eventType === 'DELETE') {
-            setSignups((prev) => prev.filter((s) => s.id !== (payload.old as Signup).id))
+            setSignups((prev) => prev.filter((s) => s.id !== (payload.old as ActivitySignup).id))
           }
         })
       .subscribe()

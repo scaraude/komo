@@ -2,13 +2,11 @@
 
 import { useState, useTransition } from 'react'
 import { proposeDateOption, voteDate, fixDate } from '@/lib/actions/dates'
-import type { Database } from '@/lib/database.types'
+import type { DateProposal } from '@/lib/types'
 import { randomId } from '@/lib/uuid'
 import { Button } from '@/components/ui/Button'
 import { DashedAddButton } from '@/components/ui/DashedAddButton'
 import { countVotes, hasVote, toggleVote } from '@/lib/votes'
-
-type Proposal = Database['public']['Tables']['date_proposals']['Row']
 
 function formatDate(d: string) {
   return new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', {
@@ -27,7 +25,7 @@ export function DatePoll({
   slug: string
   eventId: string
   participantId: string
-  initialProposals: Proposal[]
+  initialProposals: DateProposal[]
   totalParticipants: number
   isCreator: boolean
 }) {
@@ -36,15 +34,15 @@ export function DatePoll({
   const [newDate, setNewDate] = useState('')
   const [, startTransition] = useTransition()
 
-  function getVoteCount(p: Proposal) {
+  function getVoteCount(p: DateProposal) {
     return countVotes(p.votes)
   }
 
-  function hasVoted(p: Proposal) {
+  function hasVoted(p: DateProposal) {
     return hasVote(p.votes, participantId)
   }
 
-  function handleVote(proposal: Proposal) {
+  function handleVote(proposal: DateProposal) {
     const newVote = !hasVoted(proposal)
     setProposals((prev) =>
       prev.map((p) =>
@@ -60,7 +58,7 @@ export function DatePoll({
 
   function handlePropose() {
     if (!newDate) return
-    const optimistic: Proposal = {
+    const optimistic: DateProposal = {
       id: randomId(),
       event_id: eventId,
       proposed_date: newDate,
