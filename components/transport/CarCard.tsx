@@ -7,6 +7,7 @@ import { randomId } from '@/lib/uuid'
 import { Avatar } from '@/components/ui/Avatar'
 import { Card } from '@/components/ui/Card'
 import { MODE_ICON } from '@/lib/transport/modes'
+import { hhmm } from '@/lib/format'
 
 const TRUNK_LABELS: Record<string, string> = {
   small: 'petit coffre', medium: 'coffre moyen', large: 'grand coffre',
@@ -54,9 +55,9 @@ export function CarCard({
   const dateLabel = leg.departure_time
     ? `${leg.departure_time.slice(8, 10)}/${leg.departure_time.slice(5, 7)}`
     : null
-  const t1 = leg.departure_time?.slice(11, 16)
-  const t2 = leg.departure_time_end?.slice(11, 16)
-  const tArr = leg.arrival_time?.slice(11, 16)
+  const t1 = hhmm(leg.departure_time)
+  const t2 = hhmm(leg.departure_time_end)
+  const tArr = hhmm(leg.arrival_time)
   const timeLabel = t1 && tArr
     ? `${t1} → ${tArr}`
     : t1 && t2

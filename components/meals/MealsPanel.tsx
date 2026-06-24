@@ -12,6 +12,7 @@ import { Sheet } from '@/components/ui/Sheet'
 import { Button } from '@/components/ui/Button'
 import { DashedAddButton } from '@/components/ui/DashedAddButton'
 import { Card } from '@/components/ui/Card'
+import { pseudoOf as resolvePseudo } from '@/lib/participants'
 import { randomId } from '@/lib/uuid'
 import { WEEKDAYS, getDaysBetween, buildMonths, formatDayLabel } from '@/lib/calendar'
 import type { Meal, Product, MealOwner, Participant } from '@/lib/types'
@@ -74,7 +75,7 @@ export function MealsPanel({
   const pendingMealIds = useRef<Set<string>>(new Set())
 
   const eventDays = dateStart && dateEnd ? getDaysBetween(dateStart, dateEnd) : []
-  const pseudoOf = (id: string) => participants.find((p) => p.id === id)?.pseudo ?? '?'
+  const pseudoOf = (id: string) => resolvePseudo(participants, id)
 
   function productsOf(mealId: string | null) {
     return products.filter((p) => p.meal_id === mealId)

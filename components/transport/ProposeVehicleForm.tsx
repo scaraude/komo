@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { INPUT_CLASS, LABEL_CLASS } from '@/components/ui/form'
 import { PointField } from './PointField'
 import { TRANSPORT_MODES, type TransportMode } from '@/lib/transport/modes'
+import { hhmm } from '@/lib/format'
 import type { Leg } from '@/lib/types'
 
 export function ProposeVehicleForm({
@@ -166,22 +167,22 @@ export function ProposeVehicleForm({
               {useRange ? (
                 <div className="flex items-center gap-2">
                   <input name="departure_time" type="time" aria-label="Heure de début"
-                    defaultValue={initial?.departure_time?.slice(11, 16) ?? undefined} className={INPUT_CLASS} />
+                    defaultValue={hhmm(initial?.departure_time)} className={INPUT_CLASS} />
                   <span aria-hidden className="shrink-0 text-muted text-[14px]">→</span>
                   <input name="departure_time_end" type="time" aria-label="Heure de fin"
-                    defaultValue={initial?.departure_time_end?.slice(11, 16) ?? undefined} className={INPUT_CLASS} />
+                    defaultValue={hhmm(initial?.departure_time_end)} className={INPUT_CLASS} />
                 </div>
               ) : hasArrival ? (
                 <div className="flex items-center gap-2">
                   <input name="departure_time" type="time" aria-label="Heure de départ"
-                    defaultValue={initial?.departure_time?.slice(11, 16) ?? undefined} className={INPUT_CLASS} />
+                    defaultValue={hhmm(initial?.departure_time)} className={INPUT_CLASS} />
                   <span aria-hidden className="shrink-0 text-muted text-[14px]">→</span>
                   <input name="arrival_time" type="time" aria-label="Heure d'arrivée"
-                    defaultValue={initial?.arrival_time?.slice(11, 16) ?? undefined} className={INPUT_CLASS} />
+                    defaultValue={hhmm(initial?.arrival_time)} className={INPUT_CLASS} />
                 </div>
               ) : (
                 <input name="departure_time" type="time" aria-label="Heure de départ"
-                  defaultValue={initial?.departure_time?.slice(11, 16) ?? undefined} className={INPUT_CLASS} />
+                  defaultValue={hhmm(initial?.departure_time)} className={INPUT_CLASS} />
               )}
             </div>
           </div>

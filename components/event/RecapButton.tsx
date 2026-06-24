@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { pseudoOf } from '@/lib/participants'
 import type { Participant, Leg, Occupant } from '@/lib/types'
 
 type Props = {
@@ -55,7 +56,7 @@ function buildRecap(props: Props, baseUrl: string): string {
       const driverName = driver ? participants.find((p) => p.id === driver.participant_id)?.pseudo : null
       const passengers = legOccupants
         .filter((o) => !o.is_driver)
-        .map((o) => participants.find((p) => p.id === o.participant_id)?.pseudo ?? '?')
+        .map((o) => pseudoOf(participants, o.participant_id))
       const freeSeats = (leg.total_seats ?? 4) - legOccupants.length
       const namePart = passengers.length > 0 ? ` : ${passengers.join(', ')}` : ''
       const freePart = freeSeats > 0 ? ` [${freeSeats} place${freeSeats > 1 ? 's' : ''} libre${freeSeats > 1 ? 's' : ''}]` : ' [complet]'
