@@ -5,6 +5,7 @@ import { suggestAssignments, applyAssignments } from '@/lib/actions/transport'
 import { Sheet } from '@/components/ui/Sheet'
 import { Button } from '@/components/ui/Button'
 import type { Assignment } from '@/lib/transport/solver'
+import { pseudoOf } from '@/lib/participants'
 import type { Participant, Leg } from '@/lib/types'
 
 export function SuggestModal({
@@ -26,9 +27,7 @@ export function SuggestModal({
   const [unresolved, setUnresolved] = useState<string[]>([])
   const [isPending, startTransition] = useTransition()
 
-  function participantName(id: string) {
-    return participants.find((p) => p.id === id)?.pseudo ?? '?'
-  }
+  const participantName = (id: string) => pseudoOf(participants, id)
 
   function legLabel(id: string) {
     const l = legs.find((l) => l.id === id)

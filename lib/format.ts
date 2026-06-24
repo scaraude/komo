@@ -16,3 +16,7 @@ export function formatEventDates(
   }
   return `${startDate.getDate()} ${monthName(startDate)} → ${endDate.getDate()} ${monthName(endDate)}`
 }
+
+export function hhmm(isoDateTime: string | null | undefined): string | undefined {
+  return isoDateTime ? isoDateTime.slice(11, 16) : undefined
+}
