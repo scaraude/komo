@@ -5,6 +5,7 @@ import { deleteLeg, joinLeg, leaveLeg } from '@/lib/actions/transport'
 import type { Leg, Occupant, Participant } from '@/lib/types'
 import { randomId } from '@/lib/uuid'
 import { Avatar } from '@/components/ui/Avatar'
+import { Card } from '@/components/ui/Card'
 
 const MODE_ICONS: Record<string, string> = {
   car: '🚗', rental: '🚙', train: '🚆', bus: '🚌', navette: '🚐',
@@ -116,7 +117,7 @@ export function CarCard({
   if (removed) return null
 
   return (
-    <div className="bg-card border-[1.5px] border-line-2 rounded-[18px] shadow-[0_2px_8px_rgba(60,45,20,0.04)] overflow-hidden">
+    <Card className="rounded-[18px] overflow-hidden">
       <div className="p-[15px_16px] flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-[15px] font-bold text-ink flex items-center gap-1.5">
@@ -233,6 +234,6 @@ export function CarCard({
           </div>
         </div>
       )}
-    </div>
+    </Card>
   )
 }

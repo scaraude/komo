@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { Card } from '@/components/ui/Card'
 import type { Participant } from '@/lib/types'
 
 function computeCounts(participants: Participant[]) {
@@ -48,18 +49,18 @@ export function LiveCounter({
 
   return (
     <div className="grid grid-cols-3 gap-3 mb-8">
-      <div className="bg-card border-[1.5px] border-line-2 rounded-[20px] p-4 text-center shadow-[0_2px_8px_rgba(60,45,20,0.04)]">
+      <Card className="rounded-[20px] p-4 text-center">
         <p className="text-2xl font-bold text-ink">{counts.hot}</p>
         <p className="text-[12px] text-muted mt-0.5">🔥 chauds</p>
-      </div>
-      <div className="bg-card border-[1.5px] border-line-2 rounded-[20px] p-4 text-center shadow-[0_2px_8px_rgba(60,45,20,0.04)]">
+      </Card>
+      <Card className="rounded-[20px] p-4 text-center">
         <p className="text-2xl font-bold text-ink">{counts.hesitant}</p>
         <p className="text-[12px] text-muted mt-0.5">🤔 hésitants</p>
-      </div>
-      <div className="bg-card border-[1.5px] border-line-2 rounded-[20px] p-4 text-center shadow-[0_2px_8px_rgba(60,45,20,0.04)]">
+      </Card>
+      <Card className="rounded-[20px] p-4 text-center">
         <p className="text-2xl font-bold text-ink">{counts.pending}</p>
         <p className="text-[12px] text-muted mt-0.5">❓ en attente</p>
-      </div>
+      </Card>
     </div>
   )
 }

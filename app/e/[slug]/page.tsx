@@ -376,7 +376,7 @@ function ModuleTile({
   return (
     <Link
       href={href}
-      className="flex h-[94px] flex-col justify-between rounded-[19px] border-[1.5px] border-line-2 bg-card p-[17px] shadow-[0_2px_8px_rgba(60,45,20,0.04)]"
+      className="flex h-[94px] flex-col justify-between rounded-[19px] border-[1.5px] border-line-2 bg-card p-[17px] shadow-card"
     >
       <div className="text-[23px]">{emoji}</div>
       <div>

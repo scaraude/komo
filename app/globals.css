@@ -51,6 +51,9 @@
   /* Fonts */
   --font-serif: var(--font-dm-serif), Georgia, serif;
   --font-sans: var(--font-hanken), system-ui, sans-serif;
+
+  /* Shadows */
+  --shadow-card: 0 2px 8px rgba(60, 45, 20, 0.04);
 }
 
 :root {

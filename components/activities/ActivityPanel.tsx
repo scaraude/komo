@@ -337,7 +337,7 @@ function ActivityCard({
   }
 
   return (
-    <div className="overflow-hidden rounded-[18px] border-[1.5px] border-line-2 bg-card shadow-[0_2px_8px_rgba(60,45,20,0.04)]">
+    <div className="overflow-hidden rounded-[18px] border-[1.5px] border-line-2 bg-card shadow-card">
       <div className="flex items-start justify-between gap-3 px-4 pt-3.5">
         <div className="min-w-0 flex-1">
           <p className="text-[15px] font-bold text-ink">{activity.label}</p>
@@ -489,7 +489,7 @@ function ActivityForm({
           bookingUrl: fd.get('booking_url')?.toString() || null,
         })
       }}
-      className="flex flex-col gap-3 rounded-[18px] border-[1.5px] border-line-2 bg-card p-4 shadow-[0_2px_8px_rgba(60,45,20,0.04)]"
+      className="flex flex-col gap-3 rounded-[18px] border-[1.5px] border-line-2 bg-card p-4 shadow-card"
     >
       <input name="label" type="text" required maxLength={80} defaultValue={initial?.label ?? ''} placeholder="Padel, accrobranche, resto…" className={inputCls} autoFocus />
 
