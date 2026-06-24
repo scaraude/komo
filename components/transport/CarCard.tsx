@@ -6,10 +6,7 @@ import type { Leg, Occupant, Participant } from '@/lib/types'
 import { randomId } from '@/lib/uuid'
 import { Avatar } from '@/components/ui/Avatar'
 import { Card } from '@/components/ui/Card'
-
-const MODE_ICONS: Record<string, string> = {
-  car: '🚗', rental: '🚙', train: '🚆', bus: '🚌', navette: '🚐',
-}
+import { MODE_ICON } from '@/lib/transport/modes'
 
 const TRUNK_LABELS: Record<string, string> = {
   small: 'petit coffre', medium: 'coffre moyen', large: 'grand coffre',
@@ -121,7 +118,7 @@ export function CarCard({
       <div className="p-[15px_16px] flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-[15px] font-bold text-ink flex items-center gap-1.5">
-            <span>{MODE_ICONS[leg.mode] ?? '🚗'}</span>
+            <span>{MODE_ICON[leg.mode] ?? '🚗'}</span>
             {leg.label}
           </p>
           <p className="text-[13px] text-muted mt-0.5">

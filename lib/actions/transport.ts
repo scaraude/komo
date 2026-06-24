@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { ensureUser } from '@/lib/auth'
 import { mustSucceed } from '@/lib/actions/assert'
+import { isTransportMode } from '@/lib/transport/modes'
 import { computeSuggestions } from '@/lib/transport/solver'
 import type { Assignment } from '@/lib/transport/solver'
 
@@ -28,11 +29,8 @@ async function parseLegForm(
   direction: 'aller' | 'retour',
   formData: FormData,
 ) {
-  const modeRaw = formData.get('mode')?.toString() ?? ''
-  if (!['car', 'rental', 'train', 'bus', 'navette'].includes(modeRaw)) {
-    throw new Error('Mode de transport invalide.')
-  }
-  const mode = modeRaw as 'car' | 'rental' | 'train' | 'bus' | 'navette'
+  const mode = formData.get('mode')?.toString() ?? ''
+  if (!isTransportMode(mode)) throw new Error('Mode de transport invalide.')
   const label = formData.get('label')?.toString().trim() ?? ''
   // Géométrie du leg : le formulaire soumet directement départ + arrivée selon
   // la direction. Le côté event vaut '' quand non personnalisé → null → hérite

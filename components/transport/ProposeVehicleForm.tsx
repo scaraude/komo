@@ -6,17 +6,8 @@ import { Sheet } from '@/components/ui/Sheet'
 import { Button } from '@/components/ui/Button'
 import { INPUT_CLASS, LABEL_CLASS } from '@/components/ui/form'
 import { PointField } from './PointField'
+import { TRANSPORT_MODES, type TransportMode } from '@/lib/transport/modes'
 import type { Leg } from '@/lib/types'
-
-const MODES = [
-  { value: 'car', label: '🚗 Voiture' },
-  { value: 'rental', label: '🚙 Location' },
-  { value: 'train', label: '🚆 Train' },
-  { value: 'bus', label: '🚌 Bus' },
-  { value: 'navette', label: '🚐 Navette' },
-] as const
-
-type Mode = (typeof MODES)[number]['value']
 
 export function ProposeVehicleForm({
   slug,
@@ -44,7 +35,7 @@ export function ProposeVehicleForm({
   // conducteur est défini → on retire ce +1 pour réafficher les seules places passagers.
   const initialSeats =
     initial?.total_seats != null ? Math.max(1, initial.total_seats - (initial.driver_id != null ? 1 : 0)) : 4
-  const [mode, setMode] = useState<Mode>((initial?.mode as Mode) ?? 'car')
+  const [mode, setMode] = useState<TransportMode>((initial?.mode as TransportMode) ?? 'car')
   const [seats, setSeats] = useState(initialSeats)
   const [isDriver, setIsDriver] = useState(initial ? initial.driver_id != null : true)
   // false = heure fixe, true = plage (un trajet avec heure de fin = plage).
@@ -82,7 +73,7 @@ export function ProposeVehicleForm({
       const arr = formData.get('arrival_city')?.toString().trim()
       const from = dep || (departureIsHome ? '' : eventDestination)
       const to = arr || (departureIsHome ? eventDestination : '')
-      const modeLabel = MODES.find((m) => m.value === mode)?.label.replace(/^\S+\s/, '') ?? 'Trajet'
+      const modeLabel = TRANSPORT_MODES.find((m) => m.value === mode)?.label ?? 'Trajet'
       formData.set('label', from && to ? `${from} → ${to}` : from || to || modeLabel)
     }
     setError(null)
@@ -114,7 +105,7 @@ export function ProposeVehicleForm({
 
           {/* Mode */}
           <div className="flex flex-wrap gap-[8px]">
-            {MODES.map((m) => {
+            {TRANSPORT_MODES.map((m) => {
               const active = mode === m.value
               return (
                 <button key={m.value} type="button" onClick={() => setMode(m.value)}
@@ -123,7 +114,7 @@ export function ProposeVehicleForm({
                       ? 'bg-terracotta text-white font-bold'
                       : 'bg-card border-[1.5px] border-line text-body'
                   }`}>
-                  {m.label}
+                  {m.icon} {m.label}
                 </button>
               )
             })}
