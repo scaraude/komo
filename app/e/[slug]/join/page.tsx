@@ -36,6 +36,15 @@ export default async function JoinPage({
     if (already) redirect(`/e/${slug}`)
   }
 
+  // Profils « sans compte » de l'event : un orga a pu pré-remplir la liste.
+  // Le visiteur peut en revendiquer un (claim) plutôt que d'en créer un doublon.
+  const { data: profiles } = await supabase
+    .from('participants')
+    .select('id, pseudo')
+    .eq('event_id', event.id)
+    .is('user_id', null)
+    .order('joined_at')
+
   const dateLabel = formatEventDates(event.date_start, event.date_end, { fallback: 'Date à définir' })
 
   return (
@@ -59,7 +68,7 @@ export default async function JoinPage({
           </span>
         </div>
 
-        <JoinForm slug={slug} showEmail={showEmail} />
+        <JoinForm slug={slug} showEmail={showEmail} profiles={profiles ?? []} />
       </div>
     </main>
   )
