@@ -19,8 +19,11 @@ export async function joinEvent(
   _prev: JoinState,
   formData: FormData,
 ): Promise<JoinState> {
+  const profileId = formData.get('profileId')?.toString().trim() || null
   const pseudo = formData.get('pseudo')?.toString().trim()
-  if (!pseudo || pseudo.length < 1) return { status: 'idle' }
+  // Revendiquer un profil existant n'exige pas de pseudo (le profil en a déjà
+  // un) ; créer un nouveau participant l'exige.
+  if (!profileId && (!pseudo || pseudo.length < 1)) return { status: 'idle' }
   const email = formData.get('email')?.toString().trim() || null
 
   const supabase = await createClient()
@@ -85,14 +88,37 @@ export async function joinEvent(
     .maybeSingle()
 
   if (!existing) {
-    const role = event.created_by === userId ? 'créateur' : 'participant'
-    const { error } = await authed.from('participants').insert({
-      event_id: event.id,
-      pseudo,
-      user_id: userId,
-      role,
-    })
-    if (error) throw new Error('Impossible de rejoindre cet event.')
+    // Revendiquer un profil sans compte : on s'attribue la ligne (user_id null
+    // → soi). On ne touche pas au role (le profil garde le sien) ni au pseudo
+    // (il en a déjà un). Le filtre `user_id is null` rend l'op idempotente en
+    // cas de course : 0 ligne touchée → quelqu'un a déjà revendiqué le profil,
+    // on retombe sur la création d'un participant neuf.
+    let claimed = false
+    if (profileId) {
+      const { data: rows, error: claimError } = await authed
+        .from('participants')
+        .update({ user_id: userId })
+        .eq('id', profileId)
+        .eq('event_id', event.id)
+        .is('user_id', null)
+        .select('id')
+      if (claimError) throw new Error('Impossible de rejoindre cet event.')
+      claimed = (rows?.length ?? 0) > 0
+    }
+
+    if (!claimed) {
+      if (!pseudo || pseudo.length < 1) {
+        throw new Error('Choisis un pseudo pour rejoindre cet event.')
+      }
+      const role = event.created_by === userId ? 'créateur' : 'participant'
+      const { error } = await authed.from('participants').insert({
+        event_id: event.id,
+        pseudo,
+        user_id: userId,
+        role,
+      })
+      if (error) throw new Error('Impossible de rejoindre cet event.')
+    }
   }
 
   redirect(`/e/${slug}`)
