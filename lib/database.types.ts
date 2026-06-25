@@ -73,6 +73,7 @@ type ActivityRow = {
   min_participants: number | null
   max_participants: number | null
   booking_url: string | null
+  comment: string | null
   created_by: string | null
   created_at: string
 }
@@ -172,7 +173,7 @@ export type Database = {
           activity_date?: string | null; start_time?: string | null
           price?: number | null; price_type?: 'total' | 'per_person' | 'per_group' | null
           group_size?: number | null; min_participants?: number | null; max_participants?: number | null
-          booking_url?: string | null; created_by?: string | null
+          booking_url?: string | null; comment?: string | null; created_by?: string | null
         }
         Update: Partial<Omit<ActivityRow, 'id' | 'event_id' | 'created_at'>>
         Relationships: []

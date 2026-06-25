@@ -169,6 +169,7 @@ export function ActivityPanel({
       min_participants: input.minParticipants ?? null,
       max_participants: input.maxParticipants ?? null,
       booking_url: input.bookingUrl?.trim() || null,
+      comment: input.comment?.trim() || null,
       created_by: participantId,
       created_at: new Date().toISOString(),
     }
@@ -346,6 +347,9 @@ function ActivityCard({
             {!date && time && <span>🕐 {time}</span>}
             {priced && <span className="font-semibold text-ink">{priceTypeLabel(activity)}</span>}
           </div>
+          {activity.comment && (
+            <p className="mt-1 text-[13px] italic text-body">« {activity.comment} »</p>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-2.5">
           {canEdit && (
@@ -487,6 +491,7 @@ function ActivityForm({
           priceType: priceMode === 'none' ? null : priceMode,
           maxParticipants: num('max_participants'),
           bookingUrl: fd.get('booking_url')?.toString() || null,
+          comment: fd.get('comment')?.toString() || null,
         })
       }}
       className="flex flex-col gap-3 rounded-[18px] border-[1.5px] border-line-2 bg-card p-4 shadow-card"
@@ -530,6 +535,8 @@ function ActivityForm({
       <input name="max_participants" type="number" min="1" step="1" defaultValue={initial?.max_participants ?? undefined} placeholder="Nombre max de participants (optionnel)" aria-label="Nombre maximum de participants" className={inputCls} />
 
       <input name="booking_url" type="url" defaultValue={initial?.booking_url ?? undefined} placeholder="Lien de réservation (optionnel)" className={inputCls} />
+
+      <textarea name="comment" maxLength={200} rows={2} defaultValue={initial?.comment ?? undefined} placeholder="Commentaire (optionnel) — ex : prévoir des chaussures de rando…" className={`${inputCls} resize-none`} />
 
       <div className="flex gap-2">
         <button type="button" onClick={onCancel} className="flex-1 rounded-[15px] border-[1.5px] border-line-3 bg-card py-2.5 text-sm font-bold">
