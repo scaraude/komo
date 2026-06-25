@@ -9,6 +9,8 @@ import {
 } from '@dnd-kit/core'
 import { createMeal, deleteMeal, addProduct, toggleProduct, deleteProduct, setMealDate, toggleMealOwner, editMeal } from '@/lib/actions/meals'
 import { Sheet } from '@/components/ui/Sheet'
+import { ConfirmButton } from '@/components/ui/ConfirmButton'
+import { useUndo } from '@/components/ui/undo'
 import { Button } from '@/components/ui/Button'
 import { DashedAddButton } from '@/components/ui/DashedAddButton'
 import { Card } from '@/components/ui/Card'
@@ -70,6 +72,7 @@ export function MealsPanel({
   const [confirmDeleteMeal, setConfirmDeleteMeal] = useState<string | null>(null)
   const [editMealId, setEditMealId] = useState<string | null>(null)
   const [, startTransition] = useTransition()
+  const requestUndo = useUndo()
   // Repas créés en optimiste (id temporaire) pas encore persistés. Agir dessus
   // (je gère, + produit) ferait échouer la FK meal_id/meal_owners en base.
   const pendingMealIds = useRef<Set<string>>(new Set())
@@ -181,9 +184,24 @@ export function MealsPanel({
   }
 
   function handleDeleteProduct(id: string) {
-    const prev = products
+    const idx = products.findIndex((x) => x.id === id)
+    const removed = products[idx]
+    if (!removed) return
+    const name = removed.name
     setProducts((p) => p.filter((x) => x.id !== id))
-    startTransition(() => deleteProduct(slug, id).catch(() => setProducts(prev)))
+    requestUndo({
+      message: name ? `« ${name} » retiré` : 'Produit retiré',
+      commit: () => deleteProduct(slug, id),
+      // Undo fonctionnel : réinsère uniquement le produit retiré (à sa position
+      // d'origine), sans remplacer la liste — préserve les changements réalisés
+      // entre-temps via le realtime. Le guard évite un doublon.
+      undo: () =>
+        setProducts((p) =>
+          p.some((x) => x.id === id)
+            ? p
+            : [...p.slice(0, idx), removed, ...p.slice(idx)],
+        ),
+    })
   }
 
   // Édition complète d'un repas : renommage (+ retag des produits), suppression
@@ -237,8 +255,14 @@ export function MealsPanel({
   }
 
   function handleDeleteMeal(id: string, alsoProducts: boolean) {
-    const prevMeals = meals
-    const prevProducts = products
+    const mealIdx = meals.findIndex((m) => m.id === id)
+    const removedMeal = meals[mealIdx]
+    // Produits rattachés au repas + leur position d'origine, pour un undo ciblé.
+    const affected = products
+      .map((p, idx) => ({ product: p, idx }))
+      .filter(({ product }) => product.meal_id === id)
+    const affectedIds = new Set(affected.map(({ product }) => product.id))
+
     setMeals((m) => m.filter((x) => x.id !== id))
     setProducts((p) =>
       alsoProducts
@@ -246,7 +270,42 @@ export function MealsPanel({
         : p.map((x) => (x.meal_id === id ? { ...x, meal_id: null } : x)),
     )
     setConfirmDeleteMeal(null)
-    startTransition(() => deleteMeal(slug, id, alsoProducts).catch(() => { setMeals(prevMeals); setProducts(prevProducts) }))
+    const label = removedMeal?.label
+    requestUndo({
+      message: label ? `« ${label} » supprimé` : 'Repas supprimé',
+      commit: () => deleteMeal(slug, id, alsoProducts),
+      // Undo fonctionnel : restaure uniquement les lignes affectées, fusionnées
+      // dans l'état courant — préserve les changements réalisés entre-temps via
+      // le realtime, au lieu de remplacer les listes en bloc.
+      undo: () => {
+        if (removedMeal) {
+          setMeals((m) =>
+            m.some((x) => x.id === id)
+              ? m
+              : [...m.slice(0, mealIdx), removedMeal, ...m.slice(mealIdx)],
+          )
+        }
+        if (alsoProducts) {
+          // Réinsère les produits supprimés (guard anti-doublon par id).
+          setProducts((p) => {
+            const present = new Set(p.map((x) => x.id))
+            const toRestore = affected.filter(({ product }) => !present.has(product.id))
+            if (toRestore.length === 0) return p
+            // Insère chacun à sa position d'origine (ordre croissant des idx).
+            let next = p
+            for (const { product, idx } of toRestore) {
+              next = [...next.slice(0, idx), product, ...next.slice(idx)]
+            }
+            return next
+          })
+        } else {
+          // Re-rattache les produits affectés au repas, sans toucher au reste.
+          setProducts((p) =>
+            p.map((x) => (affectedIds.has(x.id) ? { ...x, meal_id: id } : x)),
+          )
+        }
+      },
+    })
   }
 
   const checkedCount = products.filter((p) => p.checked).length
@@ -761,8 +820,9 @@ function ShoppingView({
               </span>
               {ml && <span className="mt-0.5 block text-[11px] text-muted">🍽️ {ml}</span>}
             </button>
-            <button onClick={() => onDelete(p.id)} aria-label="Supprimer le produit"
-              className="shrink-0 text-[12px] text-muted hover:text-prune transition-colors">🗑</button>
+            <ConfirmButton onConfirm={() => onDelete(p.id)} confirmLabel="Retirer ?"
+              ariaLabel="Supprimer le produit"
+              className="shrink-0 text-[12px] text-muted hover:text-prune transition-colors">🗑</ConfirmButton>
           </div>
         )
       })}

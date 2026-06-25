@@ -9,6 +9,8 @@ import { perPerson, totalCost, formatEuro } from '@/lib/activities/cost'
 import { Button } from '@/components/ui/Button'
 import { DashedAddButton } from '@/components/ui/DashedAddButton'
 import { Avatar } from '@/components/ui/Avatar'
+import { ConfirmButton } from '@/components/ui/ConfirmButton'
+import { useUndo } from '@/components/ui/undo'
 import { formatDayLabel } from '@/lib/calendar'
 
 type Person = { id: string; pseudo: string }
@@ -61,6 +63,7 @@ export function ActivityPanel({
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [, startTransition] = useTransition()
+  const requestUndo = useUndo()
   // Ids des activités ajoutées en optimiste (temp uuid) en attente de leur ligne
   // réelle via realtime — sert à remplacer le placeholder au lieu de doublonner.
   // Ref (lu dans le handler realtime et handleToggle, hors render) + state miroir
@@ -151,8 +154,25 @@ export function ActivityPanel({
   }
 
   function handleDelete(activityId: string) {
+    const idx = activities.findIndex((a) => a.id === activityId)
+    const removed = activities[idx]
+    if (!removed) return
+    const label = removed.label
     setActivities((prev) => prev.filter((a) => a.id !== activityId))
-    startTransition(() => deleteActivity(slug, activityId))
+    requestUndo({
+      message: label ? `« ${label} » supprimée` : 'Activité supprimée',
+      commit: () => deleteActivity(slug, activityId),
+      // Undo fonctionnel : réinsère uniquement la ligne retirée (à sa position
+      // d'origine), sans remplacer la liste — préserve les ajouts/édits arrivés
+      // entre-temps via le realtime. Le guard évite un doublon si la ligne a déjà
+      // été ré-ajoutée.
+      undo: () =>
+        setActivities((prev) =>
+          prev.some((a) => a.id === activityId)
+            ? prev
+            : [...prev.slice(0, idx), removed, ...prev.slice(idx)],
+        ),
+    })
   }
 
   function handlePropose(input: ActivityInput) {
@@ -354,9 +374,14 @@ function ActivityCard({
             </button>
           )}
           {canDelete && (
-            <button onClick={onDelete} className="text-xs text-muted transition-colors hover:text-terracotta" aria-label="Supprimer l'activité" title="Supprimer">
+            <ConfirmButton
+              onConfirm={onDelete}
+              confirmLabel="Supprimer ?"
+              ariaLabel="Supprimer l'activité"
+              className="text-xs text-muted transition-colors hover:text-terracotta"
+            >
               ✕
-            </button>
+            </ConfirmButton>
           )}
         </div>
       </div>
