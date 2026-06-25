@@ -14,7 +14,6 @@ import { AccommodationSection } from '@/components/accommodation/AccommodationSe
 import { MealsPanel } from '@/components/meals/MealsPanel'
 import { ActivityPanel } from '@/components/activities/ActivityPanel'
 import { RecapButton } from '@/components/event/RecapButton'
-import { promoteParticipant } from '@/lib/actions/participants'
 import { ShareSheet } from './ShareSheet'
 import { ParticipantsBadge } from './ParticipantsBadge'
 import { FeedbackButton } from '@/components/feedback/FeedbackButton'
@@ -109,7 +108,6 @@ export default async function EventPage({
   if (!participant) redirect(`/e/${slug}/join`)
   const participants = allParticipants ?? []
 
-  const isCreator = event.created_by === userId
   const isAdmin = participant.role === 'créateur' || participant.role === 'co_organisateur'
   const wording = EVENT_TYPE_WORDING[event.event_type as keyof typeof EVENT_TYPE_WORDING] ?? EVENT_TYPE_WORDING.autre
   const vibe = VIBE[event.event_type as keyof typeof VIBE] ?? VIBE.autre
@@ -278,25 +276,15 @@ export default async function EventPage({
                           <span className="ml-1.5 text-xs font-normal text-terracotta">(toi)</span>
                         )}
                       </span>
-                      {p.role !== 'participant' && (
-                        <span className={`ml-2 rounded-full px-1.5 py-0.5 text-xs font-semibold ${
-                          p.role === 'créateur'
-                            ? 'bg-terracotta-soft text-terracotta'
-                            : 'bg-olive-soft text-olive-text'
-                        }`}>
-                          {p.role === 'créateur' ? 'créateur' : 'co-orga'}
+                      {/* Le rôle co-orga existe en back (RLS) mais reste masqué côté front. */}
+                      {p.role === 'créateur' && (
+                        <span className="ml-2 rounded-full bg-terracotta-soft px-1.5 py-0.5 text-xs font-semibold text-terracotta">
+                          créateur
                         </span>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {isCreator && p.id !== participant.id && p.role !== 'créateur' && (
-                      <form action={promoteParticipant.bind(null, slug, p.id, p.role === 'participant' ? 'co_organisateur' : 'participant')}>
-                        <button type="submit" className="text-xs text-muted transition-colors hover:text-olive">
-                          {p.role === 'participant' ? '+ co-orga' : '− co-orga'}
-                        </button>
-                      </form>
-                    )}
                     {p.presence_status ? (
                       <span title={STATUS_CONFIG[p.presence_status].label}>
                         {STATUS_CONFIG[p.presence_status].emoji}

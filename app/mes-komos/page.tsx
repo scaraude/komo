@@ -73,7 +73,8 @@ export default async function MesKomosPage() {
         <div className="flex flex-col gap-[11px]">
           {events.map((ev) => {
             const part = partByEvent.get(ev.id)
-            const isOrganizer = part?.role === 'créateur' || part?.role === 'co_organisateur'
+            // Co-orga masqué côté front : seul le badge « créateur » est exposé.
+            const isCreator = part?.role === 'créateur'
             return (
               <Link
                 key={ev.id}
@@ -88,9 +89,9 @@ export default async function MesKomosPage() {
                     {ev.destination ? ` · ${ev.destination}` : ''}
                   </p>
                 </div>
-                {isOrganizer && (
+                {isCreator && (
                   <span className="shrink-0 rounded-full bg-terracotta-soft px-[10px] py-[3px] text-[11px] font-bold text-terracotta">
-                    {part?.role === 'créateur' ? 'créateur' : 'co-orga'}
+                    créateur
                   </span>
                 )}
               </Link>
