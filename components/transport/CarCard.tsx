@@ -6,6 +6,7 @@ import type { Leg, Occupant, Participant } from '@/lib/types'
 import { randomId } from '@/lib/uuid'
 import { Avatar } from '@/components/ui/Avatar'
 import { Card } from '@/components/ui/Card'
+import { useUndo } from '@/components/ui/undo'
 import { MODE_ICON } from '@/lib/transport/modes'
 import { hhmm } from '@/lib/format'
 
@@ -34,6 +35,7 @@ export function CarCard({
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [removed, setRemoved] = useState(false)
   const [, startTransition] = useTransition()
+  const requestUndo = useUndo()
 
   const totalSeats = leg.total_seats ?? 4
   const free = totalSeats - localOccupants.length
@@ -102,13 +104,11 @@ export function CarCard({
 
   function handleDelete() {
     setRemoved(true) // retrait optimiste
-    startTransition(async () => {
-      try {
-        await deleteLeg(slug, leg.id)
-      } catch {
-        setRemoved(false)
-        setConfirmingDelete(false)
-      }
+    setConfirmingDelete(false)
+    requestUndo({
+      message: 'Trajet supprimé',
+      commit: () => deleteLeg(slug, leg.id),
+      undo: () => setRemoved(false),
     })
   }
 
