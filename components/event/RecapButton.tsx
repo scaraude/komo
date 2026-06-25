@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { pseudoOf } from '@/lib/participants'
+import { pseudoOf, needsTransport } from '@/lib/participants'
 import type { Participant, Leg, Occupant } from '@/lib/types'
 
 type Props = {
@@ -37,7 +37,7 @@ function buildRecap(props: Props, baseUrl: string): string {
     occupants.filter((o) => allerLegs.some((l) => l.id === o.leg_id)).map((o) => o.participant_id)
   )
   const unassigned = participants.filter(
-    (p) => ['hot', 'maybe', 'unsure'].includes(p.presence_status ?? '') && !assignedAllerIds.has(p.id)
+    (p) => needsTransport(p) && !assignedAllerIds.has(p.id)
   )
 
   const lines: string[] = [

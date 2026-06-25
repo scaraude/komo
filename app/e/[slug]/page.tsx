@@ -6,6 +6,7 @@ import { PresenceToggle } from '@/components/presence/PresenceToggle'
 import { PartialPresence } from '@/components/presence/PartialPresence'
 import { DeadlineBar } from '@/components/presence/DeadlineBar'
 import { LiveCounter } from '@/components/presence/LiveCounter'
+import { PresenceCycle } from '@/components/presence/PresenceCycle'
 import { TransportPanel } from '@/components/transport/TransportPanel'
 import { DatePoll } from '@/components/dates/DatePoll'
 import { Avatar } from '@/components/ui/Avatar'
@@ -35,13 +36,6 @@ const VIBE = {
   road_trip: { emoji: '🚗', label: 'ROAD TRIP' },
   sport:     { emoji: '⚽', label: 'SPORT' },
   autre:     { emoji: '✨', label: 'EVENT' },
-} as const
-
-const STATUS_CONFIG = {
-  hot: { emoji: '🔥', label: 'Chaud' },
-  maybe: { emoji: '🤔', label: 'Probable' },
-  unsure: { emoji: '😬', label: 'Pas sûr' },
-  no: { emoji: '❌', label: 'Non' },
 } as const
 
 const RSVP_LABEL: Record<string, string> = {
@@ -291,13 +285,12 @@ export default async function EventPage({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {p.presence_status ? (
-                      <span title={STATUS_CONFIG[p.presence_status].label}>
-                        {STATUS_CONFIG[p.presence_status].emoji}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted">?</span>
-                    )}
+                    <PresenceCycle
+                      slug={slug}
+                      participantId={p.id}
+                      initialStatus={p.presence_status}
+                      pseudo={p.pseudo}
+                    />
                   </div>
                 </div>
               ))}
