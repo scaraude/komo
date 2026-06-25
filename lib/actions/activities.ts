@@ -27,6 +27,7 @@ export type ActivityInput = {
   minParticipants?: number | null
   maxParticipants?: number | null
   bookingUrl?: string | null
+  comment?: string | null
 }
 
 // Normalise et valide un ActivityInput en colonnes DB. Partagé entre création
@@ -57,6 +58,7 @@ function normalizeActivityInput(input: ActivityInput) {
     min_participants: min,
     max_participants: max,
     booking_url: safeHttpUrl(input.bookingUrl),
+    comment: input.comment?.trim() || null,
   }
 }
 
