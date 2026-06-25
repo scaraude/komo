@@ -18,3 +18,42 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test
+
+  migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Cache key tied to the CLI version: the image tags follow the CLI,
+      # so a CLI bump invalidates the cache instead of loading stale images.
+      - id: cli
+        run: echo "version=$(supabase --version)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        id: imgcache
+        with:
+          path: ~/supabase-images.tar
+          key: supabase-images-${{ runner.os }}-${{ steps.cli.outputs.version }}
+      - if: steps.imgcache.outputs.cache-hit == 'true'
+        run: docker load -i ~/supabase-images.tar
+
+      # Boots only Postgres + auth (+ kong gateway). storage, realtime, studio,
+      # mail, edge functions and analytics are disabled in supabase/config.toml,
+      # so their images aren't even pulled (~1.9 GB saved per run).
+      - name: Start Supabase
+        run: supabase start
+
+      # Rebuild a clean DB from zero and replay every migration in order.
+      # --local pins it to the container DB (never the linked remote project).
+      # Fails the job if any migration errors out.
+      - name: Dry-run migrations
+        run: supabase db reset --local
+
+      # On a cache miss, persist the pulled images for the next run.
+      - name: Save Supabase images
+        if: steps.imgcache.outputs.cache-hit != 'true'
+        run: |
+          ids=$(docker images --filter=reference='public.ecr.aws/supabase/*' -q | sort -u)
+          [ -n "$ids" ] && docker save $ids -o ~/supabase-images.tar || echo "no images to save"
