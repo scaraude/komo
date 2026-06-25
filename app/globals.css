@@ -85,3 +85,7 @@ body {
   50%       { box-shadow: 0 0 0 7px rgba(196, 96, 47, 0.05); }
 }
 .animate-pulse-dot { animation: pulse-dot 1.8s infinite; }
+
+/* Barre de décompte du bandeau d'annulation (largeur via scaleX). */
+@keyframes undoBar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.animate-undo-bar { animation: undoBar linear forwards; }

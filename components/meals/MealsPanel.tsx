@@ -9,6 +9,8 @@ import {
 } from '@dnd-kit/core'
 import { createMeal, deleteMeal, addProduct, toggleProduct, deleteProduct, setMealDate, toggleMealOwner, editMeal } from '@/lib/actions/meals'
 import { Sheet } from '@/components/ui/Sheet'
+import { ConfirmButton } from '@/components/ui/ConfirmButton'
+import { useUndo } from '@/components/ui/undo'
 import { Button } from '@/components/ui/Button'
 import { DashedAddButton } from '@/components/ui/DashedAddButton'
 import { Card } from '@/components/ui/Card'
@@ -70,6 +72,7 @@ export function MealsPanel({
   const [confirmDeleteMeal, setConfirmDeleteMeal] = useState<string | null>(null)
   const [editMealId, setEditMealId] = useState<string | null>(null)
   const [, startTransition] = useTransition()
+  const requestUndo = useUndo()
   // Repas créés en optimiste (id temporaire) pas encore persistés. Agir dessus
   // (je gère, + produit) ferait échouer la FK meal_id/meal_owners en base.
   const pendingMealIds = useRef<Set<string>>(new Set())
@@ -182,8 +185,13 @@ export function MealsPanel({
 
   function handleDeleteProduct(id: string) {
     const prev = products
+    const name = products.find((x) => x.id === id)?.name
     setProducts((p) => p.filter((x) => x.id !== id))
-    startTransition(() => deleteProduct(slug, id).catch(() => setProducts(prev)))
+    requestUndo({
+      message: name ? `« ${name} » retiré` : 'Produit retiré',
+      commit: () => deleteProduct(slug, id),
+      undo: () => setProducts(prev),
+    })
   }
 
   // Édition complète d'un repas : renommage (+ retag des produits), suppression
@@ -246,7 +254,12 @@ export function MealsPanel({
         : p.map((x) => (x.meal_id === id ? { ...x, meal_id: null } : x)),
     )
     setConfirmDeleteMeal(null)
-    startTransition(() => deleteMeal(slug, id, alsoProducts).catch(() => { setMeals(prevMeals); setProducts(prevProducts) }))
+    const label = prevMeals.find((m) => m.id === id)?.label
+    requestUndo({
+      message: label ? `« ${label} » supprimé` : 'Repas supprimé',
+      commit: () => deleteMeal(slug, id, alsoProducts),
+      undo: () => { setMeals(prevMeals); setProducts(prevProducts) },
+    })
   }
 
   const checkedCount = products.filter((p) => p.checked).length
@@ -761,8 +774,9 @@ function ShoppingView({
               </span>
               {ml && <span className="mt-0.5 block text-[11px] text-muted">🍽️ {ml}</span>}
             </button>
-            <button onClick={() => onDelete(p.id)} aria-label="Supprimer le produit"
-              className="shrink-0 text-[12px] text-muted hover:text-prune transition-colors">🗑</button>
+            <ConfirmButton onConfirm={() => onDelete(p.id)} confirmLabel="Retirer ?"
+              ariaLabel="Supprimer le produit"
+              className="shrink-0 text-[12px] text-muted hover:text-prune transition-colors">🗑</ConfirmButton>
           </div>
         )
       })}

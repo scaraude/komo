@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { DM_Serif_Display, Hanken_Grotesk } from 'next/font/google'
 import './globals.css'
+import { UndoProvider } from '@/components/ui/undo'
 
 const dmSerif = DM_Serif_Display({
   weight: '400',
@@ -28,7 +29,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr" className={`${dmSerif.variable} ${hanken.variable}`}>
-      <body className="min-h-screen font-sans">{children}</body>
+      <body className="min-h-screen font-sans">
+        <UndoProvider>{children}</UndoProvider>
+      </body>
     </html>
   )
 }
