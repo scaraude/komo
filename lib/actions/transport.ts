@@ -200,7 +200,11 @@ export async function leaveLeg(slug: string, legId: string, participantId: strin
 //   - fromLegId null  : le participant venait de la zone « non affectés ».
 //   - toLegId   null  : on le renvoie vers la zone « non affectés ».
 // On ne touche jamais aux occupants conducteur·ice (is_driver) ni verrouillés
-// (locked) : le DELETE les exclut, donc un drag accidentel les laisse en place.
+// (locked) : la RPC les exclut, donc un drag accidentel les laisse en place.
+// Le delete(source) + insert(target) se joue dans la fonction Postgres
+// `move_occupant` = UNE transaction atomique : un échec d'insertion (véhicule
+// plein, unicité, RLS, réseau) rollback aussi le retrait, donc le participant
+// n'est jamais perdu des deux côtés. La capacité est vérifiée côté serveur.
 export async function moveOccupant(
   slug: string,
   fromLegId: string | null,
@@ -209,25 +213,17 @@ export async function moveOccupant(
 ) {
   const { supabase } = await ensureUser()
 
-  if (fromLegId) {
-    const { error } = await supabase
-      .from('transport_occupants')
-      .delete()
-      .eq('leg_id', fromLegId)
-      .eq('participant_id', participantId)
-      .eq('is_driver', false)
-      .eq('locked', false)
-    if (error) throw new Error('Impossible de retirer le participant du trajet.')
-  }
-
-  if (toLegId) {
-    const { error } = await supabase.from('transport_occupants').insert({
-      leg_id: toLegId,
-      participant_id: participantId,
-      is_driver: false,
-      locked: false,
-    })
-    if (error) throw new Error('Impossible d\'ajouter le participant au trajet.')
+  const { error } = await supabase.rpc('move_occupant', {
+    p_from_leg: fromLegId,
+    p_to_leg: toLegId,
+    p_participant: participantId,
+  })
+  if (error) {
+    // La fonction lève 'COMPLET' quand le véhicule cible est plein.
+    if (error.message.includes('COMPLET')) {
+      throw new Error('C\'est complet sur ce véhicule.')
+    }
+    throw new Error('Impossible de déplacer le participant.')
   }
 
   revalidatePath(`/e/${slug}`)
