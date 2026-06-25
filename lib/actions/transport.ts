@@ -7,6 +7,7 @@ import { mustSucceed } from '@/lib/actions/assert'
 import { isTransportMode } from '@/lib/transport/modes'
 import { computeSuggestions } from '@/lib/transport/solver'
 import type { Assignment } from '@/lib/transport/solver'
+import { needsTransport } from '@/lib/participants'
 
 // Les écritures (legs / occupants / participants) sont protégées par des
 // policies RLS basées sur `auth.uid()`. Il FAUT utiliser le client authentifié
@@ -266,7 +267,7 @@ export async function suggestAssignments(
 
   const assignedIds = new Set((occupants ?? []).map((o) => o.participant_id))
   const unassigned = (participants ?? []).filter(
-    (p) => ['hot', 'maybe', 'unsure'].includes(p.presence_status ?? '') && !assignedIds.has(p.id)
+    (p) => needsTransport(p) && !assignedIds.has(p.id)
   )
 
   // Le solver matche sur le côté PARTICIPANT du leg (sa ville). Selon la

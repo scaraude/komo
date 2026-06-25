@@ -196,6 +196,7 @@ export type Database = {
       email_is_registered: { Args: { p_email: string }; Returns: boolean }
       move_occupant: { Args: { p_from_leg: string | null; p_to_leg: string | null; p_participant: string }; Returns: undefined }
       set_date_vote: { Args: { p_proposal: string; p_participant: string; p_vote: boolean }; Returns: undefined }
+      set_presence: { Args: { p_participant: string; p_status: string | null }; Returns: undefined }
       toggle_accommodation_vote: { Args: { p_option: string; p_participant: string }; Returns: undefined }
     }
     Enums: { [_ in never]: never }

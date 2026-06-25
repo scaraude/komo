@@ -14,7 +14,7 @@ import { DashedAddButton } from '@/components/ui/DashedAddButton'
 import { Avatar } from '@/components/ui/Avatar'
 import { joinLeg, leaveLeg, moveOccupant } from '@/lib/actions/transport'
 import { randomId } from '@/lib/uuid'
-import { pseudoOf as resolvePseudo } from '@/lib/participants'
+import { pseudoOf as resolvePseudo, needsTransport } from '@/lib/participants'
 import type { Leg, Occupant, Participant } from '@/lib/types'
 
 // useSyncExternalStore sans mises à jour : false au SSR + à l'hydratation, true
@@ -76,7 +76,7 @@ export function TransportPanel({
       .map((o) => o.participant_id)
   )
   const unassigned = participants.filter(
-    (p) => ['hot', 'maybe', 'unsure'].includes(p.presence_status ?? '') && !assignedIds.has(p.id)
+    (p) => needsTransport(p) && !assignedIds.has(p.id)
   )
 
   // ---- Mutations optimistes (boutons + drag partagent le même state) ----

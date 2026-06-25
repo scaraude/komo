@@ -30,6 +30,14 @@ export function Sheet({
   labelledBy?: string
 }) {
   const panelRef = useRef<HTMLDivElement>(null)
+  // `onClose` est souvent une arrow inline (identité changeante à chaque render).
+  // On la lit via une ref pour que l'effet ne tourne qu'au montage — sinon il se
+  // rejoue à chaque frappe et vole le focus (le cleanup restaure puis re-focus
+  // le 1er élément focusable du panel).
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  })
 
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null
@@ -44,7 +52,7 @@ export function Sheet({
 
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
-        onClose()
+        onCloseRef.current()
         return
       }
       if (e.key === 'Tab' && panel) {
@@ -68,7 +76,8 @@ export function Sheet({
       document.body.style.overflow = prevOverflow
       previouslyFocused?.focus?.()
     }
-  }, [onClose])
+    // Montage uniquement : `onClose` est lu via `onCloseRef` (voir plus haut).
+  }, [])
 
   const isBottom = variant === 'bottom'
 
