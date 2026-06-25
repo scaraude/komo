@@ -109,6 +109,8 @@ export default async function EventPage({
   const participants = allParticipants ?? []
 
   const isAdmin = participant.role === 'créateur' || participant.role === 'co_organisateur'
+  // Créateur de l'event : sert à la sheet membres (bloque « Quitter le Komo »).
+  const isCreator = event.created_by === userId
   const wording = EVENT_TYPE_WORDING[event.event_type as keyof typeof EVENT_TYPE_WORDING] ?? EVENT_TYPE_WORDING.autre
   const vibe = VIBE[event.event_type as keyof typeof VIBE] ?? VIBE.autre
 

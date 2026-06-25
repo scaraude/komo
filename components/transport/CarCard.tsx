@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { deleteLeg } from '@/lib/actions/transport'
 import type { Leg, Occupant, Participant } from '@/lib/types'
@@ -40,7 +40,6 @@ export function CarCard({
 }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [removed, setRemoved] = useState(false)
-  const [, startTransition] = useTransition()
   const requestUndo = useUndo()
 
   // Le véhicule est une zone de dépôt (drop) : son id = l'id du leg.
