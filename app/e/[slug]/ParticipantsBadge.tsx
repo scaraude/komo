@@ -2,7 +2,14 @@
 
 import { useState, useTransition } from 'react'
 import { Sheet } from '@/components/ui/Sheet'
-import { addParticipantProfile } from '@/lib/actions/participants'
+import { ConfirmButton } from '@/components/ui/ConfirmButton'
+import { useUndo } from '@/components/ui/undo'
+import {
+  addParticipantProfile,
+  deleteParticipantProfile,
+  getProfileAttachments,
+  leaveEvent,
+} from '@/lib/actions/participants'
 import { randomId } from '@/lib/uuid'
 
 const AVATAR_COLORS = ['#c4602f', '#5f7a3e', '#9a8a6a', '#3a7ca5', '#9a5a6e']
@@ -10,6 +17,7 @@ const AVATAR_COLORS = ['#c4602f', '#5f7a3e', '#9a8a6a', '#3a7ca5', '#9a5a6e']
 type ParticipantSummary = {
   id: string
   pseudo: string
+  hasAccount: boolean
 }
 
 // Couleur stable par participant, dérivée de l'id (indépendante de la position).
@@ -24,18 +32,26 @@ function avatarColor(id: string) {
 export function ParticipantsBadge({
   slug,
   eventId,
+  currentParticipantId,
+  isCreator,
   participants,
 }: {
   slug: string
   eventId: string
+  currentParticipantId: string
+  isCreator: boolean
   participants: ParticipantSummary[]
 }) {
   const [open, setOpen] = useState(false)
-  // Liste locale : on l'enrichit en optimiste à l'ajout d'un pote.
+  // Liste locale : enrichie/réduite en optimiste (ajout & suppression de potes).
   const [list, setList] = useState(participants)
   const [pseudo, setPseudo] = useState('')
   const [error, setError] = useState<string | null>(null)
+  // Alerte de rattachement avant suppression d'un profil lié à des données.
+  const [attachAlert, setAttachAlert] = useState<{ id: string; pseudo: string; links: string[] } | null>(null)
+  const [checkingId, setCheckingId] = useState<string | null>(null)
   const [, startTransition] = useTransition()
+  const requestUndo = useUndo()
 
   function handleAdd(e: React.FormEvent) {
     e.preventDefault()
@@ -43,16 +59,64 @@ export function ParticipantsBadge({
     if (!clean) return
     setError(null)
     const tempId = randomId()
-    setList((l) => [...l, { id: tempId, pseudo: clean }])
+    setList((l) => [...l, { id: tempId, pseudo: clean, hasAccount: false }])
     setPseudo('')
     startTransition(async () => {
       try {
         const created = await addParticipantProfile(slug, eventId, clean)
-        // Remplace l'id temporaire par l'id réel renvoyé par la DB.
-        setList((l) => l.map((p) => (p.id === tempId ? created : p)))
+        setList((l) => l.map((p) => (p.id === tempId ? { ...created, hasAccount: false } : p)))
       } catch {
         setList((l) => l.filter((p) => p.id !== tempId))
-        setError("Ajout impossible, réessaie.")
+        setError('Ajout impossible, réessaie.')
+      }
+    })
+  }
+
+  // 2e clic du ConfirmButton : on vérifie d'abord les rattachements.
+  function requestDelete(profile: ParticipantSummary) {
+    setError(null)
+    setCheckingId(profile.id)
+    startTransition(async () => {
+      try {
+        const links = await getProfileAttachments(profile.id)
+        if (links.length > 0) {
+          setAttachAlert({ id: profile.id, pseudo: profile.pseudo, links })
+        } else {
+          performDelete(profile.id, profile.pseudo)
+        }
+      } catch {
+        setError('Action impossible, réessaie.')
+      } finally {
+        setCheckingId(null)
+      }
+    })
+  }
+
+  // Suppression optimiste + bandeau d'annulation (commit serveur différé 30 s).
+  function performDelete(id: string, name: string) {
+    const idx = list.findIndex((p) => p.id === id)
+    const removed = list[idx]
+    if (!removed) return
+    setAttachAlert(null)
+    setList((l) => l.filter((p) => p.id !== id))
+    requestUndo({
+      message: `${name} supprimé`,
+      commit: () => deleteParticipantProfile(slug, id),
+      undo: () =>
+        setList((prev) =>
+          prev.some((p) => p.id === id)
+            ? prev
+            : [...prev.slice(0, idx), removed, ...prev.slice(idx)],
+        ),
+    })
+  }
+
+  function handleLeave() {
+    startTransition(async () => {
+      try {
+        await leaveEvent(slug)
+      } catch {
+        setError('Impossible de quitter, réessaie.')
       }
     })
   }
@@ -88,22 +152,73 @@ export function ParticipantsBadge({
           <h3 id="participants-title" className="mb-4 font-serif text-[22px] text-ink">
             Les {list.length} potes
           </h3>
-          <div className="flex max-h-[50vh] flex-col gap-2 overflow-y-auto">
-            {list.map((p) => (
-              <div
-                key={p.id}
-                className="flex items-center gap-3 rounded-[13px] border-[1.5px] border-line-2 bg-card px-[14px] py-[11px]"
-              >
+
+          <div className="flex max-h-[46vh] flex-col gap-2 overflow-y-auto">
+            {list.map((p) => {
+              const isSelf = p.id === currentParticipantId
+              return (
                 <div
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                  style={{ backgroundColor: avatarColor(p.id) }}
+                  key={p.id}
+                  className="flex items-center gap-3 rounded-[13px] border-[1.5px] border-line-2 bg-card px-[14px] py-[11px]"
                 >
-                  {p.pseudo[0]?.toUpperCase()}
+                  <div
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                    style={{ backgroundColor: avatarColor(p.id) }}
+                  >
+                    {p.pseudo[0]?.toUpperCase()}
+                  </div>
+                  <span className="text-[14.5px] font-semibold text-ink">
+                    {p.pseudo}
+                    {isSelf && <span className="ml-1.5 text-xs font-normal text-terracotta">(toi)</span>}
+                    {!p.hasAccount && (
+                      <span className="ml-2 rounded-full bg-soft px-1.5 py-0.5 text-[11px] font-medium text-muted">
+                        sans compte
+                      </span>
+                    )}
+                  </span>
+                  {/* Seuls les profils sans compte sont supprimables ici. */}
+                  {!p.hasAccount && !isSelf && (
+                    <span className="ml-auto">
+                      <ConfirmButton
+                        onConfirm={() => requestDelete(p)}
+                        confirmLabel="Supprimer ?"
+                        ariaLabel={`Supprimer ${p.pseudo}`}
+                        className="text-[13px] text-muted transition-colors hover:text-prune"
+                      >
+                        {checkingId === p.id ? '…' : '🗑'}
+                      </ConfirmButton>
+                    </span>
+                  )}
                 </div>
-                <span className="text-[14.5px] font-semibold text-ink">{p.pseudo}</span>
-              </div>
-            ))}
+              )
+            })}
           </div>
+
+          {/* Alerte : le profil est rattaché à des données. */}
+          {attachAlert && (
+            <div className="mt-3 rounded-[13px] border-[1.5px] border-prune/40 bg-prune-soft p-3">
+              <p className="text-[13px] text-ink">
+                <b>{attachAlert.pseudo}</b> est rattaché à {attachAlert.links.join(', ')}. Ces
+                éléments seront retirés ou détachés.
+              </p>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAttachAlert(null)}
+                  className="flex-1 rounded-[11px] border-[1.5px] border-line-3 bg-card py-2 text-[13px] font-bold text-ink"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={() => performDelete(attachAlert.id, attachAlert.pseudo)}
+                  className="flex-1 rounded-[11px] bg-prune py-2 text-[13px] font-bold text-white active:translate-y-px"
+                >
+                  Supprimer quand même
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Ajout d'un pote (profil sans compte) — ouvert à tout membre. */}
           <form onSubmit={handleAdd} className="mt-3 flex gap-2">
@@ -124,6 +239,24 @@ export function ParticipantsBadge({
             </button>
           </form>
           {error && <p className="mt-1.5 text-[13px] text-prune">{error}</p>}
+
+          {/* Quitter le Komo (sauf créateur). */}
+          {isCreator ? (
+            <p className="mt-4 text-center text-[12.5px] text-muted">
+              En tant que créateur·ice, tu ne peux pas quitter ce Komo.
+            </p>
+          ) : (
+            <div className="mt-4 flex justify-center">
+              <ConfirmButton
+                onConfirm={handleLeave}
+                confirmLabel="Quitter pour de bon ?"
+                className="text-[13px] font-semibold text-muted transition-colors hover:text-prune"
+                confirmClassName="rounded-[11px] bg-prune px-3 py-1.5 text-[13px] font-bold text-white"
+              >
+                Quitter le Komo
+              </ConfirmButton>
+            </div>
+          )}
 
           <button
             type="button"

@@ -148,6 +148,76 @@ export async function addParticipantProfile(slug: string, eventId: string, pseud
   return data
 }
 
+/**
+ * Rattachements d'un profil : ce qui serait supprimé/détaché avec lui. Renvoie
+ * une liste de libellés FR ([] si rien). Sert à alerter avant suppression.
+ */
+export async function getProfileAttachments(participantId: string): Promise<string[]> {
+  const supabase = await createClient()
+  const head = { count: 'exact' as const, head: true }
+  const [occ, drives, signups, mealOwn] = await Promise.all([
+    supabase.from('transport_occupants').select('id', head).eq('participant_id', participantId),
+    supabase.from('transport_legs').select('id', head).eq('driver_id', participantId),
+    supabase.from('activity_signups').select('id', head).eq('participant_id', participantId),
+    supabase.from('meal_owners').select('id', head).eq('participant_id', participantId),
+  ])
+  const links: string[] = []
+  const trips = (occ.count ?? 0) + (drives.count ?? 0)
+  if (trips) links.push(`${trips} trajet${trips > 1 ? 's' : ''}`)
+  if (signups.count) links.push(`${signups.count} activité${signups.count > 1 ? 's' : ''}`)
+  if (mealOwn.count) links.push(`${mealOwn.count} repas`)
+  return links
+}
+
+/**
+ * Supprime un profil SANS compte. La RLS
+ * (participants_delete_profile_by_member) garantit : profil sans compte
+ * (user_id null) + appelant membre de l'event. Les rattachements partent via
+ * les FK (cascade pour occupants/signups/meal_owners ; set null pour driver_id).
+ */
+export async function deleteParticipantProfile(slug: string, participantId: string) {
+  const supabase = await createClient()
+  const result = await supabase
+    .from('participants')
+    .delete()
+    .eq('id', participantId)
+    .is('user_id', null)
+    .select('id')
+  mustSucceed(result, 'Suppression impossible.')
+  revalidatePath(`/e/${slug}`)
+}
+
+/**
+ * Quitter le Komo : l'utilisateur courant supprime sa propre ligne participant.
+ * Le créateur ne peut pas quitter. Les rattachements (trajets, inscriptions,
+ * repas…) partent via les FK on delete. Redirige ensuite vers /mes-komos.
+ */
+export async function leaveEvent(slug: string) {
+  const supabase = await createClient()
+  const { data: auth } = await supabase.auth.getUser()
+  const userId = auth.user?.id
+  if (!userId) redirect('/')
+
+  const { data: event } = await supabase
+    .from('events')
+    .select('id, created_by')
+    .eq('slug', slug)
+    .single()
+  if (!event) redirect('/mes-komos')
+  if (event.created_by === userId) {
+    throw new Error('Le créateur ne peut pas quitter le Komo.')
+  }
+
+  const result = await supabase
+    .from('participants')
+    .delete()
+    .eq('event_id', event.id)
+    .eq('user_id', userId)
+    .select('id')
+  mustSucceed(result, 'Impossible de quitter cet event.')
+  redirect('/mes-komos')
+}
+
 export async function promoteParticipant(
   slug: string,
   targetId: string,

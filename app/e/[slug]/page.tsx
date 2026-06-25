@@ -151,7 +151,9 @@ export default async function EventPage({
           <ParticipantsBadge
             slug={slug}
             eventId={event.id}
-            participants={participants.map((p) => ({ id: p.id, pseudo: p.pseudo }))}
+            currentParticipantId={participant.id}
+            isCreator={isCreator}
+            participants={participants.map((p) => ({ id: p.id, pseudo: p.pseudo, hasAccount: p.user_id != null }))}
           />
         </div>
 
