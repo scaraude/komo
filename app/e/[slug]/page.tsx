@@ -149,6 +149,8 @@ export default async function EventPage({
             {event.destination ? ` · ${event.destination}` : ''}
           </div>
           <ParticipantsBadge
+            slug={slug}
+            eventId={event.id}
             participants={participants.map((p) => ({ id: p.id, pseudo: p.pseudo }))}
           />
         </div>
