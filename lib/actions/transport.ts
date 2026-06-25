@@ -194,6 +194,45 @@ export async function leaveLeg(slug: string, legId: string, participantId: strin
     .eq('is_driver', false)
 }
 
+// Déplace un participant entre véhicules (ou depuis/vers la zone « non
+// affectés »). Tout membre peut déplacer n'importe qui — RLS occupants_*
+// (20260625000005) autorise tout membre de l'event du leg.
+//   - fromLegId null  : le participant venait de la zone « non affectés ».
+//   - toLegId   null  : on le renvoie vers la zone « non affectés ».
+// On ne touche jamais aux occupants conducteur·ice (is_driver) ni verrouillés
+// (locked) : le DELETE les exclut, donc un drag accidentel les laisse en place.
+export async function moveOccupant(
+  slug: string,
+  fromLegId: string | null,
+  toLegId: string | null,
+  participantId: string,
+) {
+  const { supabase } = await ensureUser()
+
+  if (fromLegId) {
+    const { error } = await supabase
+      .from('transport_occupants')
+      .delete()
+      .eq('leg_id', fromLegId)
+      .eq('participant_id', participantId)
+      .eq('is_driver', false)
+      .eq('locked', false)
+    if (error) throw new Error('Impossible de retirer le participant du trajet.')
+  }
+
+  if (toLegId) {
+    const { error } = await supabase.from('transport_occupants').insert({
+      leg_id: toLegId,
+      participant_id: participantId,
+      is_driver: false,
+      locked: false,
+    })
+    if (error) throw new Error('Impossible d\'ajouter le participant au trajet.')
+  }
+
+  revalidatePath(`/e/${slug}`)
+}
+
 export async function deleteLeg(slug: string, legId: string) {
   const { supabase } = await ensureUser()
   // RLS (legs_delete_author) garantit que seul l'auteur peut supprimer.

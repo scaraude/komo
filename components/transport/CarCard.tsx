@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { deleteLeg, joinLeg, leaveLeg } from '@/lib/actions/transport'
+import { useDraggable, useDroppable } from '@dnd-kit/core'
+import { deleteLeg } from '@/lib/actions/transport'
 import type { Leg, Occupant, Participant } from '@/lib/types'
-import { randomId } from '@/lib/uuid'
 import { Avatar } from '@/components/ui/Avatar'
 import { Card } from '@/components/ui/Card'
 import { MODE_ICON } from '@/lib/transport/modes'
@@ -20,6 +20,9 @@ export function CarCard({
   participants,
   currentParticipantId,
   eventDestination,
+  draggable,
+  onJoin,
+  onLeave,
   onEdit,
 }: {
   slug: string
@@ -28,21 +31,28 @@ export function CarCard({
   participants: Participant[]
   currentParticipantId: string
   eventDestination: string
+  // Active le DnD (faux au SSR / 1er rendu pour éviter un mismatch d'hydratation).
+  draggable: boolean
+  onJoin: () => void
+  onLeave: () => void
   onEdit: () => void
 }) {
-  const [localOccupants, setLocalOccupants] = useState(occupants)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [removed, setRemoved] = useState(false)
   const [, startTransition] = useTransition()
 
+  // Le véhicule est une zone de dépôt (drop) : son id = l'id du leg.
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: leg.id, disabled: !draggable })
+
   const totalSeats = leg.total_seats ?? 4
-  const free = totalSeats - localOccupants.length
-  const myOccupant = localOccupants.find((o) => o.participant_id === currentParticipantId)
+  const free = totalSeats - occupants.length
+  const myOccupant = occupants.find((o) => o.participant_id === currentParticipantId)
   const isMember = !!myOccupant
   const isAuthor = leg.created_by === currentParticipantId
-  const othersCount = localOccupants.filter((o) => o.participant_id !== currentParticipantId).length
+  const othersCount = occupants.filter((o) => o.participant_id !== currentParticipantId).length
   const isBillet = leg.mode === 'train' || leg.mode === 'bus'
   const tracksSeats = leg.mode === 'car' || leg.mode === 'rental'
+  const isFull = tracksSeats && free <= 0
 
   // Itinéraire départ → arrivée. Un côté null = hérite du lieu de l'event
   // (garanti par la contrainte : seul le côté event peut être null).
@@ -68,38 +78,6 @@ export function CarCard({
     return participants.find((p) => p.id === id)
   }
 
-  function handleJoin() {
-    const newOccupant: Occupant = {
-      id: randomId(),
-      leg_id: leg.id,
-      participant_id: currentParticipantId,
-      is_driver: false,
-      locked: false,
-      created_at: new Date().toISOString(),
-    }
-    const prev = localOccupants
-    setLocalOccupants([...localOccupants, newOccupant])
-    startTransition(async () => {
-      try {
-        await joinLeg(slug, leg.id, currentParticipantId)
-      } catch {
-        setLocalOccupants(prev)
-      }
-    })
-  }
-
-  function handleLeave() {
-    const prev = localOccupants
-    setLocalOccupants(localOccupants.filter((o) => o.participant_id !== currentParticipantId))
-    startTransition(async () => {
-      try {
-        await leaveLeg(slug, leg.id, currentParticipantId)
-      } catch {
-        setLocalOccupants(prev)
-      }
-    })
-  }
-
   function handleDelete() {
     setRemoved(true) // retrait optimiste
     startTransition(async () => {
@@ -114,7 +92,15 @@ export function CarCard({
 
   if (removed) return null
 
+  // Surbrillance de dépôt : terracotta si possible, atténué (prune) si plein.
+  const dropClass = isOver
+    ? isFull
+      ? 'rounded-[18px] ring-2 ring-prune/40'
+      : 'rounded-[18px] ring-2 ring-terracotta'
+    : ''
+
   return (
+    <div ref={setDropRef} className={dropClass}>
     <Card className="rounded-[18px] overflow-hidden">
       <div className="p-[15px_16px] flex items-start justify-between gap-2">
         <div className="min-w-0">
@@ -139,23 +125,22 @@ export function CarCard({
           }`}>
             {free === 0 ? 'complet' : `${free} place${free > 1 ? 's' : ''} libre${free > 1 ? 's' : ''}`}
           </span>
-        ) : localOccupants.length > 0 ? (
+        ) : occupants.length > 0 ? (
           <span className="shrink-0 bg-olive-soft text-olive-text rounded-[14px] px-[11px] py-[4px] text-[11.5px] font-bold">
-            {localOccupants.length} à bord
+            {occupants.length} à bord
           </span>
         ) : null}
       </div>
 
-      {(localOccupants.length > 0 || !isMember) && (
+      {(occupants.length > 0 || !isMember) && (
         <div className="px-[16px] pb-[14px] flex flex-col gap-2 border-t border-line-2 pt-[12px]">
-          {localOccupants.map((o) => {
+          {occupants.map((o) => {
             const p = participantFor(o.participant_id)
+            // Conducteur·ice et occupants verrouillés restent épinglés (non déplaçables).
+            const pinned = o.is_driver || o.locked
             return (
-              <div key={o.id} className="flex items-center gap-2">
-                <Avatar pseudo={p?.pseudo ?? ''} className="h-7 w-7 bg-ink text-xs text-white" />
-                <span className="text-[14px] font-medium text-ink">{p?.pseudo ?? '…'}</span>
-                {o.is_driver && <span className="text-[12px] text-muted ml-auto">conducteur·ice</span>}
-              </div>
+              <OccupantRow key={o.id} occupant={o} pseudo={p?.pseudo ?? '…'}
+                draggable={draggable && !pinned} />
             )
           })}
 
@@ -167,7 +152,7 @@ export function CarCard({
                     <span className="text-muted text-xs">+</span>
                   </div>
                   {i === 0 && !isMember && free > 0 && (
-                    <button onClick={handleJoin} className="text-[14px] text-terracotta font-semibold hover:underline">
+                    <button onClick={onJoin} className="text-[14px] text-terracotta font-semibold hover:underline">
                       Rejoindre
                     </button>
                   )}
@@ -175,7 +160,7 @@ export function CarCard({
               ))
             : /* Capacité illimitée : Rejoindre toujours dispo si non-membre. */
               !isMember && (
-                <button onClick={handleJoin} className="flex items-center gap-2 text-left">
+                <button onClick={onJoin} className="flex items-center gap-2 text-left">
                   <span className="w-7 h-7 rounded-full border-[1.5px] border-dashed border-[var(--color-dashed)] flex items-center justify-center shrink-0">
                     <span className="text-muted text-xs">+</span>
                   </span>
@@ -221,7 +206,7 @@ export function CarCard({
               <span aria-hidden>✎</span> Modifier
             </button>
             {isMember && !myOccupant?.is_driver && (
-              <button onClick={handleLeave} className="text-[12px] text-muted hover:text-terracotta transition-colors">Quitter</button>
+              <button onClick={onLeave} className="text-[12px] text-muted hover:text-terracotta transition-colors">Quitter</button>
             )}
             {isAuthor && (
               <button onClick={() => setConfirmingDelete(true)}
@@ -233,5 +218,30 @@ export function CarCard({
         </div>
       )}
     </Card>
+    </div>
+  )
+}
+
+// Une ligne occupant : avatar + pseudo. Déplaçable par drag quand `draggable`,
+// sauf conducteur·ice / verrouillé (laissés épinglés). Le clic reste libre.
+function OccupantRow({ occupant, pseudo, draggable }: {
+  occupant: Occupant
+  pseudo: string
+  draggable: boolean
+}) {
+  const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
+    id: occupant.id,
+    disabled: !draggable,
+  })
+  return (
+    <div ref={setNodeRef} {...attributes} {...listeners}
+      className={`flex items-center gap-2 ${draggable ? 'cursor-grab active:cursor-grabbing touch-none' : ''} ${isDragging ? 'opacity-40' : ''}`}>
+      {draggable && (
+        <span aria-hidden className="text-[13px] leading-none text-disabled-2">⠿</span>
+      )}
+      <Avatar pseudo={pseudo} className="h-7 w-7 bg-ink text-xs text-white" />
+      <span className="text-[14px] font-medium text-ink">{pseudo}</span>
+      {occupant.is_driver && <span className="text-[12px] text-muted ml-auto">conducteur·ice</span>}
+    </div>
   )
 }
