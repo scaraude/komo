@@ -17,6 +17,7 @@ import { RecapButton } from '@/components/event/RecapButton'
 import { promoteParticipant } from '@/lib/actions/participants'
 import { ShareSheet } from './ShareSheet'
 import { ParticipantsBadge } from './ParticipantsBadge'
+import { FeedbackButton } from '@/components/feedback/FeedbackButton'
 import type { Participant } from '@/lib/types'
 
 const EVENT_TYPE_WORDING = {
@@ -191,6 +192,8 @@ export default async function EventPage({
 
         {/* Partage */}
         <ShareSheet slug={slug} title={event.title} />
+
+        <FeedbackButton eventId={event.id} />
       </main>
     )
   }

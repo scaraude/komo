@@ -184,6 +184,12 @@ export type Database = {
         Update: Partial<{ event_id: string; activity_id: string; participant_id: string }>
         Relationships: []
       }
+      feedback: {
+        Row: { id: string; message: string; event_id: string | null; user_id: string | null; user_agent: string | null; created_at: string }
+        Insert: { message: string; event_id?: string | null; user_id?: string | null; user_agent?: string | null }
+        Update: Partial<{ message: string }>
+        Relationships: []
+      }
     }
     Views: { [_ in never]: never }
     Functions: {
