@@ -94,13 +94,20 @@ export function ParticipantsBadge({
 
   // Suppression optimiste + bandeau d'annulation (commit serveur différé 30 s).
   function performDelete(id: string, name: string) {
+    const idx = list.findIndex((p) => p.id === id)
+    const removed = list[idx]
+    if (!removed) return
     setAttachAlert(null)
-    const snapshot = list
     setList((l) => l.filter((p) => p.id !== id))
     requestUndo({
       message: `${name} supprimé`,
       commit: () => deleteParticipantProfile(slug, id),
-      undo: () => setList(snapshot),
+      undo: () =>
+        setList((prev) =>
+          prev.some((p) => p.id === id)
+            ? prev
+            : [...prev.slice(0, idx), removed, ...prev.slice(idx)],
+        ),
     })
   }
 
