@@ -98,6 +98,30 @@ export async function joinEvent(
   redirect(`/e/${slug}`)
 }
 
+/**
+ * Ajoute un profil participant SANS compte (user_id null) à l'event. Ouvert à
+ * tout membre (RLS participants_insert_profile_by_member). Renvoie la ligne
+ * créée pour la réconciliation optimiste côté client.
+ */
+export async function addParticipantProfile(slug: string, eventId: string, pseudoRaw: string) {
+  const pseudo = pseudoRaw.trim()
+  if (!pseudo) throw new Error('Pseudo requis.')
+  if (pseudo.length > 40) throw new Error('Pseudo trop long (40 max).')
+
+  const { supabase } = await ensureUser()
+  const { data, error } = await supabase
+    .from('participants')
+    .insert({ event_id: eventId, pseudo, user_id: null, role: 'participant' })
+    .select('id, pseudo')
+    .single()
+  if (error || !data) {
+    console.error('addParticipantProfile failed', error)
+    throw new Error("Impossible d'ajouter ce pote.")
+  }
+  revalidatePath(`/e/${slug}`)
+  return data
+}
+
 export async function promoteParticipant(
   slug: string,
   targetId: string,
