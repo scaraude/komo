@@ -194,6 +194,41 @@ export async function leaveLeg(slug: string, legId: string, participantId: strin
     .eq('is_driver', false)
 }
 
+// Déplace un participant entre véhicules (ou depuis/vers la zone « non
+// affectés »). Tout membre peut déplacer n'importe qui — RLS occupants_*
+// (20260625000005) autorise tout membre de l'event du leg.
+//   - fromLegId null  : le participant venait de la zone « non affectés ».
+//   - toLegId   null  : on le renvoie vers la zone « non affectés ».
+// On ne touche jamais aux occupants conducteur·ice (is_driver) ni verrouillés
+// (locked) : la RPC les exclut, donc un drag accidentel les laisse en place.
+// Le delete(source) + insert(target) se joue dans la fonction Postgres
+// `move_occupant` = UNE transaction atomique : un échec d'insertion (véhicule
+// plein, unicité, RLS, réseau) rollback aussi le retrait, donc le participant
+// n'est jamais perdu des deux côtés. La capacité est vérifiée côté serveur.
+export async function moveOccupant(
+  slug: string,
+  fromLegId: string | null,
+  toLegId: string | null,
+  participantId: string,
+) {
+  const { supabase } = await ensureUser()
+
+  const { error } = await supabase.rpc('move_occupant', {
+    p_from_leg: fromLegId,
+    p_to_leg: toLegId,
+    p_participant: participantId,
+  })
+  if (error) {
+    // La fonction lève 'COMPLET' quand le véhicule cible est plein.
+    if (error.message.includes('COMPLET')) {
+      throw new Error('C\'est complet sur ce véhicule.')
+    }
+    throw new Error('Impossible de déplacer le participant.')
+  }
+
+  revalidatePath(`/e/${slug}`)
+}
+
 export async function deleteLeg(slug: string, legId: string) {
   const { supabase } = await ensureUser()
   // RLS (legs_delete_author) garantit que seul l'auteur peut supprimer.
