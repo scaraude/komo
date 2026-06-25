@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getUserId } from '@/lib/auth'
 import { formatEventDates } from '@/lib/format'
+import { FeedbackButton } from '@/components/feedback/FeedbackButton'
 
 const VIBE_EMOJI: Record<string, string> = {
   weekend: '🏔️', soiree: '🎉', concert: '🎸', road_trip: '🚗', sport: '⚽', autre: '✨',
@@ -97,6 +98,8 @@ export default async function MesKomosPage() {
           })}
         </div>
       )}
+
+      <FeedbackButton />
     </main>
   )
 }

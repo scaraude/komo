@@ -22,4 +22,6 @@ function required(name: string): string {
 export const serverEnv = {
   supabaseServiceRoleKey: required('SUPABASE_SERVICE_ROLE_KEY'),
   geoapifyApiKey: isDev ? process.env.GEOAPIFY_API_KEY : required('GEOAPIFY_API_KEY'),
+  // Optionnelle : webhook Discord pour le ping feedback. Absente → stockage seul.
+  feedbackWebhookUrl: process.env.FEEDBACK_WEBHOOK_URL,
 }
