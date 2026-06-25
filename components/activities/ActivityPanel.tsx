@@ -154,13 +154,24 @@ export function ActivityPanel({
   }
 
   function handleDelete(activityId: string) {
-    const snapshot = activities
-    const label = activities.find((a) => a.id === activityId)?.label
+    const idx = activities.findIndex((a) => a.id === activityId)
+    const removed = activities[idx]
+    if (!removed) return
+    const label = removed.label
     setActivities((prev) => prev.filter((a) => a.id !== activityId))
     requestUndo({
       message: label ? `« ${label} » supprimée` : 'Activité supprimée',
       commit: () => deleteActivity(slug, activityId),
-      undo: () => setActivities(snapshot),
+      // Undo fonctionnel : réinsère uniquement la ligne retirée (à sa position
+      // d'origine), sans remplacer la liste — préserve les ajouts/édits arrivés
+      // entre-temps via le realtime. Le guard évite un doublon si la ligne a déjà
+      // été ré-ajoutée.
+      undo: () =>
+        setActivities((prev) =>
+          prev.some((a) => a.id === activityId)
+            ? prev
+            : [...prev.slice(0, idx), removed, ...prev.slice(idx)],
+        ),
     })
   }
 
