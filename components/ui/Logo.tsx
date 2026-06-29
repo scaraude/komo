@@ -12,12 +12,15 @@ export function KomoMark({ className }: { className?: string }) {
       fill="none"
       aria-hidden="true"
     >
+      {/* Couleurs de la charte figées en dur : ce sont les couleurs propres au
+          logo (asset de marque), indépendantes du thème — et Tailwind v4 élague
+          les variables @theme non référencées par une classe utilitaire. */}
       {/* Soleil (dessiné en premier → en partie masqué par les vagues) */}
-      <circle cx="15" cy="12" r="7.5" fill="var(--color-terracotta)" />
+      <circle cx="15" cy="12" r="7.5" fill="#df402a" />
       {/* Vague lavande (arrière) */}
       <path
         d="M2 15 C9 23 17 23 24 17 C31 11 39 11 46 19"
-        stroke="var(--color-lavender)"
+        stroke="#d1b2e2"
         strokeWidth="5"
         strokeLinecap="round"
         opacity="0.85"
@@ -25,7 +28,7 @@ export function KomoMark({ className }: { className?: string }) {
       {/* Vague orange (avant) */}
       <path
         d="M2 20 C9 12 17 12 24 18 C31 24 39 24 46 16"
-        stroke="var(--color-orange-bright)"
+        stroke="#fe7a5d"
         strokeWidth="5"
         strokeLinecap="round"
       />
