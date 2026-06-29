@@ -100,7 +100,7 @@ export function RecapButton(props: Props) {
       </button>
       <button
         onClick={handleWhatsApp}
-        className="flex-1 py-2.5 bg-[#25D366] text-white border-2 border-ink rounded-full text-sm font-bold hover:opacity-90 transition-opacity"
+        className="flex-1 py-2.5 bg-whatsapp text-white border-2 border-ink rounded-full text-sm font-bold hover:opacity-90 transition-opacity"
       >
         Envoyer sur WhatsApp
       </button>

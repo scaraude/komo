@@ -204,7 +204,7 @@ export function TransportPanel({
         {(['aller', 'retour'] as const).map((d) => (
           <button key={d} onClick={() => setDirection(d)}
             className={`flex-1 text-center rounded-[9px] py-[10px] text-[13px] transition-colors ${
-              direction === d ? 'bg-ink text-white font-bold' : 'text-[#6b665c]'
+              direction === d ? 'bg-ink text-white font-bold' : 'text-faint'
             }`}>
             {d === 'aller' ? 'Aller' : 'Retour'}
           </button>

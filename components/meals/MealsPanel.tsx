@@ -323,7 +323,7 @@ export function MealsPanel({
         {([['meals', 'Repas'], ['shopping', 'Liste de courses']] as const).map(([v, label]) => (
           <button key={v} onClick={() => setView(v)}
             className={`flex-1 text-center rounded-[9px] py-[9px] text-[13px] transition-colors ${
-              view === v ? 'bg-ink text-white font-bold' : 'text-[#6b665c]'
+              view === v ? 'bg-ink text-white font-bold' : 'text-faint'
             }`}>
             {label}
             {v === 'shopping' && products.length > 0 && (
@@ -980,7 +980,7 @@ function AddForm({
           {([['product', '🛒 Produit'], ['meal', '🍽️ Repas']] as const).map(([t, label]) => (
             <button type="button" key={t} onClick={() => setMode(t)}
               className={`flex-1 text-center rounded-[9px] py-[9px] text-[13px] transition-colors ${
-                mode === t ? 'bg-ink text-white font-bold' : 'text-[#6b665c]'
+                mode === t ? 'bg-ink text-white font-bold' : 'text-faint'
               }`}>
               {label}
             </button>

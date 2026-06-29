@@ -113,7 +113,7 @@ export function LandingForm({
 
       {/* Vibe */}
       <span className="mb-[11px] text-[12px] font-bold uppercase tracking-[0.8px] text-muted-2">
-        Une vibe&nbsp;? <span className="font-medium text-[#c2b8a6]">· facultatif</span>
+        Une vibe&nbsp;? <span className="font-medium text-disabled">· facultatif</span>
       </span>
       <input type="hidden" name="event_type" value={vibe ?? 'autre'} />
       <div className="flex flex-wrap gap-2">
@@ -143,7 +143,7 @@ export function LandingForm({
             htmlFor="email"
             className="mb-[9px] mt-[22px] text-[12px] font-bold uppercase tracking-[0.8px] text-muted-2"
           >
-            Ton email <span className="font-medium text-[#c2b8a6]">· pour retrouver tes Komos · facultatif</span>
+            Ton email <span className="font-medium text-disabled">· pour retrouver tes Komos · facultatif</span>
           </label>
           <input
             id="email"

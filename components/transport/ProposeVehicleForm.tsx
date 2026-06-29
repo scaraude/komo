@@ -155,11 +155,11 @@ export function ProposeVehicleForm({
                 <div className="bg-track rounded-[11px] p-[4px] flex gap-[3px]">
                   <button type="button" onClick={() => setRangeMode(false)}
                     className={`flex-1 rounded-[8px] py-[8px] text-[13px] transition-colors ${
-                      !rangeMode ? 'bg-ink text-white font-bold' : 'text-[#6b665c]'
+                      !rangeMode ? 'bg-ink text-white font-bold' : 'text-faint'
                     }`}>Heure fixe</button>
                   <button type="button" onClick={() => setRangeMode(true)}
                     className={`flex-1 rounded-[8px] py-[8px] text-[13px] transition-colors ${
-                      rangeMode ? 'bg-ink text-white font-bold' : 'text-[#6b665c]'
+                      rangeMode ? 'bg-ink text-white font-bold' : 'text-faint'
                     }`}>Plage</button>
                 </div>
               )}

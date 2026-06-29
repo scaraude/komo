@@ -48,7 +48,7 @@ export function PresenceToggle({
             className={`flex-1 text-center rounded-[11px] py-[13px] px-[2px] text-[12.5px] transition-all ${
               isActive
                 ? 'bg-terracotta text-white font-bold shadow-[0_1px_3px_rgba(0,0,0,.15)]'
-                : 'text-[#6b665c]'
+                : 'text-faint'
             }`}
           >
             {opt.emoji} {opt.label}
