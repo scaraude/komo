@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Fredoka, Manrope } from 'next/font/google'
 import './globals.css'
 import { UndoProvider } from '@/components/ui/undo'
@@ -18,8 +18,12 @@ const manrope = Manrope({
 })
 
 export const metadata: Metadata = {
-  title: 'Komo — organise ton event entre potes',
+  title: 'Komo — Crew. Plan. Go.',
   description: "Un lien dans le groupe. Tout le monde se déclare en 30 secondes. Qui vient, qui a une caisse, qui n'a pas encore de solution.",
+}
+
+export const viewport: Viewport = {
+  themeColor: '#df402a',
 }
 
 export default function RootLayout({

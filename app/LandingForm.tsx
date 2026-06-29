@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { createEvent } from '@/lib/actions/events'
 import { Button } from '@/components/ui/Button'
+import { Logo } from '@/components/ui/Logo'
 import { DestinationField } from './DestinationField'
 
 const VIBES = [
@@ -25,10 +26,7 @@ export function LandingForm({ showEmail }: { showEmail: boolean }) {
     >
       {/* Logo + accès à mes events */}
       <div className="mb-12 flex items-center justify-between">
-        <div className="flex items-center gap-[7px]">
-          <span className="font-serif text-[26px] leading-none text-ink">Komo</span>
-          <span className="mt-1.5 h-[7px] w-[7px] rounded-full bg-terracotta" />
-        </div>
+        <Logo />
         <Link
           href="/mes-komos"
           className="rounded-full border-[1.5px] border-line-3 bg-card px-[14px] py-[8px] text-[13px] font-semibold text-body"
