@@ -12,7 +12,10 @@ import {
 } from '@/lib/actions/participants'
 import { randomId } from '@/lib/uuid'
 
-const AVATAR_COLORS = ['#c4602f', '#5f7a3e', '#9a8a6a', '#3a7ca5', '#9a5a6e']
+// Palette d'avatars alignée sur la charte KOMO (teintes assez foncées pour
+// garder le contraste avec l'initiale blanche), avec un accent froid pour la
+// variété entre participants.
+const AVATAR_COLORS = ['#df402a', '#5f7a3e', '#9a5a6e', '#3a7ca5', '#c8722e']
 
 type ParticipantSummary = {
   id: string
