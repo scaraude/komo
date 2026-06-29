@@ -100,3 +100,22 @@ body {
 /* Barre de décompte du bandeau d'annulation (largeur via scaleX). */
 @keyframes undoBar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 .animate-undo-bar { animation: undoBar linear forwards; }
+
+/* ============ Landing — hero "Crew. Plan. Go." ============ */
+/* Lever du soleil à l'entrée. */
+@keyframes sunRise { from { opacity: 0; transform: translateY(22px) scale(.92); } to { opacity: 1; transform: none; } }
+.animate-sun-rise { animation: sunRise .7s cubic-bezier(.2,.8,.2,1) both; }
+/* Flottement doux (vagues / horizon). */
+@keyframes floatY { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.animate-float-y { animation: floatY 5s ease-in-out infinite; }
+/* Apparition décalée (titre, accroche, signature). */
+@keyframes riseUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.animate-rise-up { animation: riseUp .55s ease both; }
+
+/* Accessibilité : on coupe les animations si l'utilisateur le demande. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-screen-in, .animate-sheet-up, .animate-fade-in,
+  .animate-pulse-dot, .animate-sun-rise, .animate-float-y, .animate-rise-up {
+    animation: none !important;
+  }
+}

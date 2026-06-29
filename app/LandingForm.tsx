@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { createEvent } from '@/lib/actions/events'
 import { Button } from '@/components/ui/Button'
 import { Logo } from '@/components/ui/Logo'
+import { MesKomosLink } from './MesKomosLink'
 import { DestinationField } from './DestinationField'
 
 const VIBES = [
@@ -15,7 +15,13 @@ const VIBES = [
   { value: 'sport', label: '⚽ Sport' },
 ] as const
 
-export function LandingForm({ showEmail }: { showEmail: boolean }) {
+export function LandingForm({
+  showEmail,
+  onBack,
+}: {
+  showEmail: boolean
+  onBack?: () => void
+}) {
   const [vibe, setVibe] = useState<string | null>(null)
   const [pollMode, setPollMode] = useState(false)
 
@@ -26,13 +32,20 @@ export function LandingForm({ showEmail }: { showEmail: boolean }) {
     >
       {/* Logo + accès à mes events */}
       <div className="mb-12 flex items-center justify-between">
-        <Logo />
-        <Link
-          href="/mes-komos"
-          className="rounded-full border-[1.5px] border-line-3 bg-card px-[14px] py-[8px] text-[13px] font-semibold text-body"
-        >
-          Mes Komos
-        </Link>
+        <div className="flex items-center gap-2">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              aria-label="Retour à l'accueil"
+              className="-ml-1 flex h-8 w-8 items-center justify-center rounded-full text-[18px] text-muted-2 transition-colors hover:text-ink"
+            >
+              ←
+            </button>
+          )}
+          <Logo />
+        </div>
+        <MesKomosLink />
       </div>
 
       {/* Titre */}
