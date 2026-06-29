@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import Link from 'next/link'
 import { sendLoginLink, type LoginState } from '@/lib/actions/auth'
 import { Button } from '@/components/ui/Button'
+import { Logo } from '@/components/ui/Logo'
 
 export default function ConnexionPage() {
   const [state, formAction, pending] = useActionState<LoginState, FormData>(sendLoginLink, {
@@ -13,9 +14,8 @@ export default function ConnexionPage() {
 
   return (
     <main className="animate-screen-in mx-auto flex min-h-dvh w-full max-w-[440px] flex-col px-6 pb-10 pt-8">
-      <Link href="/" className="mb-12 flex items-center gap-[7px]">
-        <span className="font-serif text-[26px] leading-none text-ink">Komo</span>
-        <span className="mt-1.5 h-[7px] w-[7px] rounded-full bg-terracotta" />
+      <Link href="/" className="mb-12 inline-flex w-fit">
+        <Logo />
       </Link>
 
       {state.status === 'sent' ? (
