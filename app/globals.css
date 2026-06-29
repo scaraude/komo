@@ -3,19 +3,29 @@
 @theme {
   /* ============ Komo — design tokens (redesign 2026) ============ */
 
-  /* Ink & surfaces */
+  /* Ink & surfaces (crème — charte KOMO) */
   --color-ink: #221f1a;            /* titres, hero */
-  --color-paper: #f3ebdc;          /* surface "téléphone" / app */
+  --color-paper: #fbf4e9;          /* surface "téléphone" / app — crème */
   --color-card: #fffdf8;           /* cartes, inputs */
-  --color-track: #eadfcc;          /* fond des segmented controls */
-  --color-soft: #f4eee2;           /* surface douce (encarts) */
-  --color-sheet: #f6efe2;          /* bottom sheet */
+  --color-track: #ece2d2;          /* fond des segmented controls — crème foncé */
+  --color-soft: #f6eedf;           /* surface douce (encarts) */
+  --color-sheet: #fbf4e9;          /* bottom sheet */
 
-  /* Terracotta (primaire) */
-  --color-terracotta: #c4602f;
-  --color-terracotta-dk: #7c3a18;  /* ombre poussoir + hover */
-  --color-terracotta-soft: #fbede4;/* pill statut / alerte */
-  --color-terracotta-line: #ecc3a8;
+  /* Rouge principal (primaire — charte KOMO #DF402A).
+     Noms historiques "terracotta*" conservés pour propager sans churn. */
+  --color-terracotta: #df402a;     /* CTA, accents, titres forts */
+  --color-terracotta-dk: #a8301c;  /* ombre poussoir + hover (rouge assombri) */
+  --color-terracotta-soft: #fce7e1;/* pill statut / alerte */
+  --color-terracotta-line: #f0c2ba;
+
+  /* Oranges secondaires (accents, dégradés, hover — charte KOMO) */
+  --color-orange: #ff5e41;         /* orange clair — accent secondaire, dégradés */
+  --color-orange-bright: #fe7a5d;  /* orange vif — icônes, éléments d'action */
+  --color-orange-soft: #ff9f8c;    /* orange pastel — fonds doux, états hover */
+
+  /* Lavande (touche fraîche, fonds secondaires, états neutres — charte KOMO) */
+  --color-lavender: #d1b2e2;       /* lavande grisé — vagues, fonds discrets */
+  --color-lavender-soft: #edceff;  /* lavande clair — respiration, fonds très clairs */
 
   /* Vert olive (présence / dispo) */
   --color-olive: #5f7a3e;
@@ -27,9 +37,9 @@
   --color-prune: #9a5a6e;
   --color-prune-soft: #f3e9ec;
 
-  /* Sur fond sombre */
-  --color-on-dark: #f3ebdc;
-  --color-on-dark-2: #b8b0a0;
+  /* Sur fond sombre / rouge */
+  --color-on-dark: #fbf4e9;        /* texte crème sur fond rouge/sombre */
+  --color-on-dark-2: #c9bcae;
 
   /* Bordures */
   --color-line: #e2d8c6;           /* bordure input */
@@ -48,9 +58,10 @@
   /* Divers */
   --color-whatsapp: #25d366;
 
-  /* Fonts */
-  --font-serif: var(--font-dm-serif), Georgia, serif;
-  --font-sans: var(--font-hanken), system-ui, sans-serif;
+  /* Fonts (charte KOMO — Fredoka titres, Manrope corps).
+     Token "serif" conservé pour propager sans churn ; Fredoka est sans-serif. */
+  --font-serif: var(--font-fredoka), system-ui, sans-serif;
+  --font-sans: var(--font-manrope), system-ui, sans-serif;
 
   /* Shadows */
   --shadow-card: 0 2px 8px rgba(60, 45, 20, 0.04);
@@ -62,7 +73,7 @@
 }
 
 body {
-  background: radial-gradient(120% 90% at 50% 0%, #f4ecdd 0%, #e8ddc9 100%);
+  background: radial-gradient(120% 90% at 50% 0%, #fbf4e9 0%, #ece2d2 100%);
   background-attachment: fixed;
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
@@ -81,8 +92,8 @@ body {
 .animate-fade-in   { animation: fadeIn .2s ease; }
 
 @keyframes pulse-dot {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(196, 96, 47, 0.25); }
-  50%       { box-shadow: 0 0 0 7px rgba(196, 96, 47, 0.05); }
+  0%, 100% { box-shadow: 0 0 0 3px rgba(223, 64, 42, 0.25); }
+  50%       { box-shadow: 0 0 0 7px rgba(223, 64, 42, 0.05); }
 }
 .animate-pulse-dot { animation: pulse-dot 1.8s infinite; }
 

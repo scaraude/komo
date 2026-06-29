@@ -1,19 +1,19 @@
 import type { Metadata } from 'next'
-import { DM_Serif_Display, Hanken_Grotesk } from 'next/font/google'
+import { Fredoka, Manrope } from 'next/font/google'
 import './globals.css'
 import { UndoProvider } from '@/components/ui/undo'
 
-const dmSerif = DM_Serif_Display({
-  weight: '400',
+// Charte KOMO : Fredoka pour les titres (rond, amical), Manrope pour le corps.
+// Fonts variables → on charge l'axe de poids complet (pas de `weight` figé).
+const fredoka = Fredoka({
   subsets: ['latin'],
-  variable: '--font-dm-serif',
+  variable: '--font-fredoka',
   display: 'swap',
 })
 
-const hanken = Hanken_Grotesk({
-  weight: ['400', '500', '600', '700', '800'],
+const manrope = Manrope({
   subsets: ['latin'],
-  variable: '--font-hanken',
+  variable: '--font-manrope',
   display: 'swap',
 })
 
@@ -28,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="fr" className={`${dmSerif.variable} ${hanken.variable}`}>
+    <html lang="fr" className={`${fredoka.variable} ${manrope.variable}`}>
       <body className="min-h-screen font-sans">
         <UndoProvider>{children}</UndoProvider>
       </body>
