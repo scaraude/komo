@@ -1,7 +1,7 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
-import { KomoMark } from '@/components/ui/Logo'
 import { MesKomosLink } from './MesKomosLink'
 
 /**
@@ -19,19 +19,23 @@ export function LandingHero({ onGo }: { onGo: () => void }) {
         <MesKomosLink />
       </div>
 
-      {/* Scène : soleil + vagues + wordmark */}
+      {/* Scène : logo (soleil + vagues + KOMO) */}
       <div className="flex flex-1 flex-col items-center justify-center text-center">
-        <div className="animate-sun-rise relative mb-7">
+        <h1 className="animate-sun-rise relative mb-2">
+          <span className="sr-only">Komo — Crew. Plan. Go.</span>
           {/* Halo chaud derrière le soleil */}
-          <div
+          <span
             aria-hidden
-            className="pointer-events-none absolute left-1/2 top-1/2 h-52 w-52 -translate-x-1/2 -translate-y-1/2 rounded-full bg-orange-soft/40 blur-3xl"
+            className="pointer-events-none absolute left-1/2 top-[38%] h-52 w-52 -translate-x-1/2 -translate-y-1/2 rounded-full bg-orange-soft/40 blur-3xl"
           />
-          <KomoMark className="animate-float-y relative h-[120px] w-auto" />
-        </div>
-
-        <h1 className="animate-rise-up font-serif text-[60px] font-semibold leading-none text-terracotta">
-          Komo
+          <Image
+            src="/komo-logo.png"
+            alt=""
+            width={1274}
+            height={868}
+            priority
+            className="animate-float-y relative h-auto w-[220px]"
+          />
         </h1>
 
         <p
