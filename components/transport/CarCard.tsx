@@ -120,7 +120,7 @@ export function CarCard({
         </div>
         {tracksSeats ? (
           <span className={`shrink-0 rounded-[14px] px-[11px] py-[4px] text-[11.5px] font-bold ${
-            free === 0 ? 'bg-[#efe7d8] text-muted' : 'bg-olive-soft text-olive-text'
+            free === 0 ? 'bg-track text-muted' : 'bg-olive-soft text-olive-text'
           }`}>
             {free === 0 ? 'complet' : `${free} place${free > 1 ? 's' : ''} libre${free > 1 ? 's' : ''}`}
           </span>

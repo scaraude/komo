@@ -59,7 +59,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
           {total > 0 && (
             <>
               <span style={{ fontSize: '16px', color: '#5f7a3e', fontWeight: 600 }}>🔥 {hot} chauds</span>
-              {maybe > 0 && <span style={{ fontSize: '16px', color: '#c4602f', fontWeight: 600 }}>🤔 {maybe} hésitants</span>}
+              {maybe > 0 && <span style={{ fontSize: '16px', color: '#c8722e', fontWeight: 600 }}>🤔 {maybe} hésitants</span>}
               <span style={{ fontSize: '16px', color: '#5c574e' }}>{total} participants</span>
             </>
           )}
