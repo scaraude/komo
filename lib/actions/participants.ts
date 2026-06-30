@@ -7,55 +7,85 @@ import { mustSucceed } from '@/lib/actions/assert'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ensureUser, siteOrigin } from '@/lib/auth'
 
-export type JoinState = { status: 'idle' | 'verify' }
+/**
+ * États du flow de join « email d'abord » (piloté par useActionState) :
+ *  • email  : étape initiale, on attend l'email (visiteur sans email lié)
+ *  • choose : on connaît l'identité/email → liste des profils à revendiquer
+ *             ou saisie d'un pseudo. `email` est porté si saisi à l'étape 1.
+ *  • verify : email reconnu (pseudo existant sur l'event) → magic link envoyé.
+ */
+export type JoinState =
+  | { status: 'email' }
+  | { status: 'choose'; email?: string }
+  | { status: 'verify' }
 
 /**
  * Rejoindre un event. Signature `(slug, prevState, formData)` pour useActionState
- * (slug est bind côté form). Renvoie `verify` pour afficher « Vérifie tes mails »,
- * sinon redirige vers l'event.
+ * (slug est bind côté form).
+ *
+ * Étape `email` : si l'email correspond à un compte DÉJÀ participant de cet
+ * event (`email_has_pseudo_on_event`), on envoie un magic link de reconnexion
+ * (→ `verify`) ; sinon (compte inconnu, ou existant mais pas membre) on passe
+ * à l'étape `choose` en portant l'email. L'oracle vit côté service_role.
+ *
+ * Étape `choose` : on (ré)crée/revendique le participant et on redirige.
  */
 export async function joinEvent(
   slug: string,
-  _prev: JoinState,
+  prev: JoinState,
   formData: FormData,
 ): Promise<JoinState> {
+  const origin = await siteOrigin()
+
+  // ── Étape 1 — email d'abord ────────────────────────────────────────────
+  if (prev.status === 'email') {
+    const email = formData.get('email')?.toString().trim()
+    if (!email) return { status: 'email' }
+
+    const supabase = await createClient()
+    const { data: event } = await supabase
+      .from('events')
+      .select('id')
+      .eq('slug', slug)
+      .single()
+    if (!event) redirect('/')
+
+    const admin = createAdminClient()
+    const { data: hasPseudo } = await admin.rpc('email_has_pseudo_on_event', {
+      p_email: email,
+      p_event_id: event.id,
+    })
+
+    if (hasPseudo) {
+      // Compte déjà participant de cet event → magic link : au clic il revient
+      // authentifié (→ /auth/confirm → cette page) et le dédoublonnage par
+      // user_id le reconnaît, sans re-saisie ni doublon.
+      await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: false,
+          emailRedirectTo: `${origin}/auth/confirm?next=/e/${slug}/join`,
+        },
+      })
+      return { status: 'verify' }
+    }
+
+    // Compte inconnu, ou existant mais pas (encore) membre → on laisse choisir
+    // un profil de la liste ou ajouter un pseudo, en portant l'email.
+    return { status: 'choose', email }
+  }
+
+  // ── Étape 2 — choix du profil / pseudo ─────────────────────────────────
   const profileId = formData.get('profileId')?.toString().trim() || null
   const pseudo = formData.get('pseudo')?.toString().trim()
   // Revendiquer un profil existant n'exige pas de pseudo (le profil en a déjà
   // un) ; créer un nouveau participant l'exige.
-  if (!profileId && (!pseudo || pseudo.length < 1)) return { status: 'idle' }
-  const email = formData.get('email')?.toString().trim() || null
-
-  const supabase = await createClient()
-  const origin = await siteOrigin()
-
-  // Flux « relier » : un visiteur sans identité réelle (pas de session, ou
-  // session anonyme) saisit un email DÉJÀ rattaché à un compte. Créer ici un
-  // participant ferait un doublon sous une identité anonyme jetable (Supabase
-  // refuse d'attacher un email déjà pris → l'anonyme reste anonyme). On envoie
-  // donc un magic link : au clic il revient authentifié sur son identité
-  // existante (→ /auth/confirm → cette page) et le dédoublonnage par user_id
-  // le reconnaît. L'oracle d'existence vit côté service_role uniquement.
-  if (email) {
-    const { data: auth } = await supabase.auth.getUser()
-    const current = auth.user
-    if (!current || current.is_anonymous) {
-      const admin = createAdminClient()
-      const { data: registered } = await admin.rpc('email_is_registered', {
-        p_email: email,
-      })
-      if (registered) {
-        await supabase.auth.signInWithOtp({
-          email,
-          options: {
-            shouldCreateUser: false,
-            emailRedirectTo: `${origin}/auth/confirm?next=/e/${slug}/join`,
-          },
-        })
-        return { status: 'verify' }
-      }
-    }
-  }
+  if (!profileId && (!pseudo || pseudo.length < 1)) return prev
+  // Email porté depuis l'étape 1 (ou champ caché), libre car non-participant.
+  const email =
+    (prev.status === 'choose' ? prev.email : undefined) ||
+    formData.get('email')?.toString().trim() ||
+    null
 
   // Session anonyme si besoin → l'identité est auth.uid(). On réutilise le
   // client authentifié renvoyé (la RLS insert exige user_id = auth.uid()).
