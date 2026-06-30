@@ -14,15 +14,13 @@ export default async function JoinPage({
 
   const { data: event } = await supabase
     .from('events')
-    .select('id, title, date_start, date_end, destination')
+    .select('id, title, date_start, date_end, destination, created_by')
     .eq('slug', slug)
     .single()
 
   if (!event) notFound()
 
-  // Email déjà lié à l'identité → inutile de le redemander.
   const user = await getAuthUser()
-  const showEmail = !user?.email
 
   // Déjà participant (ex. retour de magic link « relier ») → droit à l'event,
   // pas de re-formulaire ni de doublon.
@@ -44,6 +42,14 @@ export default async function JoinPage({
     .eq('event_id', event.id)
     .is('user_id', null)
     .order('joined_at')
+
+  // Étape initiale du flow. On saute l'étape email quand l'identité a déjà un
+  // email lié, ou pour le créateur juste après création (il vient de le saisir
+  // sur la landing) → il choisit/saisit directement son pseudo.
+  const isCreator = !!user && event.created_by === user.id
+  const hasLinkedEmail = !!user?.email
+  const initialStatus: 'email' | 'choose' =
+    isCreator || hasLinkedEmail ? 'choose' : 'email'
 
   const dateLabel = formatEventDates(event.date_start, event.date_end, { fallback: 'Date à définir' })
 
@@ -68,7 +74,7 @@ export default async function JoinPage({
           </span>
         </div>
 
-        <JoinForm slug={slug} showEmail={showEmail} profiles={profiles ?? []} />
+        <JoinForm slug={slug} initialStatus={initialStatus} profiles={profiles ?? []} />
       </div>
     </main>
   )
