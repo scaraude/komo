@@ -14,5 +14,23 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
       { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
+    // Screenshots : débloquent la « richer install UI » de Chromium (sinon
+    // warning DevTools). `wide` = desktop, `narrow` = mobile.
+    screenshots: [
+      {
+        src: '/screenshot-mobile.png',
+        sizes: '390x844',
+        type: 'image/png',
+        form_factor: 'narrow',
+        label: 'Komo sur mobile',
+      },
+      {
+        src: '/screenshot-wide.png',
+        sizes: '1280x800',
+        type: 'image/png',
+        form_factor: 'wide',
+        label: 'Komo sur ordinateur',
+      },
+    ],
   }
 }
