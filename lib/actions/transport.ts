@@ -8,6 +8,7 @@ import { isTransportMode } from '@/lib/transport/modes'
 import { computeSuggestions } from '@/lib/transport/solver'
 import type { Assignment } from '@/lib/transport/solver'
 import { needsTransport } from '@/lib/participants'
+import { notifyEventMembers } from '@/lib/notifications/dispatch'
 
 // Les écritures (legs / occupants / participants) sont protégées par des
 // policies RLS basées sur `auth.uid()`. Il FAUT utiliser le client authentifié
@@ -131,6 +132,12 @@ export async function createLeg(
 
   // Rafraîchit le Server Component pour afficher le nouveau trajet sans reload.
   revalidatePath(`/e/${slug}`)
+  await notifyEventMembers({
+    eventId,
+    type: 'transport_created',
+    actorParticipantId: participantId,
+    subject: fields.label,
+  })
 }
 
 // Édition d'un trajet : tout membre peut modifier (RLS legs_update_member).

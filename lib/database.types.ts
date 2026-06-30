@@ -190,6 +190,62 @@ export type Database = {
         Update: Partial<{ message: string }>
         Relationships: []
       }
+      push_subscriptions: {
+        Row: { id: string; user_id: string; endpoint: string; p256dh: string; auth: string; created_at: string }
+        Insert: { user_id: string; endpoint: string; p256dh: string; auth: string }
+        Update: Partial<{ user_id: string; endpoint: string; p256dh: string; auth: string }>
+        Relationships: []
+      }
+      notification_prefs: {
+        Row: {
+          user_id: string
+          on_activity_created: boolean
+          on_transport_created: boolean
+          on_meal_created: boolean
+          on_participant_joined: boolean
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          on_activity_created?: boolean
+          on_transport_created?: boolean
+          on_meal_created?: boolean
+          on_participant_joined?: boolean
+          updated_at?: string
+        }
+        Update: Partial<{
+          on_activity_created: boolean
+          on_transport_created: boolean
+          on_meal_created: boolean
+          on_participant_joined: boolean
+          updated_at: string
+        }>
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          event_id: string
+          type: 'activity_created' | 'transport_created' | 'meal_created' | 'participant_joined'
+          title: string
+          body: string | null
+          url: string | null
+          read_at: string | null
+          created_at: string
+        }
+        Insert: {
+          user_id: string
+          event_id: string
+          type: 'activity_created' | 'transport_created' | 'meal_created' | 'participant_joined'
+          title: string
+          body?: string | null
+          url?: string | null
+          read_at?: string | null
+        }
+        Update: Partial<{ read_at: string | null }>
+        Relationships: []
+      }
     }
     Views: { [_ in never]: never }
     Functions: {

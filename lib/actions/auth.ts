@@ -1,5 +1,6 @@
 'use server'
 
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { siteOrigin } from '@/lib/auth'
 
@@ -32,4 +33,14 @@ export async function sendLoginLink(_prev: LoginState, formData: FormData): Prom
   if (!email) return { status: 'idle', email: '' }
   await requestLoginLink(email)
   return { status: 'sent', email }
+}
+
+/**
+ * Déconnexion : termine la session Supabase puis renvoie vers la page de
+ * connexion. Appelée depuis le menu utilisateur.
+ */
+export async function signOut() {
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  redirect('/connexion')
 }

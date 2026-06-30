@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { mustSucceed } from '@/lib/actions/assert'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ensureUser, siteOrigin } from '@/lib/auth'
+import { notifyEventMembers } from '@/lib/notifications/dispatch'
 
 /**
  * États du flow de join « email d'abord » (piloté par useActionState) :
@@ -141,13 +142,20 @@ export async function joinEvent(
         throw new Error('Choisis un pseudo pour rejoindre cet event.')
       }
       const role = event.created_by === userId ? 'créateur' : 'participant'
-      const { error } = await authed.from('participants').insert({
+      const { data: created, error } = await authed.from('participants').insert({
         event_id: event.id,
         pseudo,
         user_id: userId,
         role,
+      }).select('id').single()
+      if (error || !created) throw new Error('Impossible de rejoindre cet event.')
+      // Notifie les autres membres de l'arrivée (le créateur n'a personne à
+      // prévenir au moment où il crée l'event → liste vide, no-op).
+      await notifyEventMembers({
+        eventId: event.id,
+        type: 'participant_joined',
+        actorParticipantId: created.id,
       })
-      if (error) throw new Error('Impossible de rejoindre cet event.')
     }
   }
 

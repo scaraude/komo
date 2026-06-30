@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { ensureUser } from '@/lib/auth'
+import { notifyEventMembers } from '@/lib/notifications/dispatch'
 
 // Module activités. RLS membre-de-l'event (is_event_member → auth.uid()), donc
 // on DOIT écrire via le client authentifié de ensureUser() (cf. note dans
@@ -80,6 +81,12 @@ export async function proposeActivity(
     throw new Error("Impossible de proposer cette activité.")
   }
   revalidatePath(`/e/${slug}`)
+  await notifyEventMembers({
+    eventId,
+    type: 'activity_created',
+    actorParticipantId: participantId,
+    subject: fields.label,
+  })
   return data
 }
 
