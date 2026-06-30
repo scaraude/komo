@@ -30,6 +30,13 @@ export function InstallPrompt() {
     if (standalone) return
     if (localStorage.getItem(DISMISS_KEY)) return
 
+    // Bannière réservée au mobile : sur desktop, l'install se fait via la barre
+    // d'adresse du navigateur.
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(
+      navigator.userAgent,
+    )
+    if (!isMobile) return
+
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
 
     let onBeforeInstall: ((e: Event) => void) | undefined
