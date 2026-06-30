@@ -24,4 +24,7 @@ export const serverEnv = {
   geoapifyApiKey: isDev ? process.env.GEOAPIFY_API_KEY : required('GEOAPIFY_API_KEY'),
   // Optionnelle : webhook Discord pour le ping feedback. Absente → stockage seul.
   feedbackWebhookUrl: process.env.FEEDBACK_WEBHOOK_URL,
+  // Optionnelle : clé privée VAPID pour le Web Push. Absente → l'envoi push est
+  // simplement désactivé (les notifs in-app continuent). Cf. lib/notifications.
+  vapidPrivateKey: process.env.VAPID_PRIVATE_KEY,
 }

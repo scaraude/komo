@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { ensureUser } from '@/lib/auth'
+import { notifyEventMembers } from '@/lib/notifications/dispatch'
 
 // Refonte bouffe : repas (meals) + produits (products). RLS membre-de-l'event.
 //
@@ -60,6 +61,12 @@ export async function createMeal(
   }
 
   revalidatePath(`/e/${slug}`)
+  await notifyEventMembers({
+    eventId,
+    type: 'meal_created',
+    actorParticipantId: participantId,
+    subject: clean,
+  })
   return { mealId: meal.id, productIds }
 }
 
