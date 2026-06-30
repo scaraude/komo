@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getUserId } from '@/lib/auth'
 import { formatEventDates } from '@/lib/format'
 import { FeedbackButton } from '@/components/feedback/FeedbackButton'
-import { Logo } from '@/components/ui/Logo'
+import { AppHeader } from '@/components/layout/AppHeader'
 
 const VIBE_EMOJI: Record<string, string> = {
   weekend: '🏔️', soiree: '🎉', concert: '🎸', road_trip: '🚗', sport: '⚽', autre: '✨',
@@ -34,17 +34,7 @@ export default async function MesKomosPage() {
 
   return (
     <main className="animate-screen-in mx-auto min-h-dvh w-full max-w-[440px] px-[20px] pb-10 pt-8">
-      <div className="mb-9 flex items-center justify-between">
-        <Link href="/" className="inline-flex w-fit">
-          <Logo />
-        </Link>
-        <Link
-          href="/"
-          className="rounded-full border-[1.5px] border-line-3 bg-card px-[14px] py-[8px] text-[13px] font-bold text-ink"
-        >
-          ＋ Nouveau
-        </Link>
-      </div>
+      <AppHeader showNew />
 
       <h1 className="mb-1 font-serif text-[30px] text-ink">Mes Komos</h1>
       <p className="mb-7 text-[14px] text-faint">

@@ -18,4 +18,7 @@ export const clientEnv = {
   supabaseUrl: ensure(process.env.NEXT_PUBLIC_SUPABASE_URL, 'NEXT_PUBLIC_SUPABASE_URL'),
   supabaseAnonKey: ensure(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, 'NEXT_PUBLIC_SUPABASE_ANON_KEY'),
   siteUrl: ensure(process.env.NEXT_PUBLIC_SITE_URL, 'NEXT_PUBLIC_SITE_URL'),
+  // Optionnelle : clé publique VAPID pour le Web Push. Absente → l'UI propose
+  // l'activation des notifs mais la souscription échoue proprement (no-op).
+  vapidPublicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
 }

@@ -18,6 +18,7 @@ import { RecapButton } from '@/components/event/RecapButton'
 import { ShareSheet } from './ShareSheet'
 import { ParticipantsBadge } from './ParticipantsBadge'
 import { FeedbackButton } from '@/components/feedback/FeedbackButton'
+import { AppHeader } from '@/components/layout/AppHeader'
 import type { Participant } from '@/lib/types'
 
 const EVENT_TYPE_WORDING = {
@@ -37,10 +38,6 @@ const VIBE = {
   sport:     { emoji: '⚽', label: 'SPORT' },
   autre:     { emoji: '✨', label: 'EVENT' },
 } as const
-
-const RSVP_LABEL: Record<string, string> = {
-  hot: 'chaud 🔥', maybe: 'probable 🤔', unsure: 'pas sûr 😬', no: 'pas là ✕',
-}
 
 const MODULE_TABS = new Set(['presence', 'dates', 'transport', 'bouffe', 'activites'])
 
@@ -128,12 +125,13 @@ export default async function EventPage({
   const groceryCount = (products ?? []).length
   const activityCount = (activities ?? []).length
   const dateProposalCount = (dateProposals ?? []).length
-  const rsvpLabel = participant.presence_status ? RSVP_LABEL[participant.presence_status] : 'à déclarer'
 
   // ====================== HUB ======================
   if (showHub) {
     return (
       <main className="animate-screen-in mx-auto min-h-dvh w-full max-w-[440px] px-[18px] pb-8 pt-2">
+        <AppHeader />
+
         {/* Hero */}
         <div className="mb-[14px] rounded-[24px] bg-ink p-[22px] text-on-dark">
           <div className="mb-[10px] text-[11px] font-bold uppercase tracking-[1px] text-terracotta">
@@ -153,16 +151,18 @@ export default async function EventPage({
           />
         </div>
 
-        {/* Pill de statut */}
-        <Link
-          href={`?tab=${presenceTabName}`}
-          className="mb-[14px] flex items-center justify-between rounded-[16px] border-[1.5px] border-terracotta-line bg-terracotta-soft px-4 py-[14px]"
-        >
-          <span className="text-[14.5px] text-ink">
-            Tu es <b>{rsvpLabel}</b>
-          </span>
-          <span className="text-[13px] font-bold text-terracotta">changer ›</span>
-        </Link>
+        {/* Pill de statut — seulement tant que la présence n'a jamais été déclarée */}
+        {!participant.presence_status && (
+          <Link
+            href={`?tab=${presenceTabName}`}
+            className="mb-[14px] flex items-center justify-between rounded-[16px] border-[1.5px] border-terracotta-line bg-terracotta-soft px-4 py-[14px]"
+          >
+            <span className="text-[14.5px] text-ink">
+              Tu viens&nbsp;? <b>Dis-le aux potes</b>
+            </span>
+            <span className="text-[13px] font-bold text-terracotta">déclarer ›</span>
+          </Link>
+        )}
 
         {/* Grille modules 2×2 */}
         <div className="mb-[18px] grid grid-cols-2 gap-[12px]">
