@@ -10,6 +10,12 @@ type BeforeInstallPromptEvent = Event & {
 
 const DISMISS_KEY = 'komo-install-dismissed'
 
+// Affichage du bandeau d'installation :
+//  - 'on'   : toujours affiché (prévisualisation ; bouton « Installer » inerte)
+//  - 'off'  : jamais affiché
+//  - 'auto' : règles normales (masqué si app installée / desktop / déjà fermé)
+const INSTALL_BANNER: 'on' | 'off' | 'auto' = 'auto'
+
 type Mode = 'none' | 'button' | 'ios'
 
 /**
@@ -24,6 +30,14 @@ export function InstallPrompt() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null)
 
   useEffect(() => {
+    if (INSTALL_BANNER === 'off') return
+    // 'on' : force l'affichage sans aucune garde (bouton « Installer » inerte,
+    // aucun prompt capturé) — utile pour prévisualiser le rendu.
+    if (INSTALL_BANNER === 'on') {
+      Promise.resolve().then(() => setMode('button'))
+      return
+    }
+    // 'auto' : règles normales ci-dessous.
     const standalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       (navigator as Navigator & { standalone?: boolean }).standalone === true

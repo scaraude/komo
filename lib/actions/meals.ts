@@ -13,6 +13,8 @@ import { notifyEventMembers } from '@/lib/notifications/dispatch'
 // la rejetterait (erreur 42501 « new row violates row-level security policy »).
 
 type NewItem = { name: string; quantity?: number | null; unit?: string }
+// Ingrédient existant modifié en place (édition d'un repas).
+type EditedItem = { id: string; name: string; quantity?: number | null; unit?: string }
 
 // Renvoie les ids réels créés en DB pour que le client réconcilie son état
 // optimiste (sinon « je gère »/toggle produit partiraient avec un id temporaire
@@ -74,9 +76,9 @@ export async function createMeal(
 //  1. renomme le repas ;
 //  2. re-tague ses produits (remplace l'ancien label par le nouveau) ;
 //  3. supprime les ingrédients retirés (du repas ET de la liste de courses) ;
-//  4. ajoute les nouveaux ingrédients (taggés avec le nouveau label).
-// Les ingrédients existants ne sont pas modifiables en place — on les retire et
-// on les ré-ajoute. Renvoie les ids réels des produits ajoutés (réconciliation).
+//  4. met à jour les ingrédients modifiés en place (nom / quantité / unité) ;
+//  5. ajoute les nouveaux ingrédients (taggés avec le nouveau label).
+// Renvoie les ids réels des produits ajoutés (réconciliation).
 export async function editMeal(
   slug: string,
   eventId: string,
@@ -85,6 +87,7 @@ export async function editMeal(
   label: string,
   removedProductIds: string[] = [],
   newItems: NewItem[] = [],
+  editedItems: EditedItem[] = [],
 ): Promise<{ productIds: string[] }> {
   const clean = label.trim()
   if (!clean) throw new Error('Nom du repas requis.')
@@ -120,7 +123,18 @@ export async function editMeal(
     await supabase.from('products').delete().in('id', removedProductIds)
   }
 
-  // 4. Ajoute les nouveaux ingrédients, taggés avec le nouveau label.
+  // 4. Met à jour les ingrédients modifiés en place (nom / quantité / unité).
+  for (const it of editedItems) {
+    const name = it.name.trim()
+    if (!name) continue
+    const { error: edErr } = await supabase
+      .from('products')
+      .update({ name, quantity: it.quantity ?? null, unit: it.unit || 'unité' })
+      .eq('id', it.id)
+    if (edErr) console.error('editMeal item update failed', edErr)
+  }
+
+  // 5. Ajoute les nouveaux ingrédients, taggés avec le nouveau label.
   const rows = newItems
     .map((it) => ({ ...it, name: it.name.trim() }))
     .filter((it) => it.name)
@@ -225,6 +239,31 @@ export async function addProduct(
   }
   revalidatePath(`/e/${slug}`)
   return data.id
+}
+
+// Modifie un produit en place (nom / quantité / unité) depuis la liste de courses.
+// Chaque champ est optionnel : seuls ceux fournis sont mis à jour.
+export async function updateProduct(
+  slug: string,
+  productId: string,
+  patch: { name?: string; quantity?: number | null; unit?: string },
+) {
+  const update: { name?: string; quantity?: number | null; unit?: string } = {}
+  if (patch.name !== undefined) {
+    const name = patch.name.trim()
+    if (!name) throw new Error('Nom du produit requis.')
+    update.name = name
+  }
+  if (patch.quantity !== undefined) update.quantity = patch.quantity
+  if (patch.unit !== undefined) update.unit = patch.unit || 'unité'
+  if (Object.keys(update).length === 0) return
+  const { supabase } = await ensureUser()
+  const { error } = await supabase.from('products').update(update).eq('id', productId)
+  if (error) {
+    console.error('updateProduct failed', error)
+    throw new Error('Impossible de modifier ce produit.')
+  }
+  revalidatePath(`/e/${slug}`)
 }
 
 export async function toggleProduct(slug: string, productId: string, checked: boolean) {

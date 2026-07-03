@@ -7,7 +7,7 @@ import {
   type DragEndEvent, type DragStartEvent,
   type DraggableAttributes, type DraggableSyntheticListeners,
 } from '@dnd-kit/core'
-import { createMeal, deleteMeal, addProduct, toggleProduct, deleteProduct, setMealDate, toggleMealOwner, editMeal } from '@/lib/actions/meals'
+import { createMeal, deleteMeal, addProduct, toggleProduct, deleteProduct, updateProduct, setMealDate, toggleMealOwner, editMeal } from '@/lib/actions/meals'
 import { Sheet } from '@/components/ui/Sheet'
 import { ConfirmButton } from '@/components/ui/ConfirmButton'
 import { useUndo } from '@/components/ui/undo'
@@ -17,12 +17,18 @@ import { Card } from '@/components/ui/Card'
 import { pseudoOf as resolvePseudo } from '@/lib/participants'
 import { randomId } from '@/lib/uuid'
 import { WEEKDAYS, getDaysBetween, buildMonths, formatDayLabel } from '@/lib/calendar'
+import { groupByCategory } from '@/lib/meals/category'
 import type { Meal, Product, MealOwner, Participant } from '@/lib/types'
 
 const UNITS = ['unité', 'g', 'kg', 'L', 'cl', 'paquet', 'bouteille'] as const
 
 const INPUT =
   'w-full bg-card border-[1.5px] border-line rounded-[13px] p-[13px] text-[14.5px] text-ink outline-none focus:border-terracotta placeholder:text-disabled'
+
+// Bouton d'icône d'action (modifier / supprimer) : glyphe lisible + zone de clic
+// tactile ~36px. Ajouter la couleur de hover par-dessus (olive, prune…).
+const ICON_BTN =
+  'shrink-0 flex h-[36px] w-[36px] items-center justify-center rounded-[11px] text-[17px] text-muted transition-colors'
 
 // useSyncExternalStore sans mises à jour (sert juste à détecter le client).
 const subscribeNoop = () => () => {}
@@ -34,6 +40,8 @@ function qtyLabel(p: { quantity: number | null; unit: string }) {
 
 
 type DraftItem = { name: string; quantity: number | null; unit: string }
+// Ingrédient existant modifié en place lors de l'édition d'un repas.
+type EditedItem = { id: string; name: string; quantity: number | null; unit: string }
 
 // État de la modale d'ajout :
 //  - 'add'    : modale globale à 2 onglets (Produit | Repas)
@@ -204,9 +212,18 @@ export function MealsPanel({
     })
   }
 
+  // Édition en place d'un produit depuis la liste de courses (nom/quantité/unité).
+  function handleUpdateProduct(id: string, patch: { name: string; quantity: number | null; unit: string }) {
+    const prev = products
+    setProducts((p) => p.map((x) => (x.id === id ? { ...x, ...patch } : x)))
+    startTransition(() => updateProduct(slug, id, patch).catch(() => setProducts(prev)))
+  }
+
   // Édition complète d'un repas : renommage (+ retag des produits), suppression
-  // d'ingrédients et ajout de nouveaux, le tout en un appel.
-  function handleEditMeal(mealId: string, label: string, removedIds: string[], newItems: DraftItem[]) {
+  // d'ingrédients, modification en place et ajout de nouveaux, le tout en un appel.
+  function handleEditMeal(
+    mealId: string, label: string, removedIds: string[], newItems: DraftItem[], editedItems: EditedItem[],
+  ) {
     // Repas pas encore persisté (id temporaire) : on attend son id réel.
     if (pendingMealIds.current.has(mealId)) return
     const clean = label.trim()
@@ -214,6 +231,7 @@ export function MealsPanel({
     const prevMeals = meals
     const prevProducts = products
     const oldLabel = meals.find((m) => m.id === mealId)?.label ?? null
+    const editMap = new Map(editedItems.map((e) => [e.id, e]))
 
     const optimisticNew: Product[] = newItems.map((it) => ({
       id: randomId(), event_id: eventId, meal_id: mealId, name: it.name,
@@ -224,6 +242,11 @@ export function MealsPanel({
     setMeals((m) => m.map((x) => (x.id === mealId ? { ...x, label: clean } : x)))
     setProducts((p) => {
       let next = p.filter((x) => !removedIds.includes(x.id))
+      // Applique les modifications en place (nom / quantité / unité).
+      next = next.map((x) => {
+        const ed = editMap.get(x.id)
+        return ed ? { ...x, name: ed.name, quantity: ed.quantity, unit: ed.unit } : x
+      })
       // Retag optimiste : remplace l'ancien label par le nouveau dans les tags.
       if (oldLabel && oldLabel !== clean) {
         next = next.map((x) =>
@@ -234,7 +257,7 @@ export function MealsPanel({
     })
     setEditMealId(null)
     startTransition(() =>
-      editMeal(slug, eventId, participantId, mealId, clean, removedIds, newItems)
+      editMeal(slug, eventId, participantId, mealId, clean, removedIds, newItems, editedItems)
         .then(({ productIds }) => {
           // Remplace les ids temporaires des nouveaux produits par les ids réels.
           const idMap = new Map(optimisticNew.map((p, i) => [p.id, productIds[i] ?? p.id]))
@@ -359,6 +382,7 @@ export function MealsPanel({
             mealLabel={(id) => meals.find((m) => m.id === id)?.label ?? null}
             onToggle={handleToggle}
             onDelete={handleDeleteProduct}
+            onEdit={handleUpdateProduct}
           />
         </>
       )}
@@ -448,7 +472,8 @@ export function MealsPanel({
               label={meal.label}
               ingredients={productsOf(meal.id)}
               onCancel={() => setEditMealId(null)}
-              onSave={(label, removedIds, newItems) => handleEditMeal(meal.id, label, removedIds, newItems)}
+              onSave={(label, removedIds, newItems, editedItems) =>
+                handleEditMeal(meal.id, label, removedIds, newItems, editedItems)}
             />
           </Sheet>
         )
@@ -569,6 +594,11 @@ function MealsView({
               {dayMeals.length > 0 ? (
                 <div className="flex flex-col gap-[11px]">
                   {dayMeals.map((m) => meal(m, false))}
+                  {/* Plusieurs repas par jour autorisés : bouton d'ajout toujours présent. */}
+                  <DashedAddButton onClick={() => onAddMealAt(day)}
+                    className="w-full rounded-[14px] px-[14px] py-[10px] text-left text-[12.5px]">
+                    ＋ ajouter un repas
+                  </DashedAddButton>
                 </div>
               ) : (
                 <DashedAddButton onClick={() => onAddMealAt(day)}
@@ -700,9 +730,9 @@ function MealCard({
           )}
         </button>
         <button onClick={() => onEditMeal(meal.id)} aria-label="Modifier le repas"
-          className="shrink-0 text-[12px] text-muted hover:text-olive transition-colors">✎</button>
+          className={`${ICON_BTN} hover:text-olive hover:bg-soft`}>✎</button>
         <button onClick={() => onDeleteMeal(meal.id)} aria-label="Supprimer le repas"
-          className="shrink-0 text-[12px] text-muted hover:text-prune transition-colors">🗑</button>
+          className={`${ICON_BTN} hover:text-prune hover:bg-soft`}>🗑</button>
       </div>
 
       {open && (
@@ -792,40 +822,129 @@ function DateCalendar({
   )
 }
 
-/* ---------------- Vue Liste de courses ---------------- */
+/* ---------------- Vue Liste de courses ----------------
+   Les articles à acheter sont regroupés par rayon (ordre supermarché) ; les
+   articles cochés tombent dans une section « Dans le panier » en bas. Chaque
+   article est éditable en place (nom / quantité / unité). */
 function ShoppingView({
-  products, mealLabel, onToggle, onDelete,
+  products, mealLabel, onToggle, onDelete, onEdit,
 }: {
   products: Product[]
   mealLabel: (id: string) => string | null
   onToggle: (p: Product) => void
   onDelete: (id: string) => void
+  onEdit: (id: string, patch: { name: string; quantity: number | null; unit: string }) => void
 }) {
   if (products.length === 0) {
     return <p className="text-muted text-[13px] py-6 text-center">Rien à acheter pour l&apos;instant.</p>
   }
   const todo = products.filter((p) => !p.checked)
   const done = products.filter((p) => p.checked)
+  const groups = groupByCategory(todo, (p) => p.name)
+  const rowProps = { mealLabel, onToggle, onDelete, onEdit }
   return (
-    <div className="flex flex-col gap-[8px]">
-      {[...todo, ...done].map((p) => {
-        const ml = p.meal_id ? mealLabel(p.meal_id) : null
-        return (
-          <div key={p.id} className="flex items-center gap-2.5 rounded-[13px] border-[1.5px] border-line-2 bg-card px-[14px] py-[11px]">
-            <button onClick={() => onToggle(p)} className="shrink-0"><CheckBox checked={p.checked} /></button>
-            <button onClick={() => onToggle(p)} className="flex-1 min-w-0 text-left">
-              <span className="flex items-center gap-2">
-                <span className={`text-[14.5px] ${p.checked ? 'text-muted line-through' : 'text-ink font-medium'}`}>{p.name}</span>
-                <Qty p={p} />
-              </span>
-              {ml && <span className="mt-0.5 block text-[11px] text-muted">🍽️ {ml}</span>}
-            </button>
-            <ConfirmButton onConfirm={() => onDelete(p.id)} confirmLabel="Retirer ?"
-              ariaLabel="Supprimer le produit"
-              className="shrink-0 text-[12px] text-muted hover:text-prune transition-colors">🗑</ConfirmButton>
-          </div>
-        )
-      })}
+    <div className="flex flex-col gap-[18px]">
+      {groups.map(({ category, items }) => (
+        <div key={category.key} className="flex flex-col gap-[8px]">
+          <SectionHeader emoji={category.emoji} label={category.label} count={items.length} />
+          {items.map((p) => <ShoppingRow key={p.id} p={p} {...rowProps} />)}
+        </div>
+      ))}
+      {done.length > 0 && (
+        <div className="flex flex-col gap-[8px]">
+          <SectionHeader label="Dans le panier" count={done.length} />
+          {done.map((p) => <ShoppingRow key={p.id} p={p} {...rowProps} />)}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SectionHeader({ emoji, label, count }: { emoji?: string; label: string; count: number }) {
+  return (
+    <div className="flex items-center gap-2 px-[2px]">
+      {emoji && <span className="text-[13px] leading-none">{emoji}</span>}
+      <span className={COL}>{label}</span>
+      <span className="text-[11px] text-muted-2">· {count}</span>
+    </div>
+  )
+}
+
+// Une ligne de la liste de courses : bascule cochée / édition inline / retrait.
+function ShoppingRow({
+  p, mealLabel, onToggle, onDelete, onEdit,
+}: {
+  p: Product
+  mealLabel: (id: string) => string | null
+  onToggle: (p: Product) => void
+  onDelete: (id: string) => void
+  onEdit: (id: string, patch: { name: string; quantity: number | null; unit: string }) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  if (editing) {
+    return (
+      <ProductEditRow
+        p={p}
+        onCancel={() => setEditing(false)}
+        onSave={(patch) => { onEdit(p.id, patch); setEditing(false) }}
+      />
+    )
+  }
+  const ml = p.meal_id ? mealLabel(p.meal_id) : null
+  return (
+    <div className="flex items-center gap-2.5 rounded-[13px] border-[1.5px] border-line-2 bg-card px-[14px] py-[11px]">
+      <button onClick={() => onToggle(p)} className="shrink-0"><CheckBox checked={p.checked} /></button>
+      <button onClick={() => onToggle(p)} className="flex-1 min-w-0 text-left">
+        <span className="flex items-center gap-2">
+          <span className={`text-[14.5px] ${p.checked ? 'text-muted line-through' : 'text-ink font-medium'}`}>{p.name}</span>
+          <Qty p={p} />
+        </span>
+        {ml && <span className="mt-0.5 block text-[11px] text-muted">🍽️ {ml}</span>}
+      </button>
+      <button onClick={() => setEditing(true)} aria-label="Modifier le produit"
+        className={`${ICON_BTN} hover:text-olive hover:bg-soft`}>✎</button>
+      <ConfirmButton onConfirm={() => onDelete(p.id)} confirmLabel="Retirer ?"
+        ariaLabel="Supprimer le produit"
+        className={`${ICON_BTN} hover:text-prune hover:bg-soft`}>🗑</ConfirmButton>
+    </div>
+  )
+}
+
+// Éditeur inline d'un produit (nom + quantité + unité).
+function ProductEditRow({
+  p, onCancel, onSave,
+}: {
+  p: Product
+  onCancel: () => void
+  onSave: (patch: { name: string; quantity: number | null; unit: string }) => void
+}) {
+  const [name, setName] = useState(p.name)
+  const [qty, setQty] = useState(p.quantity == null ? '' : String(p.quantity))
+  const [unit, setUnit] = useState(p.unit)
+
+  function save() {
+    const nm = name.trim()
+    if (!nm) return
+    onSave({ name: nm, quantity: qty ? Number(qty) : null, unit })
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-[13px] border-[1.5px] border-terracotta bg-card px-[14px] py-[11px]">
+      <div className="flex items-center gap-2">
+        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} maxLength={60}
+          aria-label="Nom du produit" className={`${INPUT} flex-1 min-w-0`} />
+        <QtyUnit qty={qty} unit={unit} onQty={setQty} onUnit={setUnit} />
+      </div>
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onCancel}
+          className="rounded-[11px] px-3 py-1.5 text-[13px] font-semibold text-muted hover:text-ink transition-colors">
+          Annuler
+        </button>
+        <Button type="button" onClick={save} disabled={!name.trim()}
+          className="rounded-[11px] px-3 py-1.5 text-[13px]">
+          Enregistrer
+        </Button>
+      </div>
     </div>
   )
 }
@@ -1045,26 +1164,49 @@ function AddForm({
 
 /* ---------------- Modale d'édition de repas (nom + ingrédients) ----------------
    Le nom est éditable (les tags des produits suivent côté serveur). Les
-   ingrédients existants ne sont pas modifiables en place : on peut les retirer
-   (du repas ET de la liste) et/ou en ajouter de nouveaux. Rien n'est commité
-   avant « Enregistrer » → Annuler ne touche à rien. */
+   ingrédients existants sont modifiables en place (nom / quantité / unité),
+   retirables (du repas ET de la liste), et on peut en ajouter de nouveaux. Rien
+   n'est commité avant « Enregistrer » → Annuler ne touche à rien. */
 function EditMealForm({ label, ingredients, onCancel, onSave }: {
   label: string
   ingredients: Product[]
   onCancel: () => void
-  onSave: (label: string, removedIds: string[], newItems: DraftItem[]) => void
+  onSave: (label: string, removedIds: string[], newItems: DraftItem[], editedItems: EditedItem[]) => void
 }) {
   const [name, setName] = useState(label)
   const [removed, setRemoved] = useState<Set<string>>(() => new Set())
+  // Valeurs éditables des ingrédients existants (nom + quantité + unité).
+  const [edits, setEdits] = useState<Record<string, Row>>(() =>
+    Object.fromEntries(ingredients.map((p) => [p.id, {
+      name: p.name, qty: p.quantity == null ? '' : String(p.quantity), unit: p.unit,
+    }])),
+  )
   // Démarre sans ligne ouverte : seul le « + ajouter un ingrédient » est visible.
   const [rows, setRows] = useState<Row[]>([])
 
   const kept = ingredients.filter((p) => !removed.has(p.id))
   const newItems = rowsToItems(rows)
+  // Valeurs courantes d'un ingrédient (edits[] est initialisé pour tous, mais on
+  // garde un repli dérivé du produit pour satisfaire l'index-access strict).
+  const rowFor = (p: Product): Row =>
+    edits[p.id] ?? { name: p.name, qty: p.quantity == null ? '' : String(p.quantity), unit: p.unit }
+  const setEdit = (id: string, patch: Partial<Row>) =>
+    setEdits((s) => ({ ...s, [id]: { ...(s[id] ?? blankRow()), ...patch } }))
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (name.trim()) onSave(name.trim(), [...removed], newItems)
+    const clean = name.trim()
+    if (!clean) return
+    // Ne renvoie que les ingrédients réellement modifiés (et au nom non vide).
+    const editedItems: EditedItem[] = kept.flatMap((p) => {
+      const ed = rowFor(p)
+      const nm = ed.name.trim()
+      const qty = ed.qty ? Number(ed.qty) : null
+      if (!nm) return []
+      const changed = nm !== p.name || qty !== p.quantity || ed.unit !== p.unit
+      return changed ? [{ id: p.id, name: nm, quantity: qty, unit: ed.unit }] : []
+    })
+    onSave(clean, [...removed], newItems, editedItems)
   }
 
   return (
@@ -1074,20 +1216,24 @@ function EditMealForm({ label, ingredients, onCancel, onSave }: {
       <input autoFocus value={name} onChange={(e) => setName(e.target.value)} maxLength={60}
         placeholder="ex : Risotto, Gratin, Apéro…" className={INPUT} />
 
-      {/* Ingrédients déjà dans le repas — retirables (du repas et de la liste). */}
+      {/* Ingrédients déjà dans le repas — éditables en place ou retirables. */}
       {kept.length > 0 && (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           <span className={COL}>Ingrédients du repas</span>
-          {kept.map((p) => (
-            <div key={p.id} className="flex items-center gap-2 rounded-[11px] bg-soft px-[12px] py-[9px]">
-              <span className="text-disabled-2 text-[14px] leading-none">•</span>
-              <span className="text-[14px] text-ink">{p.name}</span>
-              <Qty p={p} />
-              <button type="button" onClick={() => setRemoved((s) => new Set(s).add(p.id))}
-                aria-label={`Retirer ${p.name}`}
-                className="ml-auto shrink-0 text-[12px] text-muted hover:text-prune transition-colors">🗑</button>
-            </div>
-          ))}
+          {kept.map((p) => {
+            const ed = rowFor(p)
+            return (
+              <div key={p.id} className="flex items-center gap-2">
+                <input value={ed.name} onChange={(e) => setEdit(p.id, { name: e.target.value })}
+                  maxLength={60} aria-label="Nom de l'ingrédient" className={`${INPUT} flex-1 min-w-0`} />
+                <QtyUnit qty={ed.qty} unit={ed.unit}
+                  onQty={(v) => setEdit(p.id, { qty: v })} onUnit={(v) => setEdit(p.id, { unit: v })} />
+                <button type="button" onClick={() => setRemoved((s) => new Set(s).add(p.id))}
+                  aria-label={`Retirer ${p.name}`}
+                  className={`${ICON_BTN} hover:text-prune hover:bg-card`}>🗑</button>
+              </div>
+            )
+          })}
         </div>
       )}
 
