@@ -18,6 +18,7 @@ import { pseudoOf as resolvePseudo } from '@/lib/participants'
 import { randomId } from '@/lib/uuid'
 import { WEEKDAYS, getDaysBetween, buildMonths, formatDayLabel } from '@/lib/calendar'
 import { groupByCategory } from '@/lib/meals/category'
+import { normalizeUrl, linkIcon, linkHost } from '@/lib/meals/links'
 import type { Meal, Product, MealOwner, Participant } from '@/lib/types'
 
 const UNITS = ['unité', 'g', 'kg', 'L', 'cl', 'paquet', 'bouteille'] as const
@@ -96,10 +97,15 @@ export function MealsPanel({
     return owners.filter((o) => o.meal_id === mealId)
   }
 
-  function handleCreateMeal(label: string, items: DraftItem[], mealDate: string | null) {
+  function handleCreateMeal(
+    label: string, items: DraftItem[], mealDate: string | null,
+    isRestaurant = false, links: string[] = [],
+  ) {
     const tempMealId = randomId()
+    const cleanLinks = links.map(normalizeUrl).filter(Boolean)
     const optimisticMeal: Meal = {
-      id: tempMealId, event_id: eventId, label, meal_date: mealDate, created_by: participantId,
+      id: tempMealId, event_id: eventId, label, meal_date: mealDate,
+      is_restaurant: isRestaurant, links: cleanLinks, created_by: participantId,
       created_at: new Date().toISOString(),
     }
     const optimisticProducts: Product[] = items.map((it) => ({
@@ -112,7 +118,7 @@ export function MealsPanel({
     setProducts((p) => [...p, ...optimisticProducts])
     setSheet(null)
     startTransition(() =>
-      createMeal(slug, eventId, participantId, label, items, mealDate)
+      createMeal(slug, eventId, participantId, label, items, mealDate, isRestaurant, cleanLinks)
         .then(({ mealId, productIds }) => {
           // Remplace les ids temporaires par les ids réels de la DB (même ordre).
           pendingMealIds.current.delete(tempMealId)
@@ -223,11 +229,13 @@ export function MealsPanel({
   // d'ingrédients, modification en place et ajout de nouveaux, le tout en un appel.
   function handleEditMeal(
     mealId: string, label: string, removedIds: string[], newItems: DraftItem[], editedItems: EditedItem[],
+    links: string[] | null = null,
   ) {
     // Repas pas encore persisté (id temporaire) : on attend son id réel.
     if (pendingMealIds.current.has(mealId)) return
     const clean = label.trim()
     if (!clean) return
+    const cleanLinks = links == null ? null : links.map(normalizeUrl).filter(Boolean)
     const prevMeals = meals
     const prevProducts = products
     const oldLabel = meals.find((m) => m.id === mealId)?.label ?? null
@@ -239,7 +247,9 @@ export function MealsPanel({
       created_by: participantId, created_at: new Date().toISOString(),
     }))
 
-    setMeals((m) => m.map((x) => (x.id === mealId ? { ...x, label: clean } : x)))
+    setMeals((m) => m.map((x) => (x.id === mealId
+      ? { ...x, label: clean, ...(cleanLinks == null ? {} : { links: cleanLinks }) }
+      : x)))
     setProducts((p) => {
       let next = p.filter((x) => !removedIds.includes(x.id))
       // Applique les modifications en place (nom / quantité / unité).
@@ -257,7 +267,7 @@ export function MealsPanel({
     })
     setEditMealId(null)
     startTransition(() =>
-      editMeal(slug, eventId, participantId, mealId, clean, removedIds, newItems, editedItems)
+      editMeal(slug, eventId, participantId, mealId, clean, removedIds, newItems, editedItems, cleanLinks)
         .then(({ productIds }) => {
           // Remplace les ids temporaires des nouveaux produits par les ids réels.
           const idMap = new Map(optimisticNew.map((p, i) => [p.id, productIds[i] ?? p.id]))
@@ -470,10 +480,12 @@ export function MealsPanel({
           <Sheet onClose={() => setEditMealId(null)}>
             <EditMealForm
               label={meal.label}
+              isRestaurant={meal.is_restaurant}
+              initialLinks={meal.links}
               ingredients={productsOf(meal.id)}
               onCancel={() => setEditMealId(null)}
-              onSave={(label, removedIds, newItems, editedItems) =>
-                handleEditMeal(meal.id, label, removedIds, newItems, editedItems)}
+              onSave={(label, removedIds, newItems, editedItems, links) =>
+                handleEditMeal(meal.id, label, removedIds, newItems, editedItems, links)}
             />
           </Sheet>
         )
@@ -674,7 +686,7 @@ function MealCardOverlay({ meal, ownersOf, pseudoOf }: {
   return (
     <div className="flex w-full items-center gap-2 rounded-[18px] border-[1.5px] border-terracotta bg-card px-[16px] py-[13px] shadow-[0_8px_24px_rgba(60,45,20,0.18)] cursor-grabbing">
       <span className="text-[15px] leading-none text-disabled-2">⠿</span>
-      <span className="truncate text-[15.5px] font-bold text-ink">🍽️ {meal.label}</span>
+      <span className="truncate text-[15.5px] font-bold text-ink">{meal.is_restaurant ? '🍴' : '🍽️'} {meal.label}</span>
       {ownersOf(meal.id).map((o) => (
         <span key={o.id} className="shrink-0 rounded-full bg-soft px-[8px] py-[2px] text-[11px] font-medium text-body">
           👤 {pseudoOf(o.participant_id)}
@@ -705,6 +717,9 @@ function MealCard({
   const items = productsOf(meal.id)
   const mealOwners = ownersOf(meal.id)
   const isOwner = mealOwners.some((o) => o.participant_id === participantId)
+  // Repas au restaurant : on affiche des liens à la place des ingrédients.
+  const links = meal.is_restaurant ? meal.links : []
+  const count = meal.is_restaurant ? links.length : items.length
   return (
     <Card className="rounded-[18px] overflow-hidden">
       {/* En-tête : clic = plier/déplier, appui long = déplacer (drag) */}
@@ -715,7 +730,7 @@ function MealCard({
             <span aria-hidden className="shrink-0 text-[13px] leading-none text-disabled-2 cursor-grab active:cursor-grabbing">⠿</span>
           )}
           <span className={`shrink-0 text-[11px] text-muted transition-transform ${open ? 'rotate-90' : ''}`}>▶</span>
-          <span className="shrink-0 text-[15.5px] font-bold text-ink truncate">🍽️ {meal.label}</span>
+          <span className="shrink-0 text-[15.5px] font-bold text-ink truncate">{meal.is_restaurant ? '🍴' : '🍽️'} {meal.label}</span>
           {mealOwners.length > 0 && (
             <span className="flex flex-wrap items-center gap-1">
               {mealOwners.map((o) => (
@@ -725,8 +740,8 @@ function MealCard({
               ))}
             </span>
           )}
-          {!open && items.length > 0 && (
-            <span className="shrink-0 text-[11.5px] text-muted-2">· {items.length}</span>
+          {!open && count > 0 && (
+            <span className="shrink-0 text-[11.5px] text-muted-2">· {count}</span>
           )}
         </button>
         <button onClick={() => onEditMeal(meal.id)} aria-label="Modifier le repas"
@@ -755,20 +770,38 @@ function MealCard({
             </button>
           </div>
 
-          <div className="px-[16px] pb-[14px] flex flex-col gap-1.5">
-            {items.length === 0 && (
-              <p className="text-[12.5px] text-muted italic">Pas encore de produit.</p>
-            )}
-            {items.map((p) => (
-              <div key={p.id} className="flex items-center gap-2">
-                <span className="text-disabled-2 text-[14px] leading-none">•</span>
-                <span className="text-[14px] text-ink">{p.name}</span>
-                <Qty p={p} />
-              </div>
-            ))}
-            <button onClick={() => onAddProductTo(meal.id)}
-              className="mt-1 self-start text-[13px] text-terracotta font-semibold">＋ ingrédient</button>
-          </div>
+          {meal.is_restaurant ? (
+            <div className="px-[16px] pb-[14px] flex flex-col gap-1.5">
+              {links.length === 0 ? (
+                <p className="text-[12.5px] text-muted italic">Aucun lien pour l&apos;instant.</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {links.map((url, i) => (
+                    <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 rounded-full border-[1.5px] border-line-2 bg-card px-[10px] py-[4px] text-[12.5px] font-medium text-body hover:border-terracotta transition-colors">
+                      <span className="leading-none">{linkIcon(url)}</span>
+                      <span className="truncate max-w-[180px]">{linkHost(url)}</span>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="px-[16px] pb-[14px] flex flex-col gap-1.5">
+              {items.length === 0 && (
+                <p className="text-[12.5px] text-muted italic">Pas encore de produit.</p>
+              )}
+              {items.map((p) => (
+                <div key={p.id} className="flex items-center gap-2">
+                  <span className="text-disabled-2 text-[14px] leading-none">•</span>
+                  <span className="text-[14px] text-ink">{p.name}</span>
+                  <Qty p={p} />
+                </div>
+              ))}
+              <button onClick={() => onAddProductTo(meal.id)}
+                className="mt-1 self-start text-[13px] text-terracotta font-semibold">＋ ingrédient</button>
+            </div>
+          )}
         </>
       )}
     </Card>
@@ -1053,6 +1086,41 @@ function ItemRows({ rows, setRows, noun }: {
   )
 }
 
+// Liste éditable de liens (URL seule) d'un repas au restaurant. Variante discrète
+// d'ItemRows : bouton d'ajout en gris (text-muted), pas de quantité/unité, chaque
+// ligne retirable. Démarre à [] → seul le « + ajouter un lien » est visible.
+function LinkRows({ links, setLinks }: {
+  links: string[]
+  setLinks: React.Dispatch<React.SetStateAction<string[]>>
+}) {
+  const inputs = useRef<(HTMLInputElement | null)[]>([])
+  const pendingFocus = useRef(false)
+
+  // Focus le champ du lien fraîchement ajouté.
+  useEffect(() => {
+    if (!pendingFocus.current) return
+    pendingFocus.current = false
+    inputs.current[links.length - 1]?.focus()
+  }, [links.length])
+
+  return (
+    <div className="flex flex-col gap-2">
+      {links.length > 0 && <span className={COL}>Liens</span>}
+      {links.map((url, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <input ref={(el) => { inputs.current[i] = el }} type="url" inputMode="url"
+            value={url} onChange={(e) => setLinks((ls) => ls.map((l, j) => (j === i ? e.target.value : l)))}
+            placeholder="lien Google Maps, site du resto…" className={`${INPUT} flex-1 min-w-0`} />
+          <button type="button" onClick={() => setLinks((ls) => ls.filter((_, j) => j !== i))}
+            aria-label="Retirer ce lien" className="shrink-0 w-[18px] text-[14px] text-muted hover:text-prune">✕</button>
+        </div>
+      ))}
+      <button type="button" onClick={() => { pendingFocus.current = true; setLinks((ls) => [...ls, '']) }}
+        className="self-start text-[13px] text-muted font-medium hover:text-ink transition-colors">＋ ajouter un lien</button>
+    </div>
+  )
+}
+
 function AddForm({
   initialMode, lockedDate, presetMeal, meals, eventDays, onCreateMeal, onAddProducts,
 }: {
@@ -1061,7 +1129,10 @@ function AddForm({
   presetMeal: string | null
   meals: Meal[]
   eventDays: string[]
-  onCreateMeal: (label: string, items: DraftItem[], mealDate: string | null) => void
+  onCreateMeal: (
+    label: string, items: DraftItem[], mealDate: string | null,
+    isRestaurant: boolean, links: string[],
+  ) => void
   onAddProducts: (items: DraftItem[], mealId: string | null) => void
 }) {
   const locked = lockedDate != null
@@ -1072,6 +1143,9 @@ function AddForm({
   const [mealLabel, setMealLabel] = useState('')
   const [mealDate, setMealDate] = useState<string | null>(lockedDate)
   const [showCal, setShowCal] = useState(false)
+  // Repas au restaurant : liens au lieu d'ingrédients (uniquement en mode repas).
+  const [isRestaurant, setIsRestaurant] = useState(false)
+  const [links, setLinks] = useState<string[]>([])
 
   const targetMeal = presetMeal ? meals.find((m) => m.id === presetMeal) ?? null : null
   const items = rowsToItems(rows)
@@ -1082,7 +1156,7 @@ function AddForm({
   function submit(e: React.FormEvent) {
     e.preventDefault()
     if (mode === 'meal') {
-      if (mealLabel.trim()) onCreateMeal(mealLabel.trim(), items, mealDate)
+      if (mealLabel.trim()) onCreateMeal(mealLabel.trim(), isRestaurant ? [] : items, mealDate, isRestaurant, links)
     } else if (items.length) {
       onAddProducts(items, presetMeal)
     }
@@ -1139,7 +1213,21 @@ function AddForm({
           ) : null}
 
           <input autoFocus value={mealLabel} onChange={(e) => setMealLabel(e.target.value)} maxLength={60}
-            placeholder="ex : Risotto, Gratin, Apéro, Dîner…" className={INPUT} />
+            placeholder={isRestaurant ? 'ex : Chez Luigi, La Pizzeria…' : 'ex : Risotto, Gratin, Apéro, Dîner…'}
+            className={INPUT} />
+
+          {/* Maison (ingrédients) vs restaurant (liens). */}
+          <div className="bg-track rounded-[13px] p-[5px] flex gap-[4px]">
+            {([[false, '🏠 Maison'], [true, '🍴 Au restaurant']] as const).map(([val, label]) => (
+              <button type="button" key={label}
+                onClick={() => { setIsRestaurant(val); if (val && links.length === 0) setLinks(['']) }}
+                className={`flex-1 text-center rounded-[9px] py-[9px] text-[13px] transition-colors ${
+                  isRestaurant === val ? 'bg-ink text-white font-bold' : 'text-faint'
+                }`}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -1149,7 +1237,9 @@ function AddForm({
         </span>
       )}
 
-      <ItemRows rows={rows} setRows={setRows} noun={noun} />
+      {mode === 'meal' && isRestaurant
+        ? <LinkRows links={links} setLinks={setLinks} />
+        : <ItemRows rows={rows} setRows={setRows} noun={noun} />}
 
       <Button type="submit" disabled={!canSubmit} className="mt-1 w-full rounded-[15px] p-[15px]">
         {mode === 'meal'
@@ -1167,13 +1257,22 @@ function AddForm({
    ingrédients existants sont modifiables en place (nom / quantité / unité),
    retirables (du repas ET de la liste), et on peut en ajouter de nouveaux. Rien
    n'est commité avant « Enregistrer » → Annuler ne touche à rien. */
-function EditMealForm({ label, ingredients, onCancel, onSave }: {
+function EditMealForm({ label, isRestaurant, initialLinks, ingredients, onCancel, onSave }: {
   label: string
+  isRestaurant: boolean
+  initialLinks: string[]
   ingredients: Product[]
   onCancel: () => void
-  onSave: (label: string, removedIds: string[], newItems: DraftItem[], editedItems: EditedItem[]) => void
+  onSave: (
+    label: string, removedIds: string[], newItems: DraftItem[], editedItems: EditedItem[],
+    links: string[] | null,
+  ) => void
 }) {
   const [name, setName] = useState(label)
+  // Repas au restaurant : au moins une ligne de lien ouverte par défaut.
+  const [links, setLinks] = useState<string[]>(
+    isRestaurant && initialLinks.length === 0 ? [''] : initialLinks,
+  )
   const [removed, setRemoved] = useState<Set<string>>(() => new Set())
   // Valeurs éditables des ingrédients existants (nom + quantité + unité).
   const [edits, setEdits] = useState<Record<string, Row>>(() =>
@@ -1197,6 +1296,11 @@ function EditMealForm({ label, ingredients, onCancel, onSave }: {
     e.preventDefault()
     const clean = name.trim()
     if (!clean) return
+    // Repas au restaurant : uniquement nom + liens, pas d'ingrédients.
+    if (isRestaurant) {
+      onSave(clean, [], [], [], links)
+      return
+    }
     // Ne renvoie que les ingrédients réellement modifiés (et au nom non vide).
     const editedItems: EditedItem[] = kept.flatMap((p) => {
       const ed = rowFor(p)
@@ -1206,7 +1310,7 @@ function EditMealForm({ label, ingredients, onCancel, onSave }: {
       const changed = nm !== p.name || qty !== p.quantity || ed.unit !== p.unit
       return changed ? [{ id: p.id, name: nm, quantity: qty, unit: ed.unit }] : []
     })
-    onSave(clean, [...removed], newItems, editedItems)
+    onSave(clean, [...removed], newItems, editedItems, null)
   }
 
   return (
@@ -1216,8 +1320,10 @@ function EditMealForm({ label, ingredients, onCancel, onSave }: {
       <input autoFocus value={name} onChange={(e) => setName(e.target.value)} maxLength={60}
         placeholder="ex : Risotto, Gratin, Apéro…" className={INPUT} />
 
+      {isRestaurant && <LinkRows links={links} setLinks={setLinks} />}
+
       {/* Ingrédients déjà dans le repas — éditables en place ou retirables. */}
-      {kept.length > 0 && (
+      {!isRestaurant && kept.length > 0 && (
         <div className="flex flex-col gap-2">
           <span className={COL}>Ingrédients du repas</span>
           {kept.map((p) => {
@@ -1238,7 +1344,7 @@ function EditMealForm({ label, ingredients, onCancel, onSave }: {
       )}
 
       {/* Ajout de nouveaux ingrédients : ligne(s) dépliée(s) via le « + ». */}
-      <ItemRows rows={rows} setRows={setRows} noun="ingrédient" />
+      {!isRestaurant && <ItemRows rows={rows} setRows={setRows} noun="ingrédient" />}
 
       <div className="flex gap-2">
         <button type="button" onClick={onCancel}

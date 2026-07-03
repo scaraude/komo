@@ -3,6 +3,12 @@
 import { revalidatePath } from 'next/cache'
 import { ensureUser } from '@/lib/auth'
 import { notifyEventMembers } from '@/lib/notifications/dispatch'
+import { normalizeUrl } from '@/lib/meals/links'
+
+// Nettoie une liste de liens : normalise (ajoute https://), retire les vides.
+function cleanLinks(links: string[]): string[] {
+  return links.map(normalizeUrl).filter(Boolean)
+}
 
 // Refonte bouffe : repas (meals) + produits (products). RLS membre-de-l'event.
 //
@@ -26,6 +32,8 @@ export async function createMeal(
   label: string,
   items: NewItem[] = [],
   mealDate: string | null = null,
+  isRestaurant = false,
+  links: string[] = [],
 ): Promise<{ mealId: string; productIds: string[] }> {
   const clean = label.trim()
   if (!clean) throw new Error('Nom du repas requis.')
@@ -33,7 +41,10 @@ export async function createMeal(
 
   const { data: meal, error } = await supabase
     .from('meals')
-    .insert({ event_id: eventId, label: clean, meal_date: mealDate, created_by: participantId })
+    .insert({
+      event_id: eventId, label: clean, meal_date: mealDate,
+      is_restaurant: isRestaurant, links: cleanLinks(links), created_by: participantId,
+    })
     .select('id')
     .single()
   if (error || !meal) {
@@ -88,6 +99,7 @@ export async function editMeal(
   removedProductIds: string[] = [],
   newItems: NewItem[] = [],
   editedItems: EditedItem[] = [],
+  links: string[] | null = null,
 ): Promise<{ productIds: string[] }> {
   const clean = label.trim()
   if (!clean) throw new Error('Nom du repas requis.')
@@ -97,8 +109,10 @@ export async function editMeal(
   const { data: meal } = await supabase.from('meals').select('label').eq('id', mealId).single()
   const oldLabel = meal?.label ?? null
 
-  // 1. Renomme.
-  const { error: upErr } = await supabase.from('meals').update({ label: clean }).eq('id', mealId)
+  // 1. Renomme (+ liens pour un repas au restaurant, quand fournis).
+  const mealUpdate: { label: string; links?: string[] } = { label: clean }
+  if (links != null) mealUpdate.links = cleanLinks(links)
+  const { error: upErr } = await supabase.from('meals').update(mealUpdate).eq('id', mealId)
   if (upErr) {
     console.error('editMeal rename failed', upErr)
     throw new Error('Impossible de modifier ce repas.')
