@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { nanoid } from 'nanoid'
 import { createClient } from '@/lib/supabase/server'
 import { ensureUser, siteOrigin } from '@/lib/auth'
@@ -57,4 +58,18 @@ export async function updateDeadline(slug: string, deadline: string) {
     .from('events')
     .update({ presence_deadline: deadline || null })
     .eq('slug', slug)
+}
+
+// Lien Tricount / cagnotte de l'event (URL de partage collée par l'orga).
+// Authz déléguée à la RLS (created_by = auth.uid()). Chaîne vide → on efface.
+export async function updateTricountUrl(slug: string, url: string) {
+  const raw = url.trim()
+  // Prépend https:// si l'orga a collé sans schéma ; vide → null (retrait).
+  const value = raw ? (/^[a-z][a-z0-9+.-]*:\/\//i.test(raw) ? raw : `https://${raw}`) : null
+  const supabase = await createClient()
+  await supabase
+    .from('events')
+    .update({ tricount_url: value })
+    .eq('slug', slug)
+  revalidatePath(`/e/${slug}`)
 }

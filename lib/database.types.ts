@@ -14,6 +14,7 @@ type EventRow = {
   date_end: string | null
   event_type: EventType
   presence_deadline: string | null
+  tricount_url: string | null
   created_at: string
 }
 
@@ -92,10 +93,11 @@ export type Database = {
     Tables: {
       events: {
         Row: EventRow
-        Insert: Omit<EventRow, 'id' | 'created_at' | 'creator_token' | 'created_by' | 'presence_deadline' | 'event_type' | 'date_start' | 'date_end'> & {
+        Insert: Omit<EventRow, 'id' | 'created_at' | 'creator_token' | 'created_by' | 'presence_deadline' | 'tricount_url' | 'event_type' | 'date_start' | 'date_end'> & {
           creator_token?: string
           created_by?: string | null
           presence_deadline?: string | null
+          tricount_url?: string | null
           event_type?: EventType
           date_start?: string | null
           date_end?: string | null
