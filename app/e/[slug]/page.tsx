@@ -15,6 +15,7 @@ import { AccommodationSection } from '@/components/accommodation/AccommodationSe
 import { MealsPanel } from '@/components/meals/MealsPanel'
 import { ActivityPanel } from '@/components/activities/ActivityPanel'
 import { RecapButton } from '@/components/event/RecapButton'
+import { ExpensesTile } from '@/components/event/ExpensesTile'
 import { ShareSheet } from './ShareSheet'
 import { ParticipantsBadge } from './ParticipantsBadge'
 import { FeedbackButton } from '@/components/feedback/FeedbackButton'
@@ -179,13 +180,7 @@ export default async function EventPage({
             subtitle={groceryCount > 0 ? `${groceryCount} produit${groceryCount > 1 ? 's' : ''}` : 'rien encore'} />
           <ModuleTile href="?tab=activites" emoji="🎟️" title="Activités"
             subtitle={activityCount > 0 ? `${activityCount} activité${activityCount > 1 ? 's' : ''}` : 'rien encore'} />
-          <div className="flex h-[94px] flex-col justify-between rounded-[19px] border-[1.5px] border-dashed border-[var(--color-dashed)] bg-soft p-[17px]">
-            <div className="text-[23px] opacity-50">💸</div>
-            <div>
-              <div className="text-[15px] font-bold text-disabled">Frais</div>
-              <div className="text-[12.5px] text-disabled">bientôt</div>
-            </div>
-          </div>
+          <ExpensesTile slug={slug} initialUrl={event.tricount_url} isAdmin={isAdmin} />
         </div>
 
         {/* Partage */}
