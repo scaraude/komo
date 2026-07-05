@@ -14,6 +14,7 @@ import { formatEventDates } from '@/lib/format'
 import { AccommodationSection } from '@/components/accommodation/AccommodationSection'
 import { MealsPanel } from '@/components/meals/MealsPanel'
 import { ActivityPanel } from '@/components/activities/ActivityPanel'
+import { TimelinePanel } from '@/components/timeline/TimelinePanel'
 import { RecapButton } from '@/components/event/RecapButton'
 import { ExpensesTile } from '@/components/event/ExpensesTile'
 import { ShareSheet } from './ShareSheet'
@@ -40,7 +41,7 @@ const VIBE = {
   autre:     { emoji: '✨', label: 'EVENT' },
 } as const
 
-const MODULE_TABS = new Set(['presence', 'dates', 'transport', 'bouffe', 'activites'])
+const MODULE_TABS = new Set(['presence', 'dates', 'transport', 'bouffe', 'activites', 'fil'])
 
 export default async function EventPage({
   params,
@@ -109,7 +110,8 @@ export default async function EventPage({
   const pendingCount = participants.filter((p) => !p.presence_status).length
 
   const presenceTabName = isPoll ? 'dates' : 'presence'
-  const activeTab = tab && MODULE_TABS.has(tab) ? tab : null
+  // Le fil a besoin de vraies dates : tant que l'event est un sondage, retour au hub.
+  const activeTab = tab && MODULE_TABS.has(tab) && !(tab === 'fil' && isPoll) ? tab : null
   const showHub = activeTab === null
 
   // ---- Counts pour les tuiles du hub ----
@@ -126,6 +128,7 @@ export default async function EventPage({
   const groceryCount = (products ?? []).length
   const activityCount = (activities ?? []).length
   const dateProposalCount = (dateProposals ?? []).length
+  const timelineCount = (legs ?? []).length + (meals ?? []).length + activityCount
 
   // ====================== HUB ======================
   if (showHub) {
@@ -162,6 +165,27 @@ export default async function EventPage({
               Tu viens&nbsp;? <b>Dis-le aux potes</b>
             </span>
             <span className="text-[13px] font-bold text-terracotta">déclarer ›</span>
+          </Link>
+        )}
+
+        {/* Le fil du séjour — vue chronologique transverse (events datés seulement) */}
+        {!isPoll && (
+          <Link
+            href="?tab=fil"
+            className="mb-[12px] flex items-center justify-between rounded-[19px] border-[1.5px] border-line-2 bg-card p-[17px] shadow-card"
+          >
+            <div className="flex items-center gap-[13px]">
+              <span className="text-[23px]">🧭</span>
+              <div>
+                <div className="text-[15px] font-bold text-ink">Le fil du séjour</div>
+                <div className="text-[12.5px] text-muted">
+                  {timelineCount > 0
+                    ? `${timelineCount} moment${timelineCount > 1 ? 's' : ''}, du départ au retour`
+                    : 'transports, repas & activités, dans l’ordre'}
+                </div>
+              </div>
+            </div>
+            <span className="text-[13px] font-bold text-terracotta">ouvrir ›</span>
           </Link>
         )}
 
@@ -330,6 +354,26 @@ export default async function EventPage({
           isAdmin={isAdmin}
           dateStart={event.date_start}
           dateEnd={event.date_end}
+        />
+      )}
+
+      {/* Le fil */}
+      {activeTab === 'fil' && !isPoll && (
+        <TimelinePanel
+          slug={slug}
+          eventId={event.id}
+          participantId={participant.id}
+          dateStart={event.date_start!}
+          dateEnd={event.date_end ?? event.date_start!}
+          destination={event.destination}
+          participants={participants}
+          legs={legs ?? []}
+          occupants={occupants ?? []}
+          meals={meals ?? []}
+          mealOwners={mealOwners ?? []}
+          products={products ?? []}
+          activities={activities ?? []}
+          initialSignups={activitySignups ?? []}
         />
       )}
 

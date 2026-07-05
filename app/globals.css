@@ -26,6 +26,7 @@
   /* Lavande (touche fraîche, fonds secondaires, états neutres — charte KOMO) */
   --color-lavender: #d1b2e2;       /* lavande grisé — vagues, fonds discrets */
   --color-lavender-soft: #edceff;  /* lavande clair — respiration, fonds très clairs */
+  --color-lavender-deep: #7c68b0;  /* lavande assombrie — texte lisible sur crème (arrivées/départs du fil) */
 
   /* Vert olive (présence / dispo) */
   --color-olive: #5f7a3e;
