@@ -19,7 +19,7 @@ export async function AppHeader({ showNew = false }: { showNew?: boolean }) {
       <div className="flex items-center gap-2">
         {showNew && (
           <Link
-            href="/"
+            href="/?new=1"
             className="rounded-full border-[1.5px] border-line-3 bg-card px-[14px] py-[8px] text-[13px] font-bold text-ink"
           >
             ＋ Nouveau

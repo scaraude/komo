@@ -3,12 +3,18 @@ import { LandingExperience } from './LandingExperience'
 import { getAuthUser } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ new?: string }>
+}) {
   const user = await getAuthUser()
+  const { new: forceNew } = await searchParams
 
   // Déjà une session avec au moins un Komo → on saute la landing et on file
-  // droit sur « Mes Komos ».
-  if (user) {
+  // droit sur « Mes Komos ». `?new=1` court-circuite la redirection pour
+  // laisser créer un nouveau Komo depuis la landing.
+  if (user && !forceNew) {
     const supabase = await createClient()
     const { count } = await supabase
       .from('participants')
