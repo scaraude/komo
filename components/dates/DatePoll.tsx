@@ -2,11 +2,12 @@
 
 import { useState, useTransition } from 'react'
 import { proposeDateOption, voteDate, fixDate } from '@/lib/actions/dates'
-import type { DateProposal } from '@/lib/types'
+import type { DateProposal, Period } from '@/lib/types'
 import { formatPeriod } from '@/lib/format'
 import { randomId } from '@/lib/uuid'
 import { Button } from '@/components/ui/Button'
 import { DashedAddButton } from '@/components/ui/DashedAddButton'
+import { RangeCalendar } from '@/components/ui/RangeCalendar'
 import { countVotes, hasVote, toggleVote } from '@/lib/votes'
 import { Card } from '@/components/ui/Card'
 
@@ -27,8 +28,7 @@ export function DatePoll({
 }) {
   const [proposals, setProposals] = useState(initialProposals)
   const [showInput, setShowInput] = useState(false)
-  const [newStart, setNewStart] = useState('')
-  const [newEnd, setNewEnd] = useState('')
+  const [range, setRange] = useState<Period | null>(null)
   const [, startTransition] = useTransition()
 
   function getVoteCount(p: DateProposal) {
@@ -53,25 +53,14 @@ export function DatePoll({
     })
   }
 
-  // Le début tire la fin avec lui : choisir un début postérieur à la fin
-  // (ou une première fois) recale la fin sur le début.
-  function handleStartChange(value: string) {
-    setNewStart(value)
-    if (!newEnd || newEnd < value) setNewEnd(value)
-  }
-
-  const canPropose = !!newStart && !!newEnd && newEnd >= newStart
-
   function resetInput() {
-    setNewStart('')
-    setNewEnd('')
+    setRange(null)
     setShowInput(false)
   }
 
   function handlePropose() {
-    if (!canPropose) return
-    const start = newStart
-    const end = newEnd
+    if (!range) return
+    const { start, end } = range
     const optimistic: DateProposal = {
       id: randomId(),
       event_id: eventId,
@@ -94,9 +83,6 @@ export function DatePoll({
     const diff = countVotes(b.votes) - countVotes(a.votes)
     return diff !== 0 ? diff : a.start_date.localeCompare(b.start_date)
   })
-
-  const inputClass =
-    'flex-1 min-w-0 border-[1.5px] border-line rounded-[13px] px-3 py-2.5 text-sm bg-card focus:outline-none focus:border-terracotta'
 
   return (
     <section>
@@ -162,27 +148,17 @@ export function DatePoll({
       </div>
 
       {showInput ? (
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              aria-label="Début du créneau"
-              value={newStart}
-              onChange={(e) => handleStartChange(e.target.value)}
-              className={inputClass}
-            />
-            <span aria-hidden className="shrink-0 text-sm text-muted">→</span>
-            <input
-              type="date"
-              aria-label="Fin du créneau"
-              value={newEnd}
-              min={newStart || undefined}
-              onChange={(e) => setNewEnd(e.target.value)}
-              className={inputClass}
-            />
-          </div>
+        <div className="flex flex-col gap-3">
+          <RangeCalendar value={range} onChange={setRange} />
+          <p className="text-sm text-center text-muted min-h-[20px]">
+            {range ? (
+              <>Créneau : <span className="font-semibold text-ink capitalize">{formatPeriod(range)}</span></>
+            ) : (
+              'Clique une date de début, puis une date de fin.'
+            )}
+          </p>
           <div className="flex gap-2">
-            <Button onClick={handlePropose} disabled={!canPropose} className="flex-1 rounded-[13px] px-4 py-2.5 text-sm">
+            <Button onClick={handlePropose} disabled={!range} className="flex-1 rounded-[13px] px-4 py-2.5 text-sm">
               Proposer
             </Button>
             <button
