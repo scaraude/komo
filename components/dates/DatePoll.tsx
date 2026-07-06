@@ -30,6 +30,7 @@ export function DatePoll({
   const [proposals, setProposals] = useState(initialProposals)
   const [showInput, setShowInput] = useState(false)
   const [range, setRange] = useState<Period | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [, startTransition] = useTransition()
 
   function getVoteCount(p: DateProposal) {
@@ -93,15 +94,35 @@ export function DatePoll({
     return diff !== 0 ? diff : a.start_date.localeCompare(b.start_date)
   })
 
+  const selectedProposal = proposals.find((p) => p.id === selectedId) ?? null
+
   return (
     <section>
       <h2 className="font-serif font-bold text-xl mb-1">On fait ça quand ?</h2>
       <p className="text-sm text-muted mb-6">
-        Votez pour les créneaux qui vous arrangent. Le créateur en choisit un —
-        ça fixe les dates du séjour et clôt le sondage.
+        Votez pour les créneaux qui vous arrangent.
+        {isCreator ? ' Sélectionne le créneau retenu pour fixer les dates du séjour.' : ' Le créateur choisira le créneau retenu.'}
       </p>
 
-      <div className="flex flex-col gap-3 mb-6">
+      {isCreator && sorted.length > 0 && (
+        <button
+          onClick={() => selectedProposal && handleFix(selectedProposal)}
+          disabled={!selectedProposal}
+          className={`w-full flex items-center justify-center gap-2 rounded-[14px] px-4 py-3.5 text-sm font-bold mb-4 transition-all ${
+            selectedProposal
+              ? 'bg-olive text-white shadow-[0_3px_0_var(--color-olive-text-dk)] active:translate-y-[3px] active:shadow-none'
+              : 'bg-soft text-disabled cursor-not-allowed'
+          }`}
+        >
+          {selectedProposal ? (
+            <span>✓ Choisir ces dates · <span className="capitalize">{formatPeriod({ start: selectedProposal.start_date, end: selectedProposal.end_date })}</span></span>
+          ) : (
+            'Sélectionne un créneau ci-dessous'
+          )}
+        </button>
+      )}
+
+      <div className="flex flex-col gap-3 mb-6" role={isCreator ? 'radiogroup' : undefined}>
         {sorted.length === 0 && (
           <p className="text-sm text-muted text-center py-6">Aucun créneau proposé pour l&apos;instant.</p>
         )}
@@ -109,28 +130,50 @@ export function DatePoll({
           const count = getVoteCount(p)
           const voted = hasVoted(p)
           const pct = totalParticipants > 0 ? (count / totalParticipants) * 100 : 0
+          const selected = selectedId === p.id
           return (
-            <Card key={p.id} className="rounded-[18px] overflow-hidden">
+            <Card
+              key={p.id}
+              onClick={isCreator ? () => setSelectedId(p.id) : undefined}
+              role={isCreator ? 'radio' : undefined}
+              aria-checked={isCreator ? selected : undefined}
+              className={`rounded-[18px] overflow-hidden transition-shadow ${
+                isCreator ? 'cursor-pointer' : ''
+              } ${selected ? 'ring-2 ring-olive' : ''}`}
+            >
               <div className="px-4 pt-3 pb-2 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-semibold text-sm capitalize">
-                    {formatPeriod({ start: p.start_date, end: p.end_date })}
-                  </p>
-                  <p className="text-xs text-muted mt-0.5">{count} / {totalParticipants} votes</p>
+                <div className="min-w-0 flex items-center gap-2.5">
+                  {isCreator && (
+                    <span
+                      className={`shrink-0 grid place-items-center h-5 w-5 rounded-full border-[1.5px] text-[11px] font-bold transition-colors ${
+                        selected ? 'border-olive bg-olive text-white' : 'border-line-3 text-transparent'
+                      }`}
+                    >
+                      ✓
+                    </span>
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm capitalize">
+                      {formatPeriod({ start: p.start_date, end: p.end_date })}
+                    </p>
+                    <p className="text-xs text-muted mt-0.5">{count} / {totalParticipants} votes</p>
+                  </div>
                 </div>
                 <div className="flex gap-1.5 items-center shrink-0">
                   {p.created_by === participantId && (
-                    <ConfirmButton
-                      onConfirm={() => handleDelete(p)}
-                      ariaLabel="Supprimer mon créneau"
-                      confirmLabel="Supprimer ?"
-                      className="flex h-9 w-9 items-center justify-center rounded-[11px] text-[17px] text-muted hover:text-prune hover:bg-soft transition-colors"
-                    >
-                      🗑
-                    </ConfirmButton>
+                    <span onClick={(e) => e.stopPropagation()}>
+                      <ConfirmButton
+                        onConfirm={() => handleDelete(p)}
+                        ariaLabel="Supprimer mon créneau"
+                        confirmLabel="Supprimer ?"
+                        className="flex h-9 w-9 items-center justify-center rounded-[11px] text-[17px] text-muted hover:text-prune hover:bg-soft transition-colors"
+                      >
+                        🗑
+                      </ConfirmButton>
+                    </span>
                   )}
                   <button
-                    onClick={() => handleVote(p)}
+                    onClick={(e) => { e.stopPropagation(); handleVote(p) }}
                     className={`text-xs font-bold px-3 py-1.5 rounded-full border-[1.5px] transition-colors ${
                       voted
                         ? 'bg-ink text-paper border-ink'
@@ -154,16 +197,6 @@ export function DatePoll({
                   style={{ width: `${pct}%` }}
                 />
               </div>
-              {isCreator && (
-                <div className="px-4 pb-3">
-                  <button
-                    onClick={() => handleFix(p)}
-                    className="w-full flex items-center justify-center gap-2 rounded-[13px] bg-olive px-4 py-3 text-sm font-bold text-white shadow-[0_3px_0_var(--color-olive-text-dk)] transition-all active:translate-y-[3px] active:shadow-none"
-                  >
-                    ✓ Choisir ces dates pour le séjour
-                  </button>
-                </div>
-              )}
             </Card>
           )
         })}
