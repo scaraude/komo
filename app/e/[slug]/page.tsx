@@ -241,7 +241,7 @@ export default async function EventPage({
           eventId={event.id}
           participantId={participant.id}
           initialProposals={dateProposals ?? []}
-          totalParticipants={participants.length}
+          participants={participants.map((p) => ({ id: p.id, pseudo: p.pseudo }))}
           isCreator={isAdmin}
         />
       )}
