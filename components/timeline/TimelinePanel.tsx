@@ -8,6 +8,7 @@ import { toggleActivitySignup } from '@/lib/actions/activities'
 import { updatePartialDays, updatePresence } from '@/lib/actions/presence'
 import { formatDayLabel, getDaysBetween } from '@/lib/calendar'
 import { formatEventDates, hhmm } from '@/lib/format'
+import { googleMapsUrl } from '@/lib/maps'
 import { MODE_ICON } from '@/lib/transport/modes'
 import {
   buildTimeline,
@@ -958,6 +959,16 @@ function ItemSheet({
       {(item.kind === 'transport' || item.kind === 'arrival') && item.leg.link_url && (
         <a href={item.leg.link_url} target="_blank" rel="noopener noreferrer" className="mt-3 block text-[13px] font-bold text-terracotta">
           Voir le billet ↗
+        </a>
+      )}
+      {(item.kind === 'transport' || item.kind === 'arrival') && (item.leg.arrival_city ?? destination) && (
+        <a
+          href={googleMapsUrl((item.leg.arrival_city ?? destination)!)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 block text-[13px] font-bold text-terracotta"
+        >
+          📍 Ouvrir dans Maps ↗
         </a>
       )}
       {item.kind === 'activity' && item.activity.booking_url && (

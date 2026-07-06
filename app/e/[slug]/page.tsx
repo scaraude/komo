@@ -21,6 +21,7 @@ import { ShareSheet } from './ShareSheet'
 import { ParticipantsBadge } from './ParticipantsBadge'
 import { FeedbackButton } from '@/components/feedback/FeedbackButton'
 import { AppHeader } from '@/components/layout/AppHeader'
+import { PlaceLink } from '@/components/ui/PlaceLink'
 import type { Participant } from '@/lib/types'
 
 const EVENT_TYPE_WORDING = {
@@ -80,7 +81,7 @@ export default async function EventPage({
     supabase.from('participants').select('*').eq('event_id', event.id).eq('user_id', userId).maybeSingle(),
     supabase.from('participants').select('*').eq('event_id', event.id).order('joined_at', { ascending: true }),
     isPoll
-      ? supabase.from('date_proposals').select('*').eq('event_id', event.id).order('proposed_date')
+      ? supabase.from('date_proposals').select('*').eq('event_id', event.id).order('start_date')
       : Promise.resolve({ data: [] }),
     isMultiDay
       ? supabase.from('accommodation_options').select('*').eq('event_id', event.id).order('created_at')
@@ -144,7 +145,14 @@ export default async function EventPage({
           <h1 className="font-serif text-[27px] leading-[1.1] text-on-dark">{event.title}</h1>
           <div className="mt-[7px] text-[13px] text-on-dark-2">
             {isPoll ? 'Dates à définir' : formatEventDates(event.date_start, event.date_end)}
-            {event.destination ? ` · ${event.destination}` : ''}
+            {event.destination ? (
+              <>
+                {' · '}
+                <PlaceLink query={event.destination} className="underline decoration-dotted underline-offset-2 decoration-on-dark-2 hover:decoration-on-dark">
+                  {event.destination}
+                </PlaceLink>
+              </>
+            ) : ''}
           </div>
           <ParticipantsBadge
             slug={slug}
