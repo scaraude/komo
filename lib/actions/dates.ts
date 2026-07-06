@@ -55,3 +55,12 @@ export async function fixDate(slug: string, eventId: string, start: string, end:
 
   revalidatePath(`/e/${slug}`)
 }
+
+export async function deleteDateProposal(slug: string, proposalId: string) {
+  const supabase = await createClient()
+  mustSucceed(
+    await supabase.from('date_proposals').delete().eq('id', proposalId).select('id'),
+    'Tu ne peux supprimer que tes propres créneaux.',
+  )
+  revalidatePath(`/e/${slug}`)
+}

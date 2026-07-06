@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { proposeDateOption, voteDate, fixDate } from '@/lib/actions/dates'
+import { proposeDateOption, voteDate, fixDate, deleteDateProposal } from '@/lib/actions/dates'
 import type { DateProposal, Period } from '@/lib/types'
 import { formatPeriod } from '@/lib/format'
 import { randomId } from '@/lib/uuid'
 import { Button } from '@/components/ui/Button'
+import { ConfirmButton } from '@/components/ui/ConfirmButton'
 import { DashedAddButton } from '@/components/ui/DashedAddButton'
 import { RangeCalendar } from '@/components/ui/RangeCalendar'
 import { countVotes, hasVote, toggleVote } from '@/lib/votes'
@@ -79,6 +80,14 @@ export function DatePoll({
     startTransition(() => fixDate(slug, eventId, proposal.start_date, proposal.end_date))
   }
 
+  function handleDelete(proposal: DateProposal) {
+    const prev = proposals
+    setProposals((cur) => cur.filter((p) => p.id !== proposal.id))
+    startTransition(async () => {
+      try { await deleteDateProposal(slug, proposal.id) } catch { setProposals(prev) }
+    })
+  }
+
   const sorted = [...proposals].sort((a, b) => {
     const diff = countVotes(b.votes) - countVotes(a.votes)
     return diff !== 0 ? diff : a.start_date.localeCompare(b.start_date)
@@ -86,9 +95,10 @@ export function DatePoll({
 
   return (
     <section>
-      <h2 className="font-serif font-bold text-xl mb-1">Quel créneau vous arrange ?</h2>
+      <h2 className="font-serif font-bold text-xl mb-1">On fait ça quand ?</h2>
       <p className="text-sm text-muted mb-6">
-        Votez pour les périodes qui vous conviennent, le créateur fixera la meilleure.
+        Votez pour les créneaux qui vous arrangent. Le créateur en bloque un — ça
+        fixe les dates du séjour et clôt le sondage.
       </p>
 
       <div className="flex flex-col gap-3 mb-6">
@@ -102,20 +112,33 @@ export function DatePoll({
           return (
             <Card key={p.id} className="rounded-[18px] overflow-hidden">
               <div className="px-4 pt-3 pb-2 flex items-center justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <p className="font-semibold text-sm capitalize">
                     {formatPeriod({ start: p.start_date, end: p.end_date })}
                   </p>
                   <p className="text-xs text-muted mt-0.5">{count} / {totalParticipants} votes</p>
                 </div>
-                <div className="flex gap-2 items-center">
-                  {isCreator && (
-                    <button
-                      onClick={() => handleFix(p)}
-                      className="text-xs font-bold px-3 py-1.5 bg-olive/15 text-olive border border-olive/30 rounded-full hover:bg-olive/25 transition-colors"
+                <div className="flex flex-wrap gap-2 items-center justify-end shrink-0">
+                  {p.created_by === participantId && (
+                    <ConfirmButton
+                      onConfirm={() => handleDelete(p)}
+                      ariaLabel="Supprimer mon créneau"
+                      confirmLabel="Supprimer ?"
+                      className="text-muted hover:text-prune text-sm px-1.5 py-1 transition-colors"
                     >
-                      Fixer ✓
-                    </button>
+                      ✕
+                    </ConfirmButton>
+                  )}
+                  {isCreator && (
+                    <ConfirmButton
+                      onConfirm={() => handleFix(p)}
+                      ariaLabel="Bloquer ce créneau comme dates du séjour"
+                      confirmLabel="On confirme ✓"
+                      className="text-xs font-bold px-3 py-1.5 bg-olive/15 text-olive border border-olive/30 rounded-full hover:bg-olive/25 transition-colors"
+                      confirmClassName="rounded-full bg-olive px-3 py-1.5 text-[12px] font-bold text-white"
+                    >
+                      On bloque
+                    </ConfirmButton>
                   )}
                   <button
                     onClick={() => handleVote(p)}
