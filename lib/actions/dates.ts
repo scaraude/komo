@@ -39,17 +39,14 @@ export async function voteDate(
   revalidatePath(`/e/${slug}`)
 }
 
-export async function fixDate(slug: string, eventId: string, proposalId: string) {
+export async function fixDate(slug: string, eventId: string, start: string, end: string) {
+  if (end < start) throw new Error('La fin doit être après le début.')
   const supabase = await createClient()
-
-  const { data: proposal } = await supabase
-    .from('date_proposals').select('start_date, end_date').eq('id', proposalId).single()
-  if (!proposal) throw new Error('Proposition introuvable.')
 
   mustSucceed(
     await supabase.from('events').update({
-      date_start: proposal.start_date,
-      date_end: proposal.end_date,
+      date_start: start,
+      date_end: end,
     }).eq('id', eventId).select('id'),
     "Seul un organisateur peut fixer la date.",
   )
