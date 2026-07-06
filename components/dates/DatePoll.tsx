@@ -97,8 +97,8 @@ export function DatePoll({
     <section>
       <h2 className="font-serif font-bold text-xl mb-1">On fait ça quand ?</h2>
       <p className="text-sm text-muted mb-6">
-        Votez pour les créneaux qui vous arrangent. Le créateur en bloque un — ça
-        fixe les dates du séjour et clôt le sondage.
+        Votez pour les créneaux qui vous arrangent. Le créateur en choisit un —
+        ça fixe les dates du séjour et clôt le sondage.
       </p>
 
       <div className="flex flex-col gap-3 mb-6">
@@ -118,26 +118,15 @@ export function DatePoll({
                   </p>
                   <p className="text-xs text-muted mt-0.5">{count} / {totalParticipants} votes</p>
                 </div>
-                <div className="flex flex-wrap gap-2 items-center justify-end shrink-0">
+                <div className="flex gap-1.5 items-center shrink-0">
                   {p.created_by === participantId && (
                     <ConfirmButton
                       onConfirm={() => handleDelete(p)}
                       ariaLabel="Supprimer mon créneau"
                       confirmLabel="Supprimer ?"
-                      className="text-muted hover:text-prune text-sm px-1.5 py-1 transition-colors"
+                      className="flex h-9 w-9 items-center justify-center rounded-[11px] text-[17px] text-muted hover:text-prune hover:bg-soft transition-colors"
                     >
-                      ✕
-                    </ConfirmButton>
-                  )}
-                  {isCreator && (
-                    <ConfirmButton
-                      onConfirm={() => handleFix(p)}
-                      ariaLabel="Bloquer ce créneau comme dates du séjour"
-                      confirmLabel="On confirme ✓"
-                      className="text-xs font-bold px-3 py-1.5 bg-olive/15 text-olive border border-olive/30 rounded-full hover:bg-olive/25 transition-colors"
-                      confirmClassName="rounded-full bg-olive px-3 py-1.5 text-[12px] font-bold text-white"
-                    >
-                      On bloque
+                      🗑
                     </ConfirmButton>
                   )}
                   <button
@@ -165,6 +154,16 @@ export function DatePoll({
                   style={{ width: `${pct}%` }}
                 />
               </div>
+              {isCreator && (
+                <div className="px-4 pb-3">
+                  <button
+                    onClick={() => handleFix(p)}
+                    className="w-full flex items-center justify-center gap-2 rounded-[13px] bg-olive px-4 py-3 text-sm font-bold text-white shadow-[0_3px_0_var(--color-olive-text-dk)] transition-all active:translate-y-[3px] active:shadow-none"
+                  >
+                    ✓ Choisir ces dates pour le séjour
+                  </button>
+                </div>
+              )}
             </Card>
           )
         })}
