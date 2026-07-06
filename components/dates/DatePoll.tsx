@@ -75,8 +75,8 @@ export function DatePoll({
     startTransition(() => proposeDateOption(slug, eventId, participantId, start, end))
   }
 
-  function handleFix(proposalId: string) {
-    startTransition(() => fixDate(slug, eventId, proposalId))
+  function handleFix(proposal: DateProposal) {
+    startTransition(() => fixDate(slug, eventId, proposal.start_date, proposal.end_date))
   }
 
   const sorted = [...proposals].sort((a, b) => {
@@ -111,7 +111,7 @@ export function DatePoll({
                 <div className="flex gap-2 items-center">
                   {isCreator && (
                     <button
-                      onClick={() => handleFix(p.id)}
+                      onClick={() => handleFix(p)}
                       className="text-xs font-bold px-3 py-1.5 bg-olive/15 text-olive border border-olive/30 rounded-full hover:bg-olive/25 transition-colors"
                     >
                       Fixer ✓
