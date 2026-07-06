@@ -56,7 +56,8 @@ type TransportLegRow = {
 type DateProposalRow = {
   id: string
   event_id: string
-  proposed_date: string
+  start_date: string
+  end_date: string
   created_by: string
   votes: Record<string, boolean>
   created_at: string
@@ -164,7 +165,7 @@ export type Database = {
       }
       date_proposals: {
         Row: DateProposalRow
-        Insert: { event_id: string; proposed_date: string; created_by: string; votes?: Record<string, boolean> }
+        Insert: { event_id: string; start_date: string; end_date: string; created_by: string; votes?: Record<string, boolean> }
         Update: Partial<Omit<DateProposalRow, 'id' | 'created_at'>>
         Relationships: []
       }

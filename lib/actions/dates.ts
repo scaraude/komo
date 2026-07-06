@@ -8,15 +8,18 @@ export async function proposeDateOption(
   slug: string,
   eventId: string,
   participantId: string,
-  date: string,
+  start: string,
+  end: string,
 ) {
+  if (end < start) throw new Error('La fin doit être après le début.')
   const supabase = await createClient()
   const { error } = await supabase.from('date_proposals').insert({
     event_id: eventId,
-    proposed_date: date,
+    start_date: start,
+    end_date: end,
     created_by: participantId,
   })
-  if (error) throw new Error('Impossible d\'ajouter cette date.')
+  if (error) throw new Error('Impossible d\'ajouter ce créneau.')
   revalidatePath(`/e/${slug}`)
 }
 
@@ -40,13 +43,13 @@ export async function fixDate(slug: string, eventId: string, proposalId: string)
   const supabase = await createClient()
 
   const { data: proposal } = await supabase
-    .from('date_proposals').select('proposed_date').eq('id', proposalId).single()
+    .from('date_proposals').select('start_date, end_date').eq('id', proposalId).single()
   if (!proposal) throw new Error('Proposition introuvable.')
 
   mustSucceed(
     await supabase.from('events').update({
-      date_start: proposal.proposed_date,
-      date_end: proposal.proposed_date,
+      date_start: proposal.start_date,
+      date_end: proposal.end_date,
     }).eq('id', eventId).select('id'),
     "Seul un organisateur peut fixer la date.",
   )

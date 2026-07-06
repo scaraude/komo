@@ -3,17 +3,12 @@
 import { useState, useTransition } from 'react'
 import { proposeDateOption, voteDate, fixDate } from '@/lib/actions/dates'
 import type { DateProposal } from '@/lib/types'
+import { formatPeriod } from '@/lib/format'
 import { randomId } from '@/lib/uuid'
 import { Button } from '@/components/ui/Button'
 import { DashedAddButton } from '@/components/ui/DashedAddButton'
 import { countVotes, hasVote, toggleVote } from '@/lib/votes'
 import { Card } from '@/components/ui/Card'
-
-function formatDate(d: string) {
-  return new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', {
-    weekday: 'long', day: 'numeric', month: 'long',
-  })
-}
 
 export function DatePoll({
   slug,
@@ -32,7 +27,8 @@ export function DatePoll({
 }) {
   const [proposals, setProposals] = useState(initialProposals)
   const [showInput, setShowInput] = useState(false)
-  const [newDate, setNewDate] = useState('')
+  const [newStart, setNewStart] = useState('')
+  const [newEnd, setNewEnd] = useState('')
   const [, startTransition] = useTransition()
 
   function getVoteCount(p: DateProposal) {
@@ -57,20 +53,37 @@ export function DatePoll({
     })
   }
 
+  // Le début tire la fin avec lui : choisir un début postérieur à la fin
+  // (ou une première fois) recale la fin sur le début.
+  function handleStartChange(value: string) {
+    setNewStart(value)
+    if (!newEnd || newEnd < value) setNewEnd(value)
+  }
+
+  const canPropose = !!newStart && !!newEnd && newEnd >= newStart
+
+  function resetInput() {
+    setNewStart('')
+    setNewEnd('')
+    setShowInput(false)
+  }
+
   function handlePropose() {
-    if (!newDate) return
+    if (!canPropose) return
+    const start = newStart
+    const end = newEnd
     const optimistic: DateProposal = {
       id: randomId(),
       event_id: eventId,
-      proposed_date: newDate,
+      start_date: start,
+      end_date: end,
       created_by: participantId,
       votes: {},
       created_at: new Date().toISOString(),
     }
     setProposals((prev) => [...prev, optimistic])
-    setNewDate('')
-    setShowInput(false)
-    startTransition(() => proposeDateOption(slug, eventId, participantId, newDate))
+    resetInput()
+    startTransition(() => proposeDateOption(slug, eventId, participantId, start, end))
   }
 
   function handleFix(proposalId: string) {
@@ -79,19 +92,22 @@ export function DatePoll({
 
   const sorted = [...proposals].sort((a, b) => {
     const diff = countVotes(b.votes) - countVotes(a.votes)
-    return diff !== 0 ? diff : a.proposed_date.localeCompare(b.proposed_date)
+    return diff !== 0 ? diff : a.start_date.localeCompare(b.start_date)
   })
+
+  const inputClass =
+    'flex-1 min-w-0 border-[1.5px] border-line rounded-[13px] px-3 py-2.5 text-sm bg-card focus:outline-none focus:border-terracotta'
 
   return (
     <section>
-      <h2 className="font-serif font-bold text-xl mb-1">Quelle date vous arrange ?</h2>
+      <h2 className="font-serif font-bold text-xl mb-1">Quel créneau vous arrange ?</h2>
       <p className="text-sm text-muted mb-6">
-        Votez pour les dates qui vous conviennent, le créateur fixera la meilleure.
+        Votez pour les périodes qui vous conviennent, le créateur fixera la meilleure.
       </p>
 
       <div className="flex flex-col gap-3 mb-6">
         {sorted.length === 0 && (
-          <p className="text-sm text-muted text-center py-6">Aucune date proposée pour l&apos;instant.</p>
+          <p className="text-sm text-muted text-center py-6">Aucun créneau proposé pour l&apos;instant.</p>
         )}
         {sorted.map((p) => {
           const count = getVoteCount(p)
@@ -101,7 +117,9 @@ export function DatePoll({
             <Card key={p.id} className="rounded-[18px] overflow-hidden">
               <div className="px-4 pt-3 pb-2 flex items-center justify-between gap-3">
                 <div>
-                  <p className="font-semibold text-sm capitalize">{formatDate(p.proposed_date)}</p>
+                  <p className="font-semibold text-sm capitalize">
+                    {formatPeriod({ start: p.start_date, end: p.end_date })}
+                  </p>
                   <p className="text-xs text-muted mt-0.5">{count} / {totalParticipants} votes</p>
                 </div>
                 <div className="flex gap-2 items-center">
@@ -144,27 +162,41 @@ export function DatePoll({
       </div>
 
       {showInput ? (
-        <div className="flex gap-2">
-          <input
-            type="date"
-            value={newDate}
-            onChange={(e) => setNewDate(e.target.value)}
-            className="flex-1 border-[1.5px] border-line rounded-[13px] px-3 py-2.5 text-sm bg-card focus:outline-none focus:border-terracotta"
-          />
-          <Button onClick={handlePropose} disabled={!newDate} className="rounded-[13px] px-4 py-2.5 text-sm">
-            Proposer
-          </Button>
-          <button
-            onClick={() => setShowInput(false)}
-            aria-label="Annuler"
-            className="px-3 py-2.5 border-[1.5px] border-line-3 bg-card rounded-[13px] text-sm"
-          >
-            ✕
-          </button>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              aria-label="Début du créneau"
+              value={newStart}
+              onChange={(e) => handleStartChange(e.target.value)}
+              className={inputClass}
+            />
+            <span aria-hidden className="shrink-0 text-sm text-muted">→</span>
+            <input
+              type="date"
+              aria-label="Fin du créneau"
+              value={newEnd}
+              min={newStart || undefined}
+              onChange={(e) => setNewEnd(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={handlePropose} disabled={!canPropose} className="flex-1 rounded-[13px] px-4 py-2.5 text-sm">
+              Proposer
+            </Button>
+            <button
+              onClick={resetInput}
+              aria-label="Annuler"
+              className="px-3 py-2.5 border-[1.5px] border-line-3 bg-card rounded-[13px] text-sm"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       ) : (
         <DashedAddButton onClick={() => setShowInput(true)} className="w-full rounded-[18px] py-3 text-sm">
-          + Proposer une date
+          + Proposer un créneau
         </DashedAddButton>
       )}
     </section>
