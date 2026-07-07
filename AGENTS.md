@@ -4,6 +4,10 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+# Package manager: pnpm
+
+This project uses **pnpm** exclusively (`pnpm install`, `pnpm dev`, `pnpm test`…). Never use npm or yarn — no `package-lock.json` should ever exist. The version is pinned via the `packageManager` field in `package.json`; CI uses `pnpm/action-setup` which reads it. Postinstall scripts are gated by `pnpm.onlyBuiltDependencies` in `package.json`.
+
 # Naming: English everywhere in code
 
 All identifiers are in **English** — variables, functions, types, DB tables/columns, and enum/CHECK value tokens. No exceptions.
