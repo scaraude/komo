@@ -96,9 +96,10 @@ export async function notifyEventMembers(params: {
     const url = `/e/${event.slug}${TYPE_TAB[type]}`
 
     // 1. Centre de notifs in-app.
-    await admin.from('notifications').insert(
+    const { error: notifError } = await admin.from('notifications').insert(
       recipients.map((uid) => ({ user_id: uid, event_id: eventId, type, title, body, url })),
     )
+    if (notifError) console.error('notifyEventMembers insert failed', notifError)
 
     // 2. Web Push (best-effort, seulement si les clés VAPID sont configurées).
     await sendPush(admin, recipients, { title, body, url })
