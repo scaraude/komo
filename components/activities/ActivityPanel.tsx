@@ -423,9 +423,15 @@ function ActivityCard({
           </div>
         )}
         {signedPeople.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1">
+          <div className="mt-2 flex flex-wrap gap-1.5">
             {signedPeople.map((p) => (
-              <Avatar key={p.id} pseudo={p.pseudo} className="h-6 w-6 bg-ink text-[10px] text-paper" title={p.pseudo} />
+              <div
+                key={p.id}
+                className="inline-flex items-center gap-1 rounded-full border-[1.5px] border-line-2 bg-card py-0.5 pl-0.5 pr-2 text-xs font-medium text-body"
+              >
+                <Avatar pseudo={p.pseudo} className="h-5 w-5 bg-ink text-[10px] text-paper" />
+                {p.pseudo}
+              </div>
             ))}
           </div>
         )}
