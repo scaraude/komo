@@ -24,14 +24,22 @@ function order(a: string, b: string): Period {
   return a <= b ? { start: a, end: b } : { start: b, end: a }
 }
 
+/** Heat map monochrome : une seule couleur (rouge charte), diluée vers le blanc
+ *  quand peu de monde peut. Le texte bascule en sombre sur les teintes claires. */
+function heatStyle(intensity: number): { backgroundColor: string; color: string } {
+  const mix = Math.round(25 + 75 * intensity)
+  return {
+    backgroundColor: `color-mix(in oklab, var(--color-terracotta) ${mix}%, white)`,
+    color: intensity >= 0.5 ? '#fff' : 'var(--color-terracotta-dk)',
+  }
+}
+
 /** Un créneau proposé, prêt à être dessiné en bandeau sur le calendrier. */
 export type CalendarProposal = {
   id: string
   start: string
   end: string
-  /** Couleur du bandeau (déclinaison de la charte). */
-  color: string
-  /** Part des votes (0..1) — pilote l'opacité : plus le crew peut, plus le bandeau est franc. */
+  /** Part des votes (0..1) — pilote la teinte façon heat map : plus le crew peut, plus le rouge est franc. */
   intensity: number
   /** Libellé court affiché dans le bandeau (ex. « 3/5 »). */
   label: string
@@ -41,6 +49,18 @@ export type CalendarProposal = {
   dimmed: boolean
   /** Tout le monde peut : le bandeau pulse. */
   full: boolean
+}
+
+/** Pastille sur les flèches de mois : « il y a N créneaux par là ». */
+function NavBadge({ count }: { count: number }) {
+  return (
+    <span
+      aria-hidden
+      className="absolute -right-[2px] -top-[2px] grid h-[15px] min-w-[15px] place-items-center rounded-full bg-terracotta px-[3px] text-[9.5px] font-bold leading-none text-white"
+    >
+      {count}
+    </span>
+  )
 }
 
 /**
@@ -100,6 +120,12 @@ export function ProposalCalendar({
 
   const month = buildMonths([`${viewMonth}-01`])[0]!
   const canPrev = viewMonth > min.slice(0, 7)
+
+  // Créneaux hors du mois affiché : on badge les flèches pour inviter à naviguer.
+  const earlierCount = proposals.filter((proposal) => proposal.end < `${viewMonth}-01`).length
+  const laterCount = proposals.filter(
+    (proposal) => proposal.start >= `${addMonth(viewMonth, 1)}-01`,
+  ).length
 
   const cells = [...month.cells]
   while (cells.length % 7 !== 0) cells.push(null)
@@ -169,19 +195,29 @@ export function ProposalCalendar({
           type="button"
           onClick={() => setViewMonth((m) => addMonth(m, -1))}
           disabled={!canPrev}
-          aria-label="Mois précédent"
-          className="grid h-8 w-8 place-items-center rounded-full text-ink transition-colors hover:bg-soft disabled:cursor-not-allowed disabled:text-disabled-2"
+          aria-label={
+            earlierCount > 0
+              ? `Mois précédent — ${earlierCount} créneau${earlierCount > 1 ? 'x' : ''} proposé${earlierCount > 1 ? 's' : ''} avant`
+              : 'Mois précédent'
+          }
+          className="relative grid h-8 w-8 place-items-center rounded-full text-ink transition-colors hover:bg-soft disabled:cursor-not-allowed disabled:text-disabled-2"
         >
           ‹
+          {canPrev && earlierCount > 0 && <NavBadge count={earlierCount} />}
         </button>
         <span className="text-[14px] font-bold capitalize text-ink">{month.label}</span>
         <button
           type="button"
           onClick={() => setViewMonth((m) => addMonth(m, 1))}
-          aria-label="Mois suivant"
-          className="grid h-8 w-8 place-items-center rounded-full text-ink transition-colors hover:bg-soft"
+          aria-label={
+            laterCount > 0
+              ? `Mois suivant — ${laterCount} créneau${laterCount > 1 ? 'x' : ''} proposé${laterCount > 1 ? 's' : ''} après`
+              : 'Mois suivant'
+          }
+          className="relative grid h-8 w-8 place-items-center rounded-full text-ink transition-colors hover:bg-soft"
         >
           ›
+          {laterCount > 0 && <NavBadge count={laterCount} />}
         </button>
       </div>
 
@@ -233,14 +269,10 @@ export function ProposalCalendar({
                           aria-pressed={proposal.selected}
                           style={{
                             gridColumn: `${startColumn} / span ${span}`,
-                            backgroundColor: proposal.color,
-                            opacity: selecting
-                              ? 0.3
-                              : proposal.dimmed
-                                ? 0.18
-                                : 0.55 + 0.45 * proposal.intensity,
+                            ...heatStyle(proposal.intensity),
+                            opacity: selecting ? 0.3 : proposal.dimmed ? 0.18 : 1,
                           }}
-                          className={`h-[20px] min-w-0 cursor-pointer truncate text-[10.5px] font-bold text-white transition-all ${
+                          className={`h-[20px] min-w-0 cursor-pointer truncate text-[10.5px] font-bold transition-all ${
                             roundedStart ? 'rounded-l-full' : ''
                           } ${roundedEnd ? 'rounded-r-full' : ''} ${
                             proposal.selected ? 'ring-2 ring-ink ring-offset-2 ring-offset-card' : ''

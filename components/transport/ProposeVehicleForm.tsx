@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { INPUT_CLASS, LABEL_CLASS } from '@/components/ui/form'
 import { PointField } from './PointField'
 import { TRANSPORT_MODES, type TransportMode } from '@/lib/transport/modes'
+import { TransportModeIcon, CarIcon, TrainIcon } from '@/components/ui/icons'
 import { hhmm } from '@/lib/format'
 import type { Leg } from '@/lib/types'
 
@@ -110,12 +111,12 @@ export function ProposeVehicleForm({
               const active = mode === m.value
               return (
                 <button key={m.value} type="button" onClick={() => setMode(m.value)}
-                  className={`rounded-[20px] px-[14px] py-[9px] text-[13px] transition-colors ${
+                  className={`inline-flex items-center gap-[6px] rounded-[20px] px-[14px] py-[9px] text-[13px] transition-colors ${
                     active
                       ? 'bg-terracotta text-white font-bold'
                       : 'bg-card border-[1.5px] border-line text-body'
                   }`}>
-                  {m.icon} {m.label}
+                  <TransportModeIcon mode={m.value} className="h-[14px] w-[14px]" /> {m.label}
                 </button>
               )
             })}
@@ -206,7 +207,9 @@ export function ProposeVehicleForm({
             <button type="button" onClick={() => setIsDriver((v) => !v)}
               className="bg-card border-[1.5px] border-line rounded-[13px] py-[11px] px-[14px] flex items-center justify-between gap-3 text-left">
               <div className="min-w-0">
-                <div className="text-[14.5px] text-ink font-semibold">🚗 Je suis le chauffeur·euse</div>
+                <div className="flex items-center gap-[7px] text-[14.5px] text-ink font-semibold">
+                  <CarIcon className="h-[16px] w-[16px] shrink-0 text-terracotta" /> Je suis le chauffeur·euse
+                </div>
                 <div className="text-[12px] text-muted mt-0.5 leading-[1.35]">
                   {isDriver
                     ? 'Ta place est comptée en plus des places passagers.'
@@ -239,8 +242,9 @@ export function ProposeVehicleForm({
 
           {/* Info billet (train / bus) */}
           {hasBillet && (
-            <div className="bg-soft rounded-[13px] py-[12px] px-[14px] text-[12.5px] text-muted leading-[1.4]">
-              🚆 Pas de « places » ici — chacun prend son billet, on garde juste l&apos;horaire commun.
+            <div className="bg-soft rounded-[13px] py-[12px] px-[14px] text-[12.5px] text-muted leading-[1.4] flex items-start gap-[8px]">
+              <TrainIcon className="mt-[1px] h-[14px] w-[14px] shrink-0" />
+              <span>Pas de « places » ici — chacun prend son billet, on garde juste l&apos;horaire commun.</span>
             </div>
           )}
 

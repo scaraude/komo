@@ -18,8 +18,10 @@ import { pseudoOf as resolvePseudo } from '@/lib/participants'
 import { randomId } from '@/lib/uuid'
 import { WEEKDAYS, getDaysBetween, buildMonths, formatDayLabel } from '@/lib/calendar'
 import { groupByCategory } from '@/lib/meals/category'
-import { normalizeUrl, linkIcon, linkHost } from '@/lib/meals/links'
+import { normalizeUrl, linkKind, linkHost } from '@/lib/meals/links'
 import type { Meal, Product, MealOwner, Participant } from '@/lib/types'
+import { UtensilsIcon, CookingPotIcon, UserIcon, CalendarIcon, BasketIcon, HomeIcon, PencilIcon, TrashIcon, MapPinIcon, LinkIcon, GroceryCategoryIcon } from '@/components/ui/icons'
+import type { ReactNode } from 'react'
 
 const UNITS = ['unité', 'g', 'kg', 'L', 'cl', 'paquet', 'bouteille'] as const
 
@@ -30,6 +32,11 @@ const INPUT =
 // tactile ~36px. Ajouter la couleur de hover par-dessus (olive, prune…).
 const ICON_BTN =
   'shrink-0 flex h-[36px] w-[36px] items-center justify-center rounded-[11px] text-[17px] text-muted transition-colors'
+
+// Icône du type de repas : maison (casserole) vs restaurant (couverts).
+function MealKindIcon({ isRestaurant, className }: { isRestaurant: boolean; className?: string }) {
+  return isRestaurant ? <UtensilsIcon className={className} /> : <CookingPotIcon className={className} />
+}
 
 // useSyncExternalStore sans mises à jour (sert juste à détecter le client).
 const subscribeNoop = () => () => {}
@@ -686,10 +693,13 @@ function MealCardOverlay({ meal, ownersOf, pseudoOf }: {
   return (
     <div className="flex w-full items-center gap-2 rounded-[18px] border-[1.5px] border-terracotta bg-card px-[16px] py-[13px] shadow-[0_8px_24px_rgba(60,45,20,0.18)] cursor-grabbing">
       <span className="text-[15px] leading-none text-disabled-2">⠿</span>
-      <span className="truncate text-[15.5px] font-bold text-ink">{meal.is_restaurant ? '🍴' : '🍽️'} {meal.label}</span>
+      <span className="flex min-w-0 items-center gap-1.5 text-[15.5px] font-bold text-ink">
+        <MealKindIcon isRestaurant={meal.is_restaurant} className="h-[14px] w-[14px] shrink-0 text-olive-text" />
+        <span className="truncate">{meal.label}</span>
+      </span>
       {ownersOf(meal.id).map((o) => (
-        <span key={o.id} className="shrink-0 rounded-full bg-soft px-[8px] py-[2px] text-[11px] font-medium text-body">
-          👤 {pseudoOf(o.participant_id)}
+        <span key={o.id} className="inline-flex shrink-0 items-center gap-1 rounded-full bg-soft px-[8px] py-[2px] text-[11px] font-medium text-body">
+          <UserIcon className="h-[10px] w-[10px] shrink-0" /> {pseudoOf(o.participant_id)}
         </span>
       ))}
     </div>
@@ -730,12 +740,15 @@ function MealCard({
             <span aria-hidden className="shrink-0 text-[13px] leading-none text-disabled-2 cursor-grab active:cursor-grabbing">⠿</span>
           )}
           <span className={`shrink-0 text-[11px] text-muted transition-transform ${open ? 'rotate-90' : ''}`}>▶</span>
-          <span className="shrink-0 text-[15.5px] font-bold text-ink truncate">{meal.is_restaurant ? '🍴' : '🍽️'} {meal.label}</span>
+          <span className="flex shrink-0 items-center gap-1.5 text-[15.5px] font-bold text-ink truncate">
+            <MealKindIcon isRestaurant={meal.is_restaurant} className="h-[14px] w-[14px] shrink-0 text-olive-text" />
+            <span className="truncate">{meal.label}</span>
+          </span>
           {mealOwners.length > 0 && (
             <span className="flex flex-wrap items-center gap-1">
               {mealOwners.map((o) => (
-                <span key={o.id} className="rounded-full bg-soft px-[8px] py-[2px] text-[11px] font-medium text-body">
-                  👤 {pseudoOf(o.participant_id)}
+                <span key={o.id} className="inline-flex items-center gap-1 rounded-full bg-soft px-[8px] py-[2px] text-[11px] font-medium text-body">
+                  <UserIcon className="h-[10px] w-[10px] shrink-0" /> {pseudoOf(o.participant_id)}
                 </span>
               ))}
             </span>
@@ -745,9 +758,9 @@ function MealCard({
           )}
         </button>
         <button onClick={() => onEditMeal(meal.id)} aria-label="Modifier le repas"
-          className={`${ICON_BTN} hover:text-olive hover:bg-soft`}>✎</button>
+          className={`${ICON_BTN} hover:text-olive hover:bg-soft`}><PencilIcon className="h-[15px] w-[15px]" /></button>
         <button onClick={() => onDeleteMeal(meal.id)} aria-label="Supprimer le repas"
-          className={`${ICON_BTN} hover:text-prune hover:bg-soft`}>🗑</button>
+          className={`${ICON_BTN} hover:text-prune hover:bg-soft`}><TrashIcon className="h-[15px] w-[15px]" /></button>
       </div>
 
       {open && (
@@ -756,8 +769,8 @@ function MealCard({
           <div className="px-[16px] pb-[10px] flex flex-wrap items-center gap-1.5">
             {showDate && (
               <button onClick={() => onPickDate(meal.id)}
-                className="rounded-full px-[9px] py-[3px] text-[11.5px] font-semibold border-[1.5px] border-dashed border-[var(--color-dashed)] text-muted transition-colors">
-                📅 ajouter une date
+                className="inline-flex items-center gap-1 rounded-full px-[9px] py-[3px] text-[11.5px] font-semibold border-[1.5px] border-dashed border-[var(--color-dashed)] text-muted transition-colors">
+                <CalendarIcon className="h-[10px] w-[10px] shrink-0" /> ajouter une date
               </button>
             )}
             <button onClick={() => onToggleOwner(meal.id)}
@@ -779,7 +792,9 @@ function MealCard({
                   {links.map((url, i) => (
                     <a key={i} href={url} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 rounded-full border-[1.5px] border-line-2 bg-card px-[10px] py-[4px] text-[12.5px] font-medium text-body hover:border-terracotta transition-colors">
-                      <span className="leading-none">{linkIcon(url)}</span>
+                      {linkKind(url) === 'maps'
+                        ? <MapPinIcon className="h-[12px] w-[12px] shrink-0 text-muted" />
+                        : <LinkIcon className="h-[12px] w-[12px] shrink-0 text-muted" />}
                       <span className="truncate max-w-[180px]">{linkHost(url)}</span>
                     </a>
                   ))}
@@ -879,7 +894,11 @@ function ShoppingView({
     <div className="flex flex-col gap-[18px]">
       {groups.map(({ category, items }) => (
         <div key={category.key} className="flex flex-col gap-[8px]">
-          <SectionHeader emoji={category.emoji} label={category.label} count={items.length} />
+          <SectionHeader
+            icon={<GroceryCategoryIcon category={category.key} className="h-[13px] w-[13px] shrink-0 text-olive-text" />}
+            label={category.label}
+            count={items.length}
+          />
           {items.map((p) => <ShoppingRow key={p.id} p={p} {...rowProps} />)}
         </div>
       ))}
@@ -893,10 +912,10 @@ function ShoppingView({
   )
 }
 
-function SectionHeader({ emoji, label, count }: { emoji?: string; label: string; count: number }) {
+function SectionHeader({ icon, label, count }: { icon?: ReactNode; label: string; count: number }) {
   return (
     <div className="flex items-center gap-2 px-[2px]">
-      {emoji && <span className="text-[13px] leading-none">{emoji}</span>}
+      {icon}
       <span className={COL}>{label}</span>
       <span className="text-[11px] text-muted-2">· {count}</span>
     </div>
@@ -932,13 +951,17 @@ function ShoppingRow({
           <span className={`text-[14.5px] ${p.checked ? 'text-muted line-through' : 'text-ink font-medium'}`}>{p.name}</span>
           <Qty p={p} />
         </span>
-        {ml && <span className="mt-0.5 block text-[11px] text-muted">🍽️ {ml}</span>}
+        {ml && (
+          <span className="mt-0.5 flex items-center gap-1 text-[11px] text-muted">
+            <UtensilsIcon className="h-[10px] w-[10px] shrink-0" /> {ml}
+          </span>
+        )}
       </button>
       <button onClick={() => setEditing(true)} aria-label="Modifier le produit"
-        className={`${ICON_BTN} hover:text-olive hover:bg-soft`}>✎</button>
+        className={`${ICON_BTN} hover:text-olive hover:bg-soft`}><PencilIcon className="h-[15px] w-[15px]" /></button>
       <ConfirmButton onConfirm={() => onDelete(p.id)} confirmLabel="Retirer ?"
         ariaLabel="Supprimer le produit"
-        className={`${ICON_BTN} hover:text-prune hover:bg-soft`}>🗑</ConfirmButton>
+        className={`${ICON_BTN} hover:text-prune hover:bg-soft`}><TrashIcon className="h-[15px] w-[15px]" /></ConfirmButton>
     </div>
   )
 }
@@ -1170,11 +1193,14 @@ function AddForm({
         <h3 className="font-serif text-[20px] text-ink">Ajouter un ingrédient</h3>
       ) : (
         <div className="bg-track rounded-[13px] p-[5px] flex gap-[4px]">
-          {([['product', '🛒 Produit'], ['meal', '🍽️ Repas']] as const).map(([t, label]) => (
+          {([['product', 'Produit'], ['meal', 'Repas']] as const).map(([t, label]) => (
             <button type="button" key={t} onClick={() => setMode(t)}
-              className={`flex-1 text-center rounded-[9px] py-[9px] text-[13px] transition-colors ${
+              className={`flex-1 inline-flex items-center justify-center gap-[6px] rounded-[9px] py-[9px] text-[13px] transition-colors ${
                 mode === t ? 'bg-ink text-white font-bold' : 'text-faint'
               }`}>
+              {t === 'product'
+                ? <BasketIcon className="h-[13px] w-[13px] shrink-0" />
+                : <UtensilsIcon className="h-[13px] w-[13px] shrink-0" />}
               {label}
             </button>
           ))}
@@ -1184,19 +1210,19 @@ function AddForm({
       {mode === 'meal' && (
         <div className="flex flex-col gap-3">
           {locked ? (
-            <span className="self-start rounded-full bg-olive-soft px-[11px] py-[5px] text-[12.5px] font-semibold text-olive-text-dk">
-              📅 {formatDayLabel(lockedDate!)}
+            <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-olive-soft px-[11px] py-[5px] text-[12.5px] font-semibold text-olive-text-dk">
+              <CalendarIcon className="h-[11px] w-[11px] shrink-0" /> {formatDayLabel(lockedDate!)}
             </span>
           ) : eventDays.length > 0 ? (
             <div>
               <div className="flex items-center gap-2">
                 <button type="button" onClick={() => setShowCal((s) => !s)}
-                  className={`rounded-full px-[11px] py-[5px] text-[12.5px] font-semibold transition-colors ${
+                  className={`inline-flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-[12.5px] font-semibold transition-colors ${
                     mealDate
                       ? 'bg-olive-soft text-olive-text-dk'
                       : 'border-[1.5px] border-dashed border-[var(--color-dashed)] text-muted'
                   }`}>
-                  📅 {mealDate ? formatDayLabel(mealDate) : 'Choisir un jour'}
+                  <CalendarIcon className="h-[11px] w-[11px] shrink-0" /> {mealDate ? formatDayLabel(mealDate) : 'Choisir un jour'}
                 </button>
                 {mealDate && (
                   <button type="button" onClick={() => { setMealDate(null); setShowCal(false) }}
@@ -1218,12 +1244,15 @@ function AddForm({
 
           {/* Maison (ingrédients) vs restaurant (liens). */}
           <div className="bg-track rounded-[13px] p-[5px] flex gap-[4px]">
-            {([[false, '🏠 Maison'], [true, '🍴 Au restaurant']] as const).map(([val, label]) => (
+            {([[false, 'Maison'], [true, 'Au restaurant']] as const).map(([val, label]) => (
               <button type="button" key={label}
                 onClick={() => { setIsRestaurant(val); if (val && links.length === 0) setLinks(['']) }}
-                className={`flex-1 text-center rounded-[9px] py-[9px] text-[13px] transition-colors ${
+                className={`flex-1 inline-flex items-center justify-center gap-[6px] rounded-[9px] py-[9px] text-[13px] transition-colors ${
                   isRestaurant === val ? 'bg-ink text-white font-bold' : 'text-faint'
                 }`}>
+                {val
+                  ? <UtensilsIcon className="h-[13px] w-[13px] shrink-0" />
+                  : <HomeIcon className="h-[13px] w-[13px] shrink-0" />}
                 {label}
               </button>
             ))}
@@ -1232,8 +1261,8 @@ function AddForm({
       )}
 
       {mode === 'product' && targetMeal && (
-        <span className="self-start rounded-full bg-soft px-[11px] py-[5px] text-[12.5px] font-medium text-body">
-          🍽️ Pour {targetMeal.label}
+        <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-soft px-[11px] py-[5px] text-[12.5px] font-medium text-body">
+          <UtensilsIcon className="h-[11px] w-[11px] shrink-0" /> Pour {targetMeal.label}
         </span>
       )}
 
@@ -1336,7 +1365,7 @@ function EditMealForm({ label, isRestaurant, initialLinks, ingredients, onCancel
                   onQty={(v) => setEdit(p.id, { qty: v })} onUnit={(v) => setEdit(p.id, { unit: v })} />
                 <button type="button" onClick={() => setRemoved((s) => new Set(s).add(p.id))}
                   aria-label={`Retirer ${p.name}`}
-                  className={`${ICON_BTN} hover:text-prune hover:bg-card`}>🗑</button>
+                  className={`${ICON_BTN} hover:text-prune hover:bg-card`}><TrashIcon className="h-[15px] w-[15px]" /></button>
               </div>
             )
           })}

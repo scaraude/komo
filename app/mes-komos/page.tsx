@@ -4,10 +4,7 @@ import { getUserId } from '@/lib/auth'
 import { formatEventDates } from '@/lib/format'
 import { FeedbackButton } from '@/components/feedback/FeedbackButton'
 import { AppHeader } from '@/components/layout/AppHeader'
-
-const VIBE_EMOJI: Record<string, string> = {
-  weekend: '🏔️', soiree: '🎉', concert: '🎸', road_trip: '🚗', sport: '⚽', autre: '✨',
-}
+import { EventTypeIcon, MapIcon } from '@/components/ui/icons'
 
 export default async function MesKomosPage() {
   const userId = await getUserId()
@@ -43,7 +40,7 @@ export default async function MesKomosPage() {
 
       {events.length === 0 ? (
         <div className="rounded-[20px] border-[1.5px] border-dashed border-[var(--color-dashed)] bg-soft p-7 text-center">
-          <div className="mb-2 text-[30px]">🗺️</div>
+          <MapIcon className="mx-auto mb-2 h-[30px] w-[30px] text-muted" />
           <p className="mb-1 text-[15px] font-bold text-ink">Aucun Komo pour l&apos;instant</p>
           <p className="mb-5 text-[13.5px] leading-[1.5] text-muted">
             Crée ton premier plan, ou ouvre le lien d&apos;invitation qu&apos;on t&apos;a envoyé.
@@ -71,7 +68,7 @@ export default async function MesKomosPage() {
                 href={`/e/${ev.slug}`}
                 className="flex items-center gap-3 rounded-[18px] border-[1.5px] border-line-2 bg-card p-[15px] shadow-card"
               >
-                <span className="text-[26px]">{VIBE_EMOJI[ev.event_type] ?? '✨'}</span>
+                <EventTypeIcon type={ev.event_type} className="h-[24px] w-[24px] shrink-0 text-terracotta" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[15.5px] font-bold text-ink">{ev.title}</p>
                   <p className="truncate text-[13px] text-muted">

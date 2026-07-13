@@ -18,10 +18,10 @@ import { hhmm } from './format'
 export type TimelineSlot = 'morning' | 'noon' | 'afternoon' | 'evening'
 
 export const SLOT_LABEL: Record<TimelineSlot, string> = {
-  morning: 'Matin ☀️',
+  morning: 'Matin',
   noon: 'Midi',
   afternoon: 'Aprem',
-  evening: 'Soir 🌙',
+  evening: 'Soir',
 }
 
 // Heure pivot de chaque créneau, pour trier les items sans heure parmi les datés.

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import type { Assignment } from '@/lib/transport/solver'
 import { pseudoOf } from '@/lib/participants'
 import type { Participant, Leg } from '@/lib/types'
+import { SparklesIcon } from '@/components/ui/icons'
 
 export function SuggestModal({
   slug,
@@ -54,7 +55,9 @@ export function SuggestModal({
 
   return (
     <Sheet onClose={onClose} labelledBy="suggest-title">
-        <h3 id="suggest-title" className="font-serif text-[22px] text-ink mb-1">✨ Auto-affecter</h3>
+        <h3 id="suggest-title" className="mb-1 flex items-center gap-2 font-serif text-[22px] text-ink">
+          <SparklesIcon className="h-[19px] w-[19px] shrink-0 text-terracotta" /> Auto-affecter
+        </h3>
         <p className="text-[13px] text-muted mb-5">
           Le solveur cherche la meilleure répartition selon les villes de départ.
         </p>

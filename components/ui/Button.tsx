@@ -3,6 +3,7 @@ import type { ButtonHTMLAttributes } from 'react'
 const TONE = {
   terracotta: 'bg-terracotta text-white shadow-[0_4px_0_var(--color-terracotta-dk)]',
   ink: 'bg-ink text-white shadow-[0_4px_0_rgba(0,0,0,0.25)]',
+  olive: 'bg-olive text-white shadow-[0_4px_0_var(--color-olive-text-dk)]',
 } as const
 
 export function Button({

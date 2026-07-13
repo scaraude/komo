@@ -352,6 +352,98 @@ export function PackageIcon({ className }: { className?: string }) {
   )
 }
 
+export function SunIcon({ className }: { className?: string }) {
+  return (
+    <IconBase className={className}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+    </IconBase>
+  )
+}
+
+export function MoonIcon({ className }: { className?: string }) {
+  return (
+    <IconBase className={className}>
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+    </IconBase>
+  )
+}
+
+/** Icône d'un rayon de courses (CategoryKey de lib/meals/category). */
+export function GroceryCategoryIcon({ category, className }: { category: string; className?: string }) {
+  switch (category) {
+    case 'produce': // carotte
+      return (
+        <IconBase className={className}>
+          <path d="M2.3 21.7s9.87-3.5 12.73-6.36a4.5 4.5 0 0 0-6.37-6.37C5.8 11.84 2.3 21.7 2.3 21.7Z" />
+          <path d="M22 9s-1.33-2-3.5-2C16.86 7 15 9 15 9s1.33 2 3.5 2S22 9 22 9Z" />
+          <path d="M15 2s-2 1.33-2 3.5S15 9 15 9s2-1.84 2-3.5C17 3.33 15 2 15 2Z" />
+        </IconBase>
+      )
+    case 'butchery': // pilon
+      return (
+        <IconBase className={className}>
+          <path d="M15.4 15.63a7.875 6 135 1 1 6.23-6.23 4.5 3.43 135 0 0-6.23 6.23" />
+          <path d="m8.29 12.71-2.6 2.6a2.5 2.5 0 1 0-1.65 4.65A2.5 2.5 0 1 0 8.7 18.3l2.59-2.59" />
+        </IconBase>
+      )
+    case 'dairy': // brique de lait
+      return (
+        <IconBase className={className}>
+          <path d="M8 2h8" />
+          <path d="M9 2v2.79a4 4 0 0 1-.67 2.22l-.66.98A4 4 0 0 0 7 10.21V20a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-9.79a4 4 0 0 0-.67-2.22l-.66-.98A4 4 0 0 1 15 4.79V2" />
+          <path d="M7 15a6.47 6.47 0 0 1 5 0 6.47 6.47 0 0 0 5 0" />
+        </IconBase>
+      )
+    case 'bakery': // miche de pain
+      return (
+        <IconBase className={className}>
+          <path d="M4 11c0-3.3 3.6-6 8-6s8 2.7 8 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" />
+          <path d="M9 8.5v3M12 8v3M15 8.5v3" />
+        </IconBase>
+      )
+    case 'grocery_savory': // conserve
+      return (
+        <IconBase className={className}>
+          <ellipse cx="12" cy="5.5" rx="7" ry="2.5" />
+          <path d="M5 5.5v13c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-13" />
+        </IconBase>
+      )
+    case 'grocery_sweet': // cookie
+      return (
+        <IconBase className={className}>
+          <path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5" />
+          <path d="M8.5 8.5v.01M16 15.5v.01M12 12v.01M11 17v.01M7 14v.01" />
+        </IconBase>
+      )
+    case 'frozen': // flocon
+      return (
+        <IconBase className={className}>
+          <path d="M2 12h20M12 2v20" />
+          <path d="m20 16-4-4 4-4M4 8l4 4-4 4M16 4l-4 4-4-4M8 20l4-4 4 4" />
+        </IconBase>
+      )
+    case 'drinks': // gobelet + paille
+      return (
+        <IconBase className={className}>
+          <path d="m6 8 1.75 12.28a2 2 0 0 0 2 1.72h4.54a2 2 0 0 0 2-1.72L18 8" />
+          <path d="M5 8h14" />
+          <path d="m12 8 1-6h2" />
+        </IconBase>
+      )
+    case 'household': // seau
+      return (
+        <IconBase className={className}>
+          <path d="M4 7h16" />
+          <path d="m5 7 1.7 12.1a2 2 0 0 0 2 1.9h6.6a2 2 0 0 0 2-1.9L19 7" />
+          <path d="M7 7c0-1.7 2.2-3 5-3s5 1.3 5 3" />
+        </IconBase>
+      )
+    default:
+      return <BasketIcon className={className} />
+  }
+}
+
 /** Icône d'un type d'event (weekend, soiree, concert, road_trip, sport, autre). */
 export function EventTypeIcon({ type, className }: { type: string; className?: string }) {
   switch (type) {

@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/Button'
 import { Logo } from '@/components/ui/Logo'
 import { MesKomosLink } from './MesKomosLink'
 import { DestinationField } from './DestinationField'
+import { EventTypeIcon, CalendarIcon } from '@/components/ui/icons'
 
 const VIBES = [
-  { value: 'weekend', label: '🏔️ Week-end' },
-  { value: 'soiree', label: '🎉 Soirée' },
-  { value: 'concert', label: '🎸 Concert' },
-  { value: 'road_trip', label: '🚗 Road trip' },
-  { value: 'sport', label: '⚽ Sport' },
+  { value: 'weekend', label: 'Week-end' },
+  { value: 'soiree', label: 'Soirée' },
+  { value: 'concert', label: 'Concert' },
+  { value: 'road_trip', label: 'Road trip' },
+  { value: 'sport', label: 'Sport' },
 ] as const
 
 export function LandingForm({
@@ -100,8 +101,9 @@ export function LandingForm({
         </button>
       </div>
       {pollMode ? (
-        <div className="mb-[18px] rounded-[15px] border-[1.5px] border-dashed border-terracotta bg-terracotta-soft px-4 py-[14px] text-[13.5px] font-medium leading-[1.45] text-terracotta-dk">
-          📅 On vote pour les dates — chacun coche ce qui l&apos;arrange, tu fixeras la meilleure.
+        <div className="mb-[18px] flex items-start gap-[8px] rounded-[15px] border-[1.5px] border-dashed border-terracotta bg-terracotta-soft px-4 py-[14px] text-[13.5px] font-medium leading-[1.45] text-terracotta-dk">
+          <CalendarIcon className="mt-[2px] h-[14px] w-[14px] shrink-0" />
+          <span>On vote pour les dates — chacun coche ce qui l&apos;arrange, tu fixeras la meilleure.</span>
           <input type="hidden" name="poll" value="1" />
         </div>
       ) : (
@@ -124,12 +126,13 @@ export function LandingForm({
               type="button"
               key={v.value}
               onClick={() => setVibe(active ? null : v.value)}
-              className={`rounded-[22px] border-[1.5px] px-[15px] py-[10px] text-[13.5px] transition-all ${
+              className={`inline-flex items-center gap-[6px] rounded-[22px] border-[1.5px] px-[15px] py-[10px] text-[13.5px] transition-all ${
                 active
                   ? 'border-ink bg-ink font-bold text-white'
                   : 'border-line bg-card text-body'
               }`}
             >
+              <EventTypeIcon type={v.value} className="h-[14px] w-[14px] shrink-0" />
               {v.label}
             </button>
           )
@@ -170,7 +173,7 @@ export function LandingForm({
 function DateField({ name }: { name: string }) {
   return (
     <label className="flex flex-1 items-center gap-2 rounded-[15px] border-[1.5px] border-line bg-card px-[15px] py-[14px] text-[15px] text-ink focus-within:border-terracotta">
-      <span className="text-[15px]">📅</span>
+      <CalendarIcon className="h-[15px] w-[15px] shrink-0 text-muted" />
       <input
         name={name}
         type="date"

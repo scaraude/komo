@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { DashedAddButton } from '@/components/ui/DashedAddButton'
 import { countVotes, hasVote, toggleVote } from '@/lib/votes'
 import { Card } from '@/components/ui/Card'
+import { HomeIcon } from '@/components/ui/icons'
 
 export function AccommodationSection({
   slug,
@@ -51,8 +52,8 @@ export function AccommodationSection({
 
   return (
     <div className="mt-10 pt-8 border-t border-line">
-      <h3 className="text-sm font-bold uppercase tracking-wider text-muted mb-4">
-        🏠 Logement
+      <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-muted mb-4">
+        <HomeIcon className="h-[14px] w-[14px] shrink-0" /> Logement
       </h3>
 
       <div className="flex flex-col gap-3 mb-4">

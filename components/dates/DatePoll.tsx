@@ -10,12 +10,15 @@ import { ConfirmButton } from '@/components/ui/ConfirmButton'
 import { DashedAddButton } from '@/components/ui/DashedAddButton'
 import { Avatar } from '@/components/ui/Avatar'
 import { Card } from '@/components/ui/Card'
+import { Sheet } from '@/components/ui/Sheet'
 import { ProposalCalendar, type CalendarProposal } from './ProposalCalendar'
 import { FixCelebration } from './FixCelebration'
 import { countVotes, hasVote, toggleVote } from '@/lib/votes'
+import { TrashIcon } from '@/components/ui/icons'
 
-/** Couleurs des bandeaux et des avatars — déclinaisons de la charte KOMO
- *  (rouge, lavande sombre, orange vif, olive, prune, ocre). */
+/** Couleurs des avatars du crew — déclinaisons de la charte KOMO
+ *  (rouge, lavande sombre, orange vif, olive, prune, ocre). Les bandeaux du
+ *  calendrier, eux, sont monochromes (heat map de votes). */
 const CREW_COLORS = ['#df402a', '#7c68b0', '#fe7a5d', '#5f7a3e', '#9a5a6e', '#c99b2e'] as const
 
 type Member = { id: string; pseudo: string }
@@ -42,6 +45,8 @@ export function DatePoll({
   const [adding, setAdding] = useState(initialProposals.length === 0)
   const [range, setRange] = useState<Period | null>(null)
   const [fixedPeriod, setFixedPeriod] = useState<Period | null>(null)
+  // « Valider ces dates » demande confirmation : fixer supprime les autres créneaux.
+  const [confirmingFix, setConfirmingFix] = useState(false)
   const [, startTransition] = useTransition()
 
   const totalParticipants = participants.length
@@ -58,13 +63,12 @@ export function DatePoll({
     return member.id === participantId ? 'Toi' : member.pseudo
   }
 
-  const calendarProposals: CalendarProposal[] = sorted.map((proposal, index) => {
+  const calendarProposals: CalendarProposal[] = sorted.map((proposal) => {
     const count = countVotes(proposal.votes)
     return {
       id: proposal.id,
       start: proposal.start_date,
       end: proposal.end_date,
-      color: CREW_COLORS[index % CREW_COLORS.length] ?? '#df402a',
       intensity: totalParticipants > 0 ? count / totalParticipants : 0,
       label: `${count}/${totalParticipants}`,
       ariaLabel: `${formatPeriod({ start: proposal.start_date, end: proposal.end_date })}, ${count} sur ${totalParticipants} peuvent`,
@@ -192,6 +196,15 @@ export function DatePoll({
         </p>
       )}
 
+      {!adding && (
+        <DashedAddButton
+          onClick={() => { setAdding(true); setRange(null); setSelectedId(null) }}
+          className="mb-3 w-full rounded-[18px] py-3 text-sm"
+        >
+          + Proposer un créneau
+        </DashedAddButton>
+      )}
+
       <ProposalCalendar
         proposals={calendarProposals}
         onProposalClick={(id) => setSelectedId((previous) => (previous === id ? null : id))}
@@ -247,7 +260,7 @@ export function DatePoll({
                 confirmLabel="Supprimer ?"
                 className="flex h-9 w-9 items-center justify-center rounded-[11px] text-[17px] text-muted transition-colors hover:bg-soft hover:text-prune"
               >
-                🗑
+                <TrashIcon className="h-[16px] w-[16px]" />
               </ConfirmButton>
             )}
           </div>
@@ -283,12 +296,6 @@ export function DatePoll({
           >
             {hasVote(selectedProposal.votes, participantId) ? '✓ Je peux' : 'Je peux ces dates'}
           </button>
-
-          {isCreator && (
-            <Button onClick={() => handleFix(selectedProposal)} className="mt-2 w-full rounded-[13px] px-4 py-3 text-sm">
-              ✓ Choisir ces dates
-            </Button>
-          )}
         </Card>
       ) : (
         <p className="mt-3 text-center text-[13px] text-muted">
@@ -296,13 +303,52 @@ export function DatePoll({
         </p>
       )}
 
-      {!adding && (
-        <DashedAddButton
-          onClick={() => { setAdding(true); setRange(null); setSelectedId(null) }}
-          className="mt-3 w-full rounded-[18px] py-3 text-sm"
-        >
-          + Proposer un créneau
-        </DashedAddButton>
+      {/* CTA du créateur, toujours à l'écran : grisé tant qu'aucun créneau
+          n'est sélectionné, il s'allume dès qu'on en tape un. */}
+      {isCreator && !adding && sorted.length > 0 && !fixedPeriod && (
+        <div className="sticky bottom-[14px] mt-4">
+          <Button
+            tone="olive"
+            onClick={() => selectedProposal && setConfirmingFix(true)}
+            disabled={!selectedProposal}
+            className="w-full rounded-[15px] px-4 py-[14px] text-[15px]"
+          >
+            {selectedProposal
+              ? `✓ Valider ${formatPeriod({ start: selectedProposal.start_date, end: selectedProposal.end_date })}`
+              : 'Valider ces dates'}
+          </Button>
+        </div>
+      )}
+
+      {confirmingFix && selectedProposal && (
+        <Sheet onClose={() => setConfirmingFix(false)} labelledBy="fix-confirm-title">
+          <h3 id="fix-confirm-title" className="font-serif text-[22px] text-ink">
+            Sûr de toi&nbsp;?
+          </h3>
+          <p className="mt-2 text-[15px] text-body">On part là-dessus&nbsp;:</p>
+          <p className="mt-1 font-serif text-[19px] font-semibold text-ink">
+            {formatPeriod({ start: selectedProposal.start_date, end: selectedProposal.end_date })}
+          </p>
+          <p className="mt-3 text-[13px] text-muted">
+            Les autres créneaux proposés et les votes seront supprimés.
+          </p>
+          <div className="mt-5 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirmingFix(false)}
+              className="rounded-[15px] px-4 py-[14px] font-semibold text-muted transition-colors hover:text-ink"
+            >
+              Pas encore
+            </button>
+            <Button
+              tone="olive"
+              onClick={() => { setConfirmingFix(false); handleFix(selectedProposal) }}
+              className="flex-1 rounded-[15px] p-[14px]"
+            >
+              ✓ On part&nbsp;!
+            </Button>
+          </div>
+        </Sheet>
       )}
 
       {fixedPeriod && <FixCelebration period={fixedPeriod} slug={slug} />}

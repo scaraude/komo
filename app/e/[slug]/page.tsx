@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { getUserId } from '@/lib/auth'
 import { PresenceToggle } from '@/components/presence/PresenceToggle'
 import { PartialPresence } from '@/components/presence/PartialPresence'
-import { DeadlineBar } from '@/components/presence/DeadlineBar'
 import { LiveCounter } from '@/components/presence/LiveCounter'
 import { PresenceCycle } from '@/components/presence/PresenceCycle'
 import { TransportPanel } from '@/components/transport/TransportPanel'
@@ -22,7 +21,9 @@ import { ParticipantsBadge } from './ParticipantsBadge'
 import { FeedbackButton } from '@/components/feedback/FeedbackButton'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { PlaceLink } from '@/components/ui/PlaceLink'
+import { CompassIcon, CalendarIcon, UsersIcon, CarIcon, BasketIcon, TicketIcon } from '@/components/ui/icons'
 import type { Participant } from '@/lib/types'
+import type { ReactNode } from 'react'
 
 const EVENT_TYPE_WORDING = {
   weekend:  { eyebrow: 'Komo · week-end',  presenceQ: 'Tu viens ?' },
@@ -31,15 +32,6 @@ const EVENT_TYPE_WORDING = {
   road_trip:{ eyebrow: 'Komo · road trip', presenceQ: 'T\'embarques ?' },
   sport:    { eyebrow: 'Komo · sport',     presenceQ: 'Tu joues ?' },
   autre:    { eyebrow: 'Komo · ton event', presenceQ: 'Tu es là ?' },
-} as const
-
-const VIBE = {
-  weekend:   { emoji: '🏔️', label: 'WEEK-END' },
-  soiree:    { emoji: '🎉', label: 'SOIRÉE' },
-  concert:   { emoji: '🎸', label: 'CONCERT' },
-  road_trip: { emoji: '🚗', label: 'ROAD TRIP' },
-  sport:     { emoji: '⚽', label: 'SPORT' },
-  autre:     { emoji: '✨', label: 'EVENT' },
 } as const
 
 const MODULE_TABS = new Set(['presence', 'dates', 'transport', 'bouffe', 'activites', 'fil'])
@@ -106,11 +98,8 @@ export default async function EventPage({
   // Créateur de l'event : sert à la sheet membres (bloque « Quitter le Komo »).
   const isCreator = event.created_by === userId
   const wording = EVENT_TYPE_WORDING[event.event_type as keyof typeof EVENT_TYPE_WORDING] ?? EVENT_TYPE_WORDING.autre
-  const vibe = VIBE[event.event_type as keyof typeof VIBE] ?? VIBE.autre
 
-  const pendingCount = participants.filter((p) => !p.presence_status).length
 
-  const presenceTabName = isPoll ? 'dates' : 'presence'
   // Le fil a besoin de vraies dates : tant que l'event est un sondage, retour au hub.
   const activeTab = tab && MODULE_TABS.has(tab) && !(tab === 'fil' && isPoll) ? tab : null
   const showHub = activeTab === null
@@ -139,20 +128,16 @@ export default async function EventPage({
 
         {/* Hero */}
         <div className="mb-[14px] rounded-[24px] bg-ink p-[22px] text-on-dark">
-          <div className="mb-[10px] text-[11px] font-bold uppercase tracking-[1px] text-terracotta">
-            {vibe.emoji} {vibe.label}
-          </div>
           <h1 className="font-serif text-[27px] leading-[1.1] text-on-dark">{event.title}</h1>
           <div className="mt-[7px] text-[13px] text-on-dark-2">
-            {isPoll ? 'Dates à définir' : formatEventDates(event.date_start, event.date_end)}
-            {event.destination ? (
-              <>
-                {' · '}
+            <div>{isPoll ? 'Dates à définir' : formatEventDates(event.date_start, event.date_end)}</div>
+            {event.destination && (
+              <div className="mt-[2px]">
                 <PlaceLink query={event.destination} className="underline decoration-dotted underline-offset-2 decoration-on-dark-2 hover:decoration-on-dark">
                   {event.destination}
                 </PlaceLink>
-              </>
-            ) : ''}
+              </div>
+            )}
           </div>
           <ParticipantsBadge
             slug={slug}
@@ -163,19 +148,6 @@ export default async function EventPage({
           />
         </div>
 
-        {/* Pill de statut — seulement tant que la présence n'a jamais été déclarée */}
-        {!participant.presence_status && (
-          <Link
-            href={`?tab=${presenceTabName}`}
-            className="mb-[14px] flex items-center justify-between rounded-[16px] border-[1.5px] border-terracotta-line bg-terracotta-soft px-4 py-[14px]"
-          >
-            <span className="text-[14.5px] text-ink">
-              Tu viens&nbsp;? <b>Dis-le aux potes</b>
-            </span>
-            <span className="text-[13px] font-bold text-terracotta">déclarer ›</span>
-          </Link>
-        )}
-
         {/* Le fil du séjour — vue chronologique transverse (events datés seulement) */}
         {!isPoll && (
           <Link
@@ -183,7 +155,7 @@ export default async function EventPage({
             className="mb-[12px] flex items-center justify-between rounded-[19px] border-[1.5px] border-line-2 bg-card p-[17px] shadow-card"
           >
             <div className="flex items-center gap-[13px]">
-              <span className="text-[23px]">🧭</span>
+              <CompassIcon className="h-[23px] w-[23px] shrink-0 text-terracotta" />
               <div>
                 <div className="text-[15px] font-bold text-ink">Le fil du séjour</div>
                 <div className="text-[12.5px] text-muted">
@@ -200,17 +172,17 @@ export default async function EventPage({
         {/* Grille modules 2×2 */}
         <div className="mb-[18px] grid grid-cols-2 gap-[12px]">
           {isPoll ? (
-            <ModuleTile href="?tab=dates" emoji="📅" title="Dates"
+            <ModuleTile href="?tab=dates" icon={<CalendarIcon className="h-[23px] w-[23px]" />} title="Dates"
               subtitle={`${dateProposalCount} proposition${dateProposalCount > 1 ? 's' : ''}`} />
           ) : (
-            <ModuleTile href="?tab=presence" emoji="👥" title="Présence"
+            <ModuleTile href="?tab=presence" icon={<UsersIcon className="h-[23px] w-[23px]" />} title="Présence"
               subtitle={`${hotCount} chaud${hotCount > 1 ? 's' : ''} · ${maybeCount} hésite${maybeCount > 1 ? 'nt' : ''}`} />
           )}
-          <ModuleTile href="?tab=transport" emoji="🚗" title="Transport"
+          <ModuleTile href="?tab=transport" icon={<CarIcon className="h-[23px] w-[23px]" />} title="Transport" locked={isPoll}
             subtitle={freeSeats > 0 ? `${freeSeats} place${freeSeats > 1 ? 's' : ''} libre${freeSeats > 1 ? 's' : ''}` : 'à organiser'} />
-          <ModuleTile href="?tab=bouffe" emoji="🛒" title="Bouffe"
+          <ModuleTile href="?tab=bouffe" icon={<BasketIcon className="h-[23px] w-[23px]" />} title="Bouffe" locked={isPoll}
             subtitle={groceryCount > 0 ? `${groceryCount} produit${groceryCount > 1 ? 's' : ''}` : 'rien encore'} />
-          <ModuleTile href="?tab=activites" emoji="🎟️" title="Activités"
+          <ModuleTile href="?tab=activites" icon={<TicketIcon className="h-[23px] w-[23px]" />} title="Activités" locked={isPoll}
             subtitle={activityCount > 0 ? `${activityCount} activité${activityCount > 1 ? 's' : ''}` : 'rien encore'} />
           <ExpensesTile slug={slug} initialUrl={event.tricount_url} canEdit />
         </div>
@@ -250,13 +222,6 @@ export default async function EventPage({
       {activeTab === 'presence' && (
         <section>
           <h1 className="mb-[18px] font-serif text-[30px] text-ink">{wording.presenceQ}</h1>
-
-          {!isPoll && <DeadlineBar
-            slug={slug}
-            deadline={event.presence_deadline}
-            pendingCount={pendingCount}
-            isCreator={isAdmin}
-          />}
 
           <PresenceToggle
             slug={slug}
@@ -406,16 +371,34 @@ export default async function EventPage({
 }
 
 function ModuleTile({
-  href, emoji, title, subtitle,
+  href, icon, title, subtitle, locked = false,
 }: {
-  href: string; emoji: string; title: string; subtitle: string
+  href: string; icon: ReactNode; title: string; subtitle: string
+  /** Tant que les dates ne sont pas fixées, la tuile est inerte. */
+  locked?: boolean
 }) {
+  if (locked) {
+    return (
+      <div
+        aria-disabled="true"
+        className="flex h-[94px] flex-col justify-between rounded-[19px] border-[1.5px] border-line-2 bg-card p-[17px]"
+      >
+        <div className="text-disabled">{icon}</div>
+        <div>
+          <div className="text-[15px] font-bold text-disabled">{title}</div>
+          <div className="text-[11px] font-bold leading-[1.25] text-terracotta">
+            nous faut une date d&apos;abord
+          </div>
+        </div>
+      </div>
+    )
+  }
   return (
     <Link
       href={href}
       className="flex h-[94px] flex-col justify-between rounded-[19px] border-[1.5px] border-line-2 bg-card p-[17px] shadow-card"
     >
-      <div className="text-[23px]">{emoji}</div>
+      <div className="text-terracotta">{icon}</div>
       <div>
         <div className="text-[15px] font-bold text-ink">{title}</div>
         <div className="text-[12.5px] text-muted">{subtitle}</div>

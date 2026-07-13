@@ -50,9 +50,10 @@
 
   /* Texte */
   --color-body: #5c574e;           /* corps */
-  --color-muted: #9a907f;          /* sourdine */
-  --color-muted-2: #a59c8c;        /* labels */
-  --color-faint: #8a8276;          /* sous-titres */
+  /* Gris sourdine : ≥ 4.5:1 (WCAG AA) sur card, paper et soft. */
+  --color-muted: #736b5d;          /* sourdine */
+  --color-muted-2: #716b5f;        /* labels */
+  --color-faint: #6e685c;          /* sous-titres */
   --color-disabled: #b2a895;       /* désactivé */
   --color-disabled-2: #cfc6b6;     /* hors-fenêtre calendrier */
 

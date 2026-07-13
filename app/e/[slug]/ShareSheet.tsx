@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Sheet } from '@/components/ui/Sheet'
 import { Button } from '@/components/ui/Button'
+import { LinkIcon } from '@/components/ui/icons'
 
 export function ShareSheet({ slug, title }: { slug: string; title: string }) {
   const [open, setOpen] = useState(false)
@@ -28,7 +29,9 @@ export function ShareSheet({ slug, title }: { slug: string; title: string }) {
   return (
     <>
       <Button type="button" tone="ink" onClick={() => setOpen(true)} className="w-full rounded-[17px] p-[17px] text-[15px]">
-        🔗 Partager le lien
+        <span className="inline-flex items-center justify-center gap-2">
+          <LinkIcon className="h-[17px] w-[17px]" /> Partager le lien
+        </span>
       </Button>
 
       {open && (

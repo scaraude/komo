@@ -51,15 +51,6 @@ export async function createEvent(formData: FormData) {
   redirect(`/e/${slug}/join`)
 }
 
-export async function updateDeadline(slug: string, deadline: string) {
-  // Authz déléguée à la RLS (events_update_creator : created_by = auth.uid()).
-  const supabase = await createClient()
-  await supabase
-    .from('events')
-    .update({ presence_deadline: deadline || null })
-    .eq('slug', slug)
-}
-
 // Lien Tricount / cagnotte de l'event (URL de partage collée par un membre).
 // Authz déléguée à la RPC set_event_tricount_url (tout membre de l'event, via
 // is_event_member). Chaîne vide → on efface. Renvoie { ok } pour que l'UI

@@ -12,6 +12,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { ConfirmButton } from '@/components/ui/ConfirmButton'
 import { useUndo } from '@/components/ui/undo'
 import { formatDayLabel } from '@/lib/calendar'
+import { CalendarIcon, ClockIcon, UsersIcon, PencilIcon } from '@/components/ui/icons'
 
 type Person = { id: string; pseudo: string }
 
@@ -363,8 +364,16 @@ function ActivityCard({
         <div className="min-w-0 flex-1">
           <p className="text-[15px] font-bold text-ink">{activity.label}</p>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs text-muted">
-            {date && <span>📅 {date}{time ? ` · ${time}` : ''}</span>}
-            {!date && time && <span>🕐 {time}</span>}
+            {date && (
+              <span className="inline-flex items-center gap-1">
+                <CalendarIcon className="h-[11px] w-[11px] shrink-0" /> {date}{time ? ` · ${time}` : ''}
+              </span>
+            )}
+            {!date && time && (
+              <span className="inline-flex items-center gap-1">
+                <ClockIcon className="h-[11px] w-[11px] shrink-0" /> {time}
+              </span>
+            )}
             {priced && <span className="font-semibold text-ink">{priceTypeLabel(activity)}</span>}
           </div>
           {activity.comment && (
@@ -373,8 +382,8 @@ function ActivityCard({
         </div>
         <div className="flex shrink-0 items-center gap-2.5">
           {canEdit && (
-            <button onClick={onEdit} className="text-xs text-muted transition-colors hover:text-olive" aria-label="Modifier l'activité" title="Modifier">
-              ✎
+            <button onClick={onEdit} className="text-muted transition-colors hover:text-olive" aria-label="Modifier l'activité" title="Modifier">
+              <PencilIcon className="h-[13px] w-[13px]" />
             </button>
           )}
           {canDelete && (
@@ -420,7 +429,11 @@ function ActivityCard({
             ))}
           </div>
         )}
-        {groupMsg && <p className="mt-2 text-xs text-muted">👥 {groupMsg}</p>}
+        {groupMsg && (
+          <p className="mt-2 flex items-center gap-1 text-xs text-muted">
+            <UsersIcon className="h-[11px] w-[11px] shrink-0" /> {groupMsg}
+          </p>
+        )}
       </div>
 
       {/* Simulateur de coût */}

@@ -16,6 +16,7 @@ import { joinLeg, leaveLeg, moveOccupant } from '@/lib/actions/transport'
 import { randomId } from '@/lib/uuid'
 import { pseudoOf as resolvePseudo, needsTransport } from '@/lib/participants'
 import type { Leg, Occupant, Participant } from '@/lib/types'
+import { SparklesIcon } from '@/components/ui/icons'
 
 // useSyncExternalStore sans mises à jour : false au SSR + à l'hydratation, true
 // ensuite côté client. @dnd-kit génère ses ids via un compteur module → on ne
@@ -183,7 +184,7 @@ export function TransportPanel({
           aria-label="Auto-affecter les trajets"
           title="Auto-affecter"
           className="px-[18px] bg-card border-[1.5px] border-line-3 rounded-[18px] font-bold text-ink hover:bg-soft transition-colors">
-          ✨
+          <SparklesIcon className="h-[17px] w-[17px] text-terracotta" />
         </button>
       )}
     </div>

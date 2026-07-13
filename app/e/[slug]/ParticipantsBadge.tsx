@@ -11,6 +11,7 @@ import {
   leaveEvent,
 } from '@/lib/actions/participants'
 import { randomId } from '@/lib/uuid'
+import { TrashIcon } from '@/components/ui/icons'
 
 // Palette d'avatars alignée sur la charte KOMO (teintes assez foncées pour
 // garder le contraste avec l'initiale blanche), avec un accent froid pour la
@@ -188,7 +189,7 @@ export function ParticipantsBadge({
                         ariaLabel={`Supprimer ${p.pseudo}`}
                         className="text-[13px] text-muted transition-colors hover:text-prune"
                       >
-                        {checkingId === p.id ? '…' : '🗑'}
+                        {checkingId === p.id ? '…' : <TrashIcon className="h-[14px] w-[14px]" />}
                       </ConfirmButton>
                     </span>
                   )}

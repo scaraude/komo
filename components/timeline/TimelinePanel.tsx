@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react'
 import Link from 'next/link'
 import { Avatar } from '@/components/ui/Avatar'
 import { Sheet } from '@/components/ui/Sheet'
@@ -9,7 +9,20 @@ import { updatePartialDays, updatePresence } from '@/lib/actions/presence'
 import { formatDayLabel, getDaysBetween } from '@/lib/calendar'
 import { formatEventDates, hhmm } from '@/lib/format'
 import { googleMapsUrl } from '@/lib/maps'
-import { MODE_ICON } from '@/lib/transport/modes'
+import {
+  TransportModeIcon,
+  CarIcon,
+  UtensilsIcon,
+  CookingPotIcon,
+  TicketIcon,
+  UsersIcon,
+  FlameIcon,
+  FlagIcon,
+  BeerIcon,
+  MapPinIcon,
+  SunIcon,
+  MoonIcon,
+} from '@/components/ui/icons'
 import {
   buildTimeline,
   classifyDayPresence,
@@ -31,13 +44,15 @@ import type {
 
 type TimelineFilter = 'all' | 'transport' | 'food' | 'activity' | 'presence' | 'mine'
 
-const FILTERS: { key: TimelineFilter; label: string }[] = [
+const FILTER_ICON_CLASS = 'h-[12px] w-[12px] shrink-0'
+
+const FILTERS: { key: TimelineFilter; label: string; icon?: ReactNode }[] = [
   { key: 'all', label: 'Tout' },
-  { key: 'transport', label: '🚗 Transport' },
-  { key: 'food', label: '🍽️ Bouffe' },
-  { key: 'activity', label: '🎟️ Activités' },
-  { key: 'presence', label: '👥 Présence' },
-  { key: 'mine', label: '🔥 Moi' },
+  { key: 'transport', label: 'Transport', icon: <CarIcon className={FILTER_ICON_CLASS} /> },
+  { key: 'food', label: 'Bouffe', icon: <UtensilsIcon className={FILTER_ICON_CLASS} /> },
+  { key: 'activity', label: 'Activités', icon: <TicketIcon className={FILTER_ICON_CLASS} /> },
+  { key: 'presence', label: 'Présence', icon: <UsersIcon className={FILTER_ICON_CLASS} /> },
+  { key: 'mine', label: 'Moi', icon: <FlameIcon className={FILTER_ICON_CLASS} /> },
 ]
 
 // Accents par type d'item — familles de la charte (le transport en encre :
@@ -49,6 +64,12 @@ const ACCENT = {
   apero: { knot: 'border-prune', bar: 'bg-prune', text: 'text-prune', pill: 'bg-prune-soft text-prune' },
   meal: { knot: 'border-olive', bar: 'bg-olive', text: 'text-olive-text', pill: 'bg-olive-soft text-olive-text-dk' },
 } as const
+
+// Petit marqueur du créneau (matin/soir) à côté du label du séparateur.
+const SLOT_ICON: Partial<Record<TimelineSlot, ReactNode>> = {
+  morning: <SunIcon className="h-[11px] w-[11px] shrink-0" />,
+  evening: <MoonIcon className="h-[11px] w-[11px] shrink-0" />,
+}
 
 // formatDayLabel renvoie « ven. 5 juil. » — on ne capitalise que la 1re lettre
 // (la classe CSS `capitalize` mettrait aussi « Juil. » en majuscule).
@@ -65,12 +86,12 @@ function accentOf(item: TimelineItem) {
   return ACCENT[item.kind]
 }
 
-function iconOf(item: TimelineItem): string {
+function iconOf(item: TimelineItem, className: string): ReactNode {
   switch (item.kind) {
-    case 'transport': return MODE_ICON[item.leg.mode] ?? '🚗'
-    case 'arrival': return '👋'
-    case 'activity': return isApero(item.activity.label) ? '🍻' : '🎟️'
-    case 'meal': return item.meal.is_restaurant ? '🍴' : '🍳'
+    case 'transport': return <TransportModeIcon mode={item.leg.mode} className={className} />
+    case 'arrival': return <FlagIcon className={className} />
+    case 'activity': return isApero(item.activity.label) ? <BeerIcon className={className} /> : <TicketIcon className={className} />
+    case 'meal': return item.meal.is_restaurant ? <UtensilsIcon className={className} /> : <CookingPotIcon className={className} />
   }
 }
 
@@ -292,10 +313,11 @@ export function TimelinePanel({
             key={f.key}
             onClick={() => setFilter(f.key)}
             aria-pressed={filter === f.key}
-            className={`shrink-0 rounded-full border-[1.5px] px-3 py-[5px] text-[12px] font-bold transition-colors ${
+            className={`inline-flex shrink-0 items-center gap-[5px] rounded-full border-[1.5px] px-3 py-[5px] text-[12px] font-bold transition-colors ${
               filter === f.key ? 'border-ink bg-ink text-paper' : 'border-line-2 bg-card text-muted'
             }`}
           >
+            {f.icon}
             {f.label}
           </button>
         ))}
@@ -353,8 +375,9 @@ export function TimelinePanel({
                       <div key={item.id}>
                         {isToday && idx === nowIndex && <NowLine label={now.label} />}
                         {showSlot && item.slot && (
-                          <div className="mb-[2px] ml-[64px] mt-[14px] text-[10.5px] font-bold uppercase tracking-[1.6px] text-muted-2">
+                          <div className="mb-[2px] ml-[64px] mt-[14px] flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-[1.6px] text-muted-2">
                             {SLOT_LABEL[item.slot]}
+                            {SLOT_ICON[item.slot]}
                           </div>
                         )}
                         {item.kind === 'arrival' ? (
@@ -759,7 +782,7 @@ function ArrivalFlag({
       <span className="absolute -left-[64px] w-[36px] text-right text-[11px] font-bold tabular-nums text-muted">
         {item.time}
       </span>
-      <span aria-hidden>👋</span>
+      <FlagIcon className="h-[13px] w-[13px] shrink-0" />
       <span className="min-w-0">
         {names.length > 0 ? shown : item.leg.label} arrive{names.length > 1 ? 'nt' : ''}
         {place ? ` · ${place}` : ''}
@@ -836,7 +859,7 @@ function ItemCard({
         </span>
       )}
       <span className="flex items-center gap-2 text-[14px] font-bold text-ink">
-        <span aria-hidden className="text-[15px]">{iconOf(item)}</span>
+        <span aria-hidden className={accent.text}>{iconOf(item, 'h-[15px] w-[15px] shrink-0')}</span>
         <span className="min-w-0 truncate">{title}</span>
       </span>
       {(meta || pills.length > 0) && (
@@ -927,8 +950,9 @@ function ItemSheet({
   return (
     <div>
       <div className={`text-[11px] font-bold uppercase tracking-[1.2px] ${accent.text}`}>{eyebrow}</div>
-      <h2 id="fil-sheet-title" className="mb-[2px] mt-1 font-serif text-[22px] text-ink">
-        {iconOf(item)} {title}
+      <h2 id="fil-sheet-title" className="mb-[2px] mt-1 flex items-center gap-2 font-serif text-[22px] text-ink">
+        <span aria-hidden className={accent.text}>{iconOf(item, 'h-[19px] w-[19px] shrink-0')}</span>
+        <span className="min-w-0">{title}</span>
       </h2>
       <p className="text-[13px] font-semibold text-muted">{metaLine}</p>
 
@@ -966,9 +990,9 @@ function ItemSheet({
           href={googleMapsUrl((item.leg.arrival_city ?? destination)!)}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 block text-[13px] font-bold text-terracotta"
+          className="mt-3 flex items-center gap-1.5 text-[13px] font-bold text-terracotta"
         >
-          📍 Ouvrir dans Maps ↗
+          <MapPinIcon className="h-[13px] w-[13px] shrink-0" /> Ouvrir dans Maps ↗
         </a>
       )}
       {item.kind === 'activity' && item.activity.booking_url && (

@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { Sheet } from '@/components/ui/Sheet'
 import { Button } from '@/components/ui/Button'
 import { sendFeedback } from '@/lib/actions/feedback'
+import { MessageIcon } from '@/components/ui/icons'
 
 /**
  * Point d'entrée feedback : un déclencheur discret + une modale (textarea + Envoyer).
@@ -62,7 +63,11 @@ export function FeedbackButton({
           'mx-auto mt-7 block text-[13px] font-semibold text-muted transition-colors hover:text-terracotta'
         }
       >
-        {children ?? '💬 Un avis sur Komo ?'}
+        {children ?? (
+          <span className="inline-flex items-center gap-1.5">
+            <MessageIcon className="h-[13px] w-[13px] shrink-0" /> Un avis sur Komo ?
+          </span>
+        )}
       </button>
 
       {open && (

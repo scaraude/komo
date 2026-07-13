@@ -3,9 +3,17 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import type { Participant } from '@/lib/types'
 import { Avatar } from '@/components/ui/Avatar'
+import { BackpackIcon, SuitcaseIcon, PackageIcon } from '@/components/ui/icons'
 
-const LUGGAGE_LABELS: Record<string, string> = {
-  light: '🎒', medium: '🧳', large: '🪣',
+const LUGGAGE_ICON_CLASS = 'h-[13px] w-[13px] shrink-0 text-muted'
+
+function LuggageIcon({ size }: { size: string }) {
+  switch (size) {
+    case 'light': return <BackpackIcon className={LUGGAGE_ICON_CLASS} />
+    case 'medium': return <SuitcaseIcon className={LUGGAGE_ICON_CLASS} />
+    case 'large': return <PackageIcon className={LUGGAGE_ICON_CLASS} />
+    default: return null
+  }
 }
 
 export function UnassignedZone({
@@ -64,7 +72,7 @@ function UnassignedChip({ participant: p, draggable }: { participant: Participan
       <Avatar pseudo={p.pseudo} className="h-5 w-5 bg-terracotta text-[11px] text-white" />
       {p.pseudo}
       {p.departure_city && <span className="text-muted text-[12px]">· {p.departure_city}</span>}
-      {p.luggage_size && <span>{LUGGAGE_LABELS[p.luggage_size]}</span>}
+      {p.luggage_size && <LuggageIcon size={p.luggage_size} />}
     </div>
   )
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { PlaceSuggestion } from '@/app/api/places/route'
+import { MapPinIcon } from '@/components/ui/icons'
 
 const DEFAULT_INPUT_CLASS =
   'w-full rounded-[15px] border-[1.5px] border-line bg-card p-4 text-[15px] text-ink outline-none placeholder:text-disabled focus:border-terracotta'
@@ -144,7 +145,7 @@ export function PlaceAutocomplete({
                   active === i ? 'bg-soft text-ink' : 'text-body'
                 } ${i > 0 ? 'border-t border-line-2' : ''}`}
               >
-                <span className="shrink-0">📍</span>
+                <MapPinIcon className="h-[14px] w-[14px] shrink-0 text-muted" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[14px]">{p.line1}</span>
                   {p.line2 && <span className="block truncate text-[12px] text-faint">{p.line2}</span>}

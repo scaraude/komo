@@ -23,10 +23,6 @@ export function linkKind(url: string): 'maps' | 'web' {
   return isMaps ? 'maps' : 'web'
 }
 
-export function linkIcon(url: string): string {
-  return linkKind(url) === 'maps' ? '📍' : '🔗'
-}
-
 // Hôte nettoyé (sans « www. ») pour libeller une puce ; repli sur l'URL brute.
 export function linkHost(url: string): string {
   const host = hostname(url)

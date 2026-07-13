@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeUrl, linkKind, linkIcon, linkHost } from './links'
+import { normalizeUrl, linkKind, linkHost } from './links'
 
 describe('normalizeUrl', () => {
   it('prepends https:// when no scheme is present', () => {
@@ -31,13 +31,6 @@ describe('linkKind', () => {
     expect(linkKind('https://restaurant.fr')).toBe('web')
     expect(linkKind('https://www.google.com/search?q=luigi')).toBe('web')
     expect(linkKind('not a url')).toBe('web')
-  })
-})
-
-describe('linkIcon', () => {
-  it('maps to a pin, web to a link glyph', () => {
-    expect(linkIcon('https://maps.google.com/x')).toBe('📍')
-    expect(linkIcon('https://restaurant.fr')).toBe('🔗')
   })
 })
 

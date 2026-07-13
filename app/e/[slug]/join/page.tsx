@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getAuthUser } from '@/lib/auth'
 import { JoinForm } from './JoinForm'
 import { formatEventDates } from '@/lib/format'
+import { CalendarIcon, MapPinIcon } from '@/components/ui/icons'
 
 export default async function JoinPage({
   params,
@@ -67,10 +68,10 @@ export default async function JoinPage({
 
         <div className="flex flex-wrap gap-2 mb-8">
           <span className="inline-flex items-center gap-1.5 bg-card border border-line rounded-full px-3 py-1 text-sm font-medium">
-            📅 {dateLabel}
+            <CalendarIcon className="h-[13px] w-[13px] shrink-0 text-terracotta" /> {dateLabel}
           </span>
           <span className="inline-flex items-center gap-1.5 bg-card border border-line rounded-full px-3 py-1 text-sm font-medium">
-            📍 {event.destination}
+            <MapPinIcon className="h-[13px] w-[13px] shrink-0 text-terracotta" /> {event.destination}
           </span>
         </div>
 

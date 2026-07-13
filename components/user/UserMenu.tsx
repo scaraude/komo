@@ -22,6 +22,7 @@ import {
 } from '@/lib/notifications/client'
 import { PREF_DEFAULTS, PREF_LABELS, type NotificationPrefValues } from '@/lib/notifications/prefs'
 import type { Notification } from '@/lib/types'
+import { MapIcon } from '@/components/ui/icons'
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
@@ -140,7 +141,9 @@ export function UserMenu({ email }: { email: string | null }) {
             onClick={() => setOpen(false)}
             className="mb-4 flex items-center justify-between rounded-[14px] border-[1.5px] border-line-2 bg-card px-4 py-[13px] text-[14.5px] font-bold text-ink"
           >
-            <span>🗺️ Mes Komos</span>
+            <span className="flex items-center gap-2">
+              <MapIcon className="h-[16px] w-[16px] shrink-0 text-terracotta" /> Mes Komos
+            </span>
             <span className="text-[13px] font-bold text-terracotta">ouvrir ›</span>
           </Link>
 

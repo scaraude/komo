@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { PlaceAutocomplete } from '@/components/PlaceAutocomplete'
 import { INPUT_CLASS, LABEL_CLASS } from '@/components/ui/form'
+import { MapPinIcon } from '@/components/ui/icons'
 
 /**
  * Un point d'un trajet (départ ou arrivée), avec autocomplete Geoapify.
@@ -84,7 +85,7 @@ export function PointField({
       ) : (
         <div className="flex items-center justify-between gap-2 bg-soft border-[1.5px] border-line rounded-[13px] py-[11px] px-[14px]">
           <span className="flex items-center gap-2 min-w-0 text-[14.5px] text-ink">
-            <span aria-hidden>📍</span>
+            <MapPinIcon className="h-[14px] w-[14px] shrink-0 text-muted" />
             <span className="truncate">{override ?? defaultValue}</span>
             {!override && (
               <span className="shrink-0 text-[11.5px] text-muted">· lieu de l&apos;event</span>

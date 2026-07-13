@@ -12,20 +12,21 @@ export type CategoryKey =
   | 'produce' | 'butchery' | 'dairy' | 'bakery' | 'grocery_savory'
   | 'grocery_sweet' | 'frozen' | 'drinks' | 'household' | 'other'
 
-export type Category = { key: CategoryKey; label: string; emoji: string }
+// Icônes : voir GroceryCategoryIcon dans components/ui/icons.tsx.
+export type Category = { key: CategoryKey; label: string }
 
 // Ordre = parcours type d'un supermarché (sert à ordonner les sections).
 export const CATEGORIES: Category[] = [
-  { key: 'produce', label: 'Fruits & légumes', emoji: '🥦' },
-  { key: 'butchery', label: 'Boucherie & poissonnerie', emoji: '🥩' },
-  { key: 'dairy', label: 'Crèmerie & frais', emoji: '🧀' },
-  { key: 'bakery', label: 'Pains & pâtisserie', emoji: '🥖' },
-  { key: 'grocery_savory', label: 'Épicerie salée', emoji: '🥫' },
-  { key: 'grocery_sweet', label: 'Épicerie sucrée', emoji: '🍫' },
-  { key: 'frozen', label: 'Surgelés', emoji: '🧊' },
-  { key: 'drinks', label: 'Boissons', emoji: '🥤' },
-  { key: 'household', label: 'Hygiène & maison', emoji: '🧻' },
-  { key: 'other', label: 'Divers', emoji: '🛒' },
+  { key: 'produce', label: 'Fruits & légumes' },
+  { key: 'butchery', label: 'Boucherie & poissonnerie' },
+  { key: 'dairy', label: 'Crèmerie & frais' },
+  { key: 'bakery', label: 'Pains & pâtisserie' },
+  { key: 'grocery_savory', label: 'Épicerie salée' },
+  { key: 'grocery_sweet', label: 'Épicerie sucrée' },
+  { key: 'frozen', label: 'Surgelés' },
+  { key: 'drinks', label: 'Boissons' },
+  { key: 'household', label: 'Hygiène & maison' },
+  { key: 'other', label: 'Divers' },
 ]
 
 const CATEGORY_BY_KEY = new Map(CATEGORIES.map((c) => [c.key, c]))

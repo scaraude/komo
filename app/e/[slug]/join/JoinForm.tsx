@@ -133,7 +133,7 @@ export function JoinForm({
                   onChange={() => setSelected(NEW_PROFILE)}
                   className="accent-terracotta"
                 />
-                <span className="font-medium">➕ Je ne suis pas dans la liste</span>
+                <span className="font-medium">＋ Je ne suis pas dans la liste</span>
               </label>
             </div>
           </div>

@@ -7,7 +7,7 @@ import type { Leg, Occupant, Participant } from '@/lib/types'
 import { Avatar } from '@/components/ui/Avatar'
 import { Card } from '@/components/ui/Card'
 import { useUndo } from '@/components/ui/undo'
-import { MODE_ICON } from '@/lib/transport/modes'
+import { TransportModeIcon, PencilIcon, TrashIcon } from '@/components/ui/icons'
 import { hhmm } from '@/lib/format'
 
 const TRUNK_LABELS: Record<string, string> = {
@@ -104,7 +104,7 @@ export function CarCard({
       <div className="p-[15px_16px] flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-[15px] font-bold text-ink flex items-center gap-1.5">
-            <span>{MODE_ICON[leg.mode] ?? '🚗'}</span>
+            <TransportModeIcon mode={leg.mode} className="h-[17px] w-[17px] shrink-0 text-terracotta" />
             {leg.label}
           </p>
           <p className="text-[13px] text-muted mt-0.5">
@@ -202,7 +202,7 @@ export function CarCard({
           <div className="flex items-center gap-4 shrink-0">
             <button onClick={onEdit}
               className="text-[12px] text-muted hover:text-olive transition-colors inline-flex items-center gap-1">
-              <span aria-hidden>✎</span> Modifier
+              <PencilIcon className="h-[12px] w-[12px]" /> Modifier
             </button>
             {isMember && !myOccupant?.is_driver && (
               <button onClick={onLeave} className="text-[12px] text-muted hover:text-terracotta transition-colors">Quitter</button>
@@ -210,7 +210,7 @@ export function CarCard({
             {isAuthor && (
               <button onClick={() => setConfirmingDelete(true)}
                 className="text-[12px] text-muted hover:text-prune transition-colors inline-flex items-center gap-1">
-                <span aria-hidden>🗑</span> Supprimer
+                <TrashIcon className="h-[12px] w-[12px]" /> Supprimer
               </button>
             )}
           </div>
