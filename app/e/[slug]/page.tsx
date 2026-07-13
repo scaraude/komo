@@ -212,7 +212,7 @@ export default async function EventPage({
             subtitle={groceryCount > 0 ? `${groceryCount} produit${groceryCount > 1 ? 's' : ''}` : 'rien encore'} />
           <ModuleTile href="?tab=activites" emoji="🎟️" title="Activités"
             subtitle={activityCount > 0 ? `${activityCount} activité${activityCount > 1 ? 's' : ''}` : 'rien encore'} />
-          <ExpensesTile slug={slug} initialUrl={event.tricount_url} isAdmin={isAdmin} />
+          <ExpensesTile slug={slug} initialUrl={event.tricount_url} canEdit />
         </div>
 
         {/* Partage */}

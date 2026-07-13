@@ -60,16 +60,23 @@ export async function updateDeadline(slug: string, deadline: string) {
     .eq('slug', slug)
 }
 
-// Lien Tricount / cagnotte de l'event (URL de partage collée par l'orga).
-// Authz déléguée à la RLS (created_by = auth.uid()). Chaîne vide → on efface.
-export async function updateTricountUrl(slug: string, url: string) {
+// Lien Tricount / cagnotte de l'event (URL de partage collée par un membre).
+// Authz déléguée à la RPC set_event_tricount_url (tout membre de l'event, via
+// is_event_member). Chaîne vide → on efface. Renvoie { ok } pour que l'UI
+// réconcilie : un UPDATE direct bloqué par la RLS échouait en silence.
+export async function updateTricountUrl(
+  slug: string,
+  url: string,
+): Promise<{ ok: boolean }> {
   const raw = url.trim()
   // Prépend https:// si l'orga a collé sans schéma ; vide → null (retrait).
   const value = raw ? (/^[a-z][a-z0-9+.-]*:\/\//i.test(raw) ? raw : `https://${raw}`) : null
   const supabase = await createClient()
-  await supabase
-    .from('events')
-    .update({ tricount_url: value })
-    .eq('slug', slug)
+  const { error } = await supabase.rpc('set_event_tricount_url', {
+    p_slug: slug,
+    p_url: value,
+  })
+  if (error) return { ok: false }
   revalidatePath(`/e/${slug}`)
+  return { ok: true }
 }
