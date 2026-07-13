@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { Sheet } from '@/components/ui/Sheet'
 import { Switch } from '@/components/ui/Switch'
 import { Avatar } from '@/components/ui/Avatar'
+import { AvatarCropSheet } from '@/components/user/AvatarCropSheet'
 import { signOut } from '@/lib/actions/auth'
 import { updateAvatar } from '@/lib/actions/avatar'
 import {
@@ -47,21 +48,33 @@ export function UserMenu({ email, avatarUrl }: { email: string | null; avatarUrl
   const [avatar, setAvatar] = useState(avatarUrl)
   const [avatarBusy, setAvatarBusy] = useState(false)
   const [avatarError, setAvatarError] = useState<string | null>(null)
+  const [cropImage, setCropImage] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [, startTransition] = useTransition()
 
   const initial = (email ?? '?').trim().charAt(0).toUpperCase() || '?'
   const pushSupported = isPushSupported()
 
-  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleAvatarPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     e.target.value = '' // permet de re-sélectionner le même fichier après une erreur
     if (!file) return
+    setAvatarError(null)
+    setCropImage(URL.createObjectURL(file))
+  }
+
+  function closeCrop() {
+    if (cropImage) URL.revokeObjectURL(cropImage)
+    setCropImage(null)
+  }
+
+  async function handleCropConfirm(blob: Blob) {
+    closeCrop()
     setAvatarBusy(true)
     setAvatarError(null)
     try {
       const formData = new FormData()
-      formData.append('avatar', file)
+      formData.append('avatar', blob, 'avatar.jpg')
       setAvatar(await updateAvatar(formData))
     } catch (err) {
       setAvatarError(err instanceof Error ? err.message : "Impossible d'envoyer la photo.")
@@ -149,7 +162,7 @@ export function UserMenu({ email, avatarUrl }: { email: string | null; avatarUrl
         )}
       </button>
 
-      {open && (
+      {open && !cropImage && (
         <Sheet onClose={() => setOpen(false)} variant="bottom" labelledBy="user-menu-title">
           <div className="mb-4 flex items-center justify-between">
             <h2 id="user-menu-title" className="font-serif text-[20px] text-ink">
@@ -175,7 +188,7 @@ export function UserMenu({ email, avatarUrl }: { email: string | null; avatarUrl
                 ref={fileInputRef}
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
-                onChange={handleAvatarChange}
+                onChange={handleAvatarPick}
                 className="hidden"
               />
             </div>
@@ -271,6 +284,10 @@ export function UserMenu({ email, avatarUrl }: { email: string | null; avatarUrl
             </button>
           </form>
         </Sheet>
+      )}
+
+      {cropImage && (
+        <AvatarCropSheet imageSrc={cropImage} onCancel={closeCrop} onConfirm={handleCropConfirm} />
       )}
     </>
   )

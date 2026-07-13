@@ -5,6 +5,13 @@ const nextConfig: NextConfig = {
     'macbook-pro-de-ludovic.angora-hadar.ts.net',
     'scaraude-g3.angora-hadar.ts.net',
   ],
+  experimental: {
+    serverActions: {
+      // Défaut Next = 1 Mo, trop bas pour un upload de photo (avatar
+      // recadré/compressé côté client, mais on garde une marge de sécurité).
+      bodySizeLimit: '5mb',
+    },
+  },
   async headers() {
     return [
       {
