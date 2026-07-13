@@ -177,6 +177,11 @@ export function TimelinePanel({
     return (id: string) => map.get(id) ?? '?'
   }, [participants])
 
+  const avatarUrlOf = useMemo(() => {
+    const map = new Map(participants.map((p) => [p.id, p.avatar_url]))
+    return (id: string) => map.get(id) ?? null
+  }, [participants])
+
   // Participants avec MA présence surchargée (optimiste) → compteurs à jour sans refetch.
   const people = useMemo(
     () =>
@@ -435,6 +440,7 @@ export function TimelinePanel({
           <ItemSheet
             item={selected}
             pseudoOf={pseudoOf}
+            avatarUrlOf={avatarUrlOf}
             destination={destination}
             participantId={participantId}
             signups={signups}
@@ -474,6 +480,7 @@ function AvatarStack({ people, variant }: { people: Participant[]; variant: 'sol
         <Avatar
           key={p.id}
           pseudo={p.pseudo}
+          avatarUrl={p.avatar_url}
           className={`-ml-[7px] h-[22px] w-[22px] border-2 border-card text-[9.5px] first:ml-0 ${cls}`}
         />
       ))}
@@ -594,7 +601,7 @@ function PresenceGroup({
             key={p.id}
             className={`flex items-center gap-1.5 rounded-full py-[3px] pl-[3px] pr-[11px] text-[12.5px] font-semibold ${chipCls}`}
           >
-            <Avatar pseudo={p.pseudo} className="h-[24px] w-[24px] bg-ink text-[10px] text-paper" />
+            <Avatar pseudo={p.pseudo} avatarUrl={p.avatar_url} className="h-[24px] w-[24px] bg-ink text-[10px] text-paper" />
             {p.pseudo}
           </span>
         ))}
@@ -664,7 +671,8 @@ function PresenceDaySheet({
   onSetPresent: (present: boolean) => void
 }) {
   const breakdown = presenceBreakdown(people, day)
-  const meName = people.find((p) => p.id === participantId)?.pseudo ?? 'Toi'
+  const me = people.find((p) => p.id === participantId)
+  const meName = me?.pseudo ?? 'Toi'
 
   const hint =
     mine === 'pending'
@@ -689,7 +697,7 @@ function PresenceDaySheet({
       {/* Mon contrôle — clair : Je suis là / Pas ce jour */}
       <div className="mt-4 rounded-[16px] border-[1.5px] border-line-2 bg-soft p-[13px]">
         <div className="mb-[10px] flex items-center gap-2">
-          <Avatar pseudo={meName} className="h-[26px] w-[26px] bg-ink text-[11px] text-paper" />
+          <Avatar pseudo={meName} avatarUrl={me?.avatar_url} className="h-[26px] w-[26px] bg-ink text-[11px] text-paper" />
           <span className="text-[14px] font-bold text-ink">Toi</span>
           <span className="ml-auto text-[16px]" aria-hidden>
             {PRESENCE_EMOJI[mine]}
@@ -731,7 +739,7 @@ function PresenceDaySheet({
                   key={p.id}
                   className="flex items-center gap-1.5 rounded-full border-[1.5px] border-line-2 bg-card py-[3px] pl-[3px] pr-[10px] text-[12px] font-semibold text-ink"
                 >
-                  <Avatar pseudo={p.pseudo} className="h-[22px] w-[22px] bg-ink text-[9.5px] text-paper" />
+                  <Avatar pseudo={p.pseudo} avatarUrl={p.avatar_url} className="h-[22px] w-[22px] bg-ink text-[9.5px] text-paper" />
                   {p.pseudo}
                 </span>
               ))}
@@ -881,6 +889,7 @@ function ItemCard({
 function ItemSheet({
   item,
   pseudoOf,
+  avatarUrlOf,
   destination,
   participantId,
   signups,
@@ -888,6 +897,7 @@ function ItemSheet({
 }: {
   item: TimelineItem
   pseudoOf: (id: string) => string
+  avatarUrlOf: (id: string) => string | null
   destination: string | null
   participantId: string
   signups: ActivitySignup[]
@@ -904,7 +914,7 @@ function ItemSheet({
 
   let title: string
   let metaLine: string
-  let people: { id: string; pseudo: string }[] = []
+  let people: { id: string; pseudo: string; avatar_url: string | null }[] = []
   let peopleLabel = ''
 
   if (item.kind === 'transport' || item.kind === 'arrival') {
@@ -914,7 +924,7 @@ function ItemSheet({
     const t1 = hhmm(leg.departure_time)
     const tArr = hhmm(leg.arrival_time)
     metaLine = `${leg.direction === 'aller' ? 'Aller' : 'Retour'} · ${route}${t1 ? ` · ${t1}` : ''}${tArr ? ` → ${tArr}` : ''}`
-    people = item.occupants.map((o) => ({ id: o.participant_id, pseudo: pseudoOf(o.participant_id) }))
+    people = item.occupants.map((o) => ({ id: o.participant_id, pseudo: pseudoOf(o.participant_id), avatar_url: avatarUrlOf(o.participant_id) }))
     peopleLabel = 'À bord'
   } else if (item.kind === 'activity') {
     const { activity } = item
@@ -926,7 +936,7 @@ function ItemSheet({
     ].filter(Boolean)
     metaLine = parts.join(' · ') || 'à caler'
     const current = signups.filter((s) => s.activity_id === activity.id)
-    people = current.map((s) => ({ id: s.participant_id, pseudo: pseudoOf(s.participant_id) }))
+    people = current.map((s) => ({ id: s.participant_id, pseudo: pseudoOf(s.participant_id), avatar_url: avatarUrlOf(s.participant_id) }))
     peopleLabel = `${current.length} inscrit${current.length > 1 ? 's' : ''}${activity.max_participants != null ? ` / ${activity.max_participants}` : ''}`
   } else {
     const { meal } = item
@@ -936,7 +946,7 @@ function ItemSheet({
       SLOT_LABEL[item.slot],
       meal.is_restaurant ? 'au resto' : null,
     ].filter(Boolean).join(' · ')
-    people = item.owners.map((o) => ({ id: o.participant_id, pseudo: pseudoOf(o.participant_id) }))
+    people = item.owners.map((o) => ({ id: o.participant_id, pseudo: pseudoOf(o.participant_id), avatar_url: avatarUrlOf(o.participant_id) }))
     peopleLabel = 'Aux fourneaux'
   }
 
@@ -968,7 +978,7 @@ function ItemSheet({
           <div className="flex flex-wrap gap-1.5">
             {people.map((p) => (
               <span key={p.id} className="flex items-center gap-1.5 rounded-full border-[1.5px] border-line-2 bg-card py-[3px] pl-[3px] pr-[10px] text-[12px] font-semibold text-ink">
-                <Avatar pseudo={p.pseudo} className="h-[22px] w-[22px] bg-ink text-[9.5px] text-paper" />
+                <Avatar pseudo={p.pseudo} avatarUrl={p.avatar_url} className="h-[22px] w-[22px] bg-ink text-[9.5px] text-paper" />
                 {p.pseudo}
                 {p.id === participantId && <span className="text-terracotta">(toi)</span>}
               </span>

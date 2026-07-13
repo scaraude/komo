@@ -119,6 +119,17 @@ export async function joinEvent(
     .maybeSingle()
 
   if (!existing) {
+    // La photo suit le compte : si elle a déjà été uploadée sur un autre
+    // event, on la reprend ici plutôt que de repartir sans avatar.
+    const { data: existingAvatar } = await authed
+      .from('participants')
+      .select('avatar_url')
+      .eq('user_id', userId)
+      .not('avatar_url', 'is', null)
+      .limit(1)
+      .maybeSingle()
+    const avatarUrl = existingAvatar?.avatar_url ?? null
+
     // Revendiquer un profil sans compte : on s'attribue la ligne (user_id null
     // → soi). On ne touche pas au role (le profil garde le sien) ni au pseudo
     // (il en a déjà un). Le filtre `user_id is null` rend l'op idempotente en
@@ -128,7 +139,7 @@ export async function joinEvent(
     if (profileId) {
       const { data: rows, error: claimError } = await authed
         .from('participants')
-        .update({ user_id: userId })
+        .update({ user_id: userId, avatar_url: avatarUrl })
         .eq('id', profileId)
         .eq('event_id', event.id)
         .is('user_id', null)
@@ -147,6 +158,7 @@ export async function joinEvent(
         pseudo,
         user_id: userId,
         role,
+        avatar_url: avatarUrl,
       }).select('id').single()
       if (error || !created) throw new Error('Impossible de rejoindre cet event.')
       // Notifie les autres membres de l'arrivée (le créateur n'a personne à

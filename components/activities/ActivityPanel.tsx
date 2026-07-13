@@ -14,7 +14,7 @@ import { useUndo } from '@/components/ui/undo'
 import { formatDayLabel } from '@/lib/calendar'
 import { CalendarIcon, ClockIcon, UsersIcon, PencilIcon } from '@/components/ui/icons'
 
-type Person = { id: string; pseudo: string }
+type Person = { id: string; pseudo: string; avatar_url: string | null }
 
 // Postgres `numeric` revient en string via PostgREST (précision préservée) :
 // on le ramène en number, sinon formatEuro affiche « 40,00€ » au lieu de « 40€ ».
@@ -429,7 +429,7 @@ function ActivityCard({
                 key={p.id}
                 className="inline-flex items-center gap-1 rounded-full border-[1.5px] border-line-2 bg-card py-0.5 pl-0.5 pr-2 text-xs font-medium text-body"
               >
-                <Avatar pseudo={p.pseudo} className="h-5 w-5 bg-ink text-[10px] text-paper" />
+                <Avatar pseudo={p.pseudo} avatarUrl={p.avatar_url} className="h-5 w-5 bg-ink text-[10px] text-paper" />
                 {p.pseudo}
               </div>
             ))}

@@ -144,7 +144,7 @@ export default async function EventPage({
             eventId={event.id}
             currentParticipantId={participant.id}
             isCreator={isCreator}
-            participants={participants.map((p) => ({ id: p.id, pseudo: p.pseudo, hasAccount: p.user_id != null }))}
+            participants={participants.map((p) => ({ id: p.id, pseudo: p.pseudo, hasAccount: p.user_id != null, avatar_url: p.avatar_url }))}
           />
         </div>
 
@@ -213,7 +213,7 @@ export default async function EventPage({
           eventId={event.id}
           participantId={participant.id}
           initialProposals={dateProposals ?? []}
-          participants={participants.map((p) => ({ id: p.id, pseudo: p.pseudo }))}
+          participants={participants.map((p) => ({ id: p.id, pseudo: p.pseudo, avatar_url: p.avatar_url }))}
           isCreator={isAdmin}
         />
       )}
@@ -260,7 +260,7 @@ export default async function EventPage({
                     p.id === participant.id ? 'border-terracotta' : 'border-line-2'
                   }`}>
                   <div className="flex items-center gap-2">
-                    <Avatar pseudo={p.pseudo} className="h-8 w-8 bg-ink text-xs text-paper" />
+                    <Avatar pseudo={p.pseudo} avatarUrl={p.avatar_url} className="h-8 w-8 bg-ink text-xs text-paper" />
                     <div>
                       <span className="text-sm font-semibold">
                         {p.pseudo}
@@ -323,7 +323,7 @@ export default async function EventPage({
           participantId={participant.id}
           initialActivities={activities ?? []}
           initialSignups={activitySignups ?? []}
-          participants={participants.map((p) => ({ id: p.id, pseudo: p.pseudo }))}
+          participants={participants.map((p) => ({ id: p.id, pseudo: p.pseudo, avatar_url: p.avatar_url }))}
           isAdmin={isAdmin}
           dateStart={event.date_start}
           dateEnd={event.date_end}

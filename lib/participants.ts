@@ -4,6 +4,10 @@ export function pseudoOf(participants: Pick<Participant, 'id' | 'pseudo'>[], id:
   return participants.find((p) => p.id === id)?.pseudo ?? '?'
 }
 
+export function avatarUrlOf(participants: Pick<Participant, 'id' | 'avatar_url'>[], id: string): string | null {
+  return participants.find((p) => p.id === id)?.avatar_url ?? null
+}
+
 // Un·e participant·e « concerné·e par le transport » : tout le monde SAUF ceux
 // qui ont explicitement répondu « Non » (presence_status 'no'). Les non-déclaré·es
 // (presence_status null — ex. les potes qu'on vient d'ajouter à la main) comptent

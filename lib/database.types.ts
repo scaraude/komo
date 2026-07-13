@@ -29,6 +29,7 @@ type ParticipantRow = {
   departure_city: string | null
   luggage_size: 'light' | 'medium' | 'large' | null
   role: 'créateur' | 'co_organisateur' | 'participant'
+  avatar_url: string | null
   joined_at: string
 }
 
@@ -119,6 +120,7 @@ export type Database = {
           departure_city?: string | null
           luggage_size?: 'light' | 'medium' | 'large' | null
           role?: 'créateur' | 'co_organisateur' | 'participant'
+          avatar_url?: string | null
         }
         Update: Partial<Omit<ParticipantRow, 'id' | 'joined_at'>>
         Relationships: []

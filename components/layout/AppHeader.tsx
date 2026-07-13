@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Logo } from '@/components/ui/Logo'
 import { UserMenu } from '@/components/user/UserMenu'
 import { getAuthUser } from '@/lib/auth'
+import { getMyAvatarUrl } from '@/lib/actions/avatar'
 
 /**
  * Barre de navigation partagée (logo + menu utilisateur). Montée sur les pages
@@ -9,7 +10,7 @@ import { getAuthUser } from '@/lib/auth'
  * « + Nouveau » (utile sur /mes-komos).
  */
 export async function AppHeader({ showNew = false }: { showNew?: boolean }) {
-  const user = await getAuthUser()
+  const [user, avatarUrl] = await Promise.all([getAuthUser(), getMyAvatarUrl()])
 
   return (
     <header className="mb-7 flex items-center justify-between">
@@ -25,7 +26,7 @@ export async function AppHeader({ showNew = false }: { showNew?: boolean }) {
             ＋ Nouveau
           </Link>
         )}
-        <UserMenu email={user?.email ?? null} />
+        <UserMenu email={user?.email ?? null} avatarUrl={avatarUrl} />
       </div>
     </header>
   )

@@ -69,7 +69,7 @@ function UnassignedChip({ participant: p, draggable }: { participant: Participan
       className={`inline-flex items-center gap-1.5 bg-card border-[1.5px] border-[var(--color-terracotta-line)] rounded-[20px] px-[12px] py-[7px] text-[13px] font-medium text-body ${
         draggable ? 'cursor-grab active:cursor-grabbing touch-none' : ''
       } ${isDragging ? 'opacity-40' : ''}`}>
-      <Avatar pseudo={p.pseudo} className="h-5 w-5 bg-terracotta text-[11px] text-white" />
+      <Avatar pseudo={p.pseudo} avatarUrl={p.avatar_url} className="h-5 w-5 bg-terracotta text-[11px] text-white" />
       {p.pseudo}
       {p.departure_city && <span className="text-muted text-[12px]">· {p.departure_city}</span>}
       {p.luggage_size && <LuggageIcon size={p.luggage_size} />}

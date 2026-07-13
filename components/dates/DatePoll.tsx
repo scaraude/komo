@@ -21,7 +21,7 @@ import { TrashIcon } from '@/components/ui/icons'
  *  calendrier, eux, sont monochromes (heat map de votes). */
 const CREW_COLORS = ['#df402a', '#7c68b0', '#fe7a5d', '#5f7a3e', '#9a5a6e', '#c99b2e'] as const
 
-type Member = { id: string; pseudo: string }
+type Member = { id: string; pseudo: string; avatar_url: string | null }
 
 export function DatePoll({
   slug,
@@ -166,6 +166,7 @@ export function DatePoll({
               >
                 <Avatar
                   pseudo={member.pseudo}
+                  avatarUrl={member.avatar_url}
                   style={{ backgroundColor: memberColor(member.id) }}
                   className={`h-9 w-9 text-[13px] text-white transition-transform ${
                     focused ? 'scale-110 ring-2 ring-ink ring-offset-2 ring-offset-paper' : ''
@@ -278,6 +279,7 @@ export function DatePoll({
                 >
                   <Avatar
                     pseudo={member.pseudo}
+                    avatarUrl={member.avatar_url}
                     className={`h-5 w-5 text-[10px] ${can ? 'bg-white/25 text-white' : 'bg-track text-muted'}`}
                   />
                   {memberLabel(member)}

@@ -138,7 +138,7 @@ export function CarCard({
             // Conducteur·ice et occupants verrouillés restent épinglés (non déplaçables).
             const pinned = o.is_driver || o.locked
             return (
-              <OccupantRow key={o.id} occupant={o} pseudo={p?.pseudo ?? '…'}
+              <OccupantRow key={o.id} occupant={o} pseudo={p?.pseudo ?? '…'} avatarUrl={p?.avatar_url ?? null}
                 draggable={draggable && !pinned} />
             )
           })}
@@ -223,9 +223,10 @@ export function CarCard({
 
 // Une ligne occupant : avatar + pseudo. Déplaçable par drag quand `draggable`,
 // sauf conducteur·ice / verrouillé (laissés épinglés). Le clic reste libre.
-function OccupantRow({ occupant, pseudo, draggable }: {
+function OccupantRow({ occupant, pseudo, avatarUrl, draggable }: {
   occupant: Occupant
   pseudo: string
+  avatarUrl: string | null
   draggable: boolean
 }) {
   const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
@@ -238,7 +239,7 @@ function OccupantRow({ occupant, pseudo, draggable }: {
       {draggable && (
         <span aria-hidden className="text-[13px] leading-none text-disabled-2">⠿</span>
       )}
-      <Avatar pseudo={pseudo} className="h-7 w-7 bg-ink text-xs text-white" />
+      <Avatar pseudo={pseudo} avatarUrl={avatarUrl} className="h-7 w-7 bg-ink text-xs text-white" />
       <span className="text-[14px] font-medium text-ink">{pseudo}</span>
       {occupant.is_driver && <span className="text-[12px] text-muted ml-auto">conducteur·ice</span>}
     </div>

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { Sheet } from '@/components/ui/Sheet'
+import { Avatar } from '@/components/ui/Avatar'
 import { ConfirmButton } from '@/components/ui/ConfirmButton'
 import { useUndo } from '@/components/ui/undo'
 import {
@@ -22,6 +23,7 @@ type ParticipantSummary = {
   id: string
   pseudo: string
   hasAccount: boolean
+  avatar_url: string | null
 }
 
 // Couleur stable par participant, dérivée de l'id (indépendante de la position).
@@ -63,12 +65,12 @@ export function ParticipantsBadge({
     if (!clean) return
     setError(null)
     const tempId = randomId()
-    setList((l) => [...l, { id: tempId, pseudo: clean, hasAccount: false }])
+    setList((l) => [...l, { id: tempId, pseudo: clean, hasAccount: false, avatar_url: null }])
     setPseudo('')
     startTransition(async () => {
       try {
         const created = await addParticipantProfile(slug, eventId, clean)
-        setList((l) => l.map((p) => (p.id === tempId ? { ...created, hasAccount: false } : p)))
+        setList((l) => l.map((p) => (p.id === tempId ? { ...created, hasAccount: false, avatar_url: null } : p)))
       } catch {
         setList((l) => l.filter((p) => p.id !== tempId))
         setError('Ajout impossible, réessaie.')
@@ -133,13 +135,13 @@ export function ParticipantsBadge({
         className="mt-[16px] flex items-center text-left"
       >
         {list.slice(0, 3).map((p) => (
-          <div
+          <Avatar
             key={p.id}
-            className="-mr-[11px] flex h-[30px] w-[30px] items-center justify-center rounded-full border-[2.5px] border-ink text-[11px] font-bold text-white"
+            pseudo={p.pseudo}
+            avatarUrl={p.avatar_url}
             style={{ backgroundColor: avatarColor(p.id) }}
-          >
-            {p.pseudo[0]?.toUpperCase()}
-          </div>
+            className="-mr-[11px] h-[30px] w-[30px] border-[2.5px] border-ink text-[11px] text-white"
+          />
         ))}
         {list.length > 3 && (
           <div className="flex h-[30px] w-[30px] items-center justify-center rounded-full border-[2.5px] border-ink bg-[#3a352e] text-[11px] font-bold text-white">
@@ -165,12 +167,12 @@ export function ParticipantsBadge({
                   key={p.id}
                   className="flex items-center gap-3 rounded-[13px] border-[1.5px] border-line-2 bg-card px-[14px] py-[11px]"
                 >
-                  <div
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                  <Avatar
+                    pseudo={p.pseudo}
+                    avatarUrl={p.avatar_url}
                     style={{ backgroundColor: avatarColor(p.id) }}
-                  >
-                    {p.pseudo[0]?.toUpperCase()}
-                  </div>
+                    className="h-8 w-8 shrink-0 text-xs text-white"
+                  />
                   <span className="text-[14.5px] font-semibold text-ink">
                     {p.pseudo}
                     {isSelf && <span className="ml-1.5 text-xs font-normal text-terracotta">(toi)</span>}

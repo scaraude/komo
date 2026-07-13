@@ -14,7 +14,7 @@ import { DashedAddButton } from '@/components/ui/DashedAddButton'
 import { Avatar } from '@/components/ui/Avatar'
 import { joinLeg, leaveLeg, moveOccupant } from '@/lib/actions/transport'
 import { randomId } from '@/lib/uuid'
-import { pseudoOf as resolvePseudo, needsTransport } from '@/lib/participants'
+import { pseudoOf as resolvePseudo, avatarUrlOf as resolveAvatarUrl, needsTransport } from '@/lib/participants'
 import type { Leg, Occupant, Participant } from '@/lib/types'
 import { SparklesIcon } from '@/components/ui/icons'
 
@@ -120,6 +120,7 @@ export function TransportPanel({
   const activeUnassignedPid = activeId?.startsWith('unassigned:') ? activeId.slice('unassigned:'.length) : null
   const activePid = activeOccupant?.participant_id ?? activeUnassignedPid
   const activePseudo = activePid ? resolvePseudo(participants, activePid) : null
+  const activeAvatarUrl = activePid ? resolveAvatarUrl(participants, activePid) : null
 
   function handleDragEnd(e: DragEndEvent) {
     setActiveId(null)
@@ -224,7 +225,7 @@ export function TransportPanel({
           <DragOverlay>
             {activePseudo ? (
               <span className="inline-flex items-center gap-1.5 rounded-[20px] border-[1.5px] border-terracotta bg-card px-[12px] py-[7px] text-[13px] font-medium text-body shadow-[0_8px_24px_rgba(60,45,20,0.18)] cursor-grabbing">
-                <Avatar pseudo={activePseudo} className="h-5 w-5 bg-terracotta text-[11px] text-white" />
+                <Avatar pseudo={activePseudo} avatarUrl={activeAvatarUrl} className="h-5 w-5 bg-terracotta text-[11px] text-white" />
                 {activePseudo}
               </span>
             ) : null}

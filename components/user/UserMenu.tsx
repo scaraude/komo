@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { Sheet } from '@/components/ui/Sheet'
 import { Switch } from '@/components/ui/Switch'
 import { Avatar } from '@/components/ui/Avatar'
 import { signOut } from '@/lib/actions/auth'
+import { updateAvatar } from '@/lib/actions/avatar'
 import {
   getNotifications,
   getNotificationPrefs,
@@ -22,7 +23,7 @@ import {
 } from '@/lib/notifications/client'
 import { PREF_DEFAULTS, PREF_LABELS, type NotificationPrefValues } from '@/lib/notifications/prefs'
 import type { Notification } from '@/lib/types'
-import { MapIcon } from '@/components/ui/icons'
+import { MapIcon, PencilIcon } from '@/components/ui/icons'
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
@@ -35,7 +36,7 @@ function timeAgo(iso: string): string {
   return `il y a ${d} j`
 }
 
-export function UserMenu({ email }: { email: string | null }) {
+export function UserMenu({ email, avatarUrl }: { email: string | null; avatarUrl: string | null }) {
   const [open, setOpen] = useState(false)
   const [notifs, setNotifs] = useState<Notification[]>([])
   const [unread, setUnread] = useState(0)
@@ -43,10 +44,31 @@ export function UserMenu({ email }: { email: string | null }) {
   const [prefsLoaded, setPrefsLoaded] = useState(false)
   const [pushOn, setPushOn] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
+  const [avatar, setAvatar] = useState(avatarUrl)
+  const [avatarBusy, setAvatarBusy] = useState(false)
+  const [avatarError, setAvatarError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [, startTransition] = useTransition()
 
   const initial = (email ?? '?').trim().charAt(0).toUpperCase() || '?'
   const pushSupported = isPushSupported()
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // permet de re-sélectionner le même fichier après une erreur
+    if (!file) return
+    setAvatarBusy(true)
+    setAvatarError(null)
+    try {
+      const formData = new FormData()
+      formData.append('avatar', file)
+      setAvatar(await updateAvatar(formData))
+    } catch (err) {
+      setAvatarError(err instanceof Error ? err.message : "Impossible d'envoyer la photo.")
+    } finally {
+      setAvatarBusy(false)
+    }
+  }
 
   // Au montage : on charge les notifs (pour la pastille « non lu » de l'avatar).
   useEffect(() => {
@@ -119,7 +141,7 @@ export function UserMenu({ email }: { email: string | null }) {
         aria-label="Menu et notifications"
         className="relative inline-flex h-9 w-9 items-center justify-center rounded-full border-[1.5px] border-line-3 bg-card text-[14px] text-ink"
       >
-        <Avatar pseudo={initial} className="h-full w-full text-[14px]" />
+        <Avatar pseudo={initial} avatarUrl={avatar} className="h-full w-full text-[14px]" />
         {unread > 0 && (
           <span className="absolute -right-[2px] -top-[2px] flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-terracotta px-1 text-[10px] font-bold text-white">
             {unread > 9 ? '9+' : unread}
@@ -134,6 +156,35 @@ export function UserMenu({ email }: { email: string | null }) {
               Mon compte
             </h2>
             <span className="max-w-[55%] truncate text-[12.5px] text-faint">{email ?? 'Invité'}</span>
+          </div>
+
+          {/* Photo de profil */}
+          <div className="mb-4 flex items-center gap-3 rounded-[14px] border-[1.5px] border-line-2 bg-card px-4 py-[13px]">
+            <div className="relative h-14 w-14 shrink-0">
+              <Avatar pseudo={initial} avatarUrl={avatar} className="h-14 w-14 text-[20px]" />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={avatarBusy}
+                aria-label="Changer la photo de profil"
+                className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-[1.5px] border-card bg-ink text-white"
+              >
+                <PencilIcon className="h-3 w-3" />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleAvatarChange}
+                className="hidden"
+              />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[14px] font-bold text-ink">Photo de profil</p>
+              <p className={`truncate text-[12px] ${avatarError ? 'text-terracotta' : 'text-faint'}`}>
+                {avatarError ?? (avatarBusy ? 'Envoi en cours…' : 'JPG, PNG ou WebP, 5 Mo max')}
+              </p>
+            </div>
           </div>
 
           <Link
