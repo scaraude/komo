@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { ensureUser } from '@/lib/auth'
+import { ensureUser, getAuthUser } from '@/lib/auth'
 
 const MAX_SIZE = 5 * 1024 * 1024 // 5 Mo
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
@@ -52,14 +52,14 @@ export async function updateAvatar(formData: FormData): Promise<string> {
 
 /** Photo de profil du compte courant, ou null (pas de compte / pas de photo). */
 export async function getMyAvatarUrl(): Promise<string | null> {
-  const supabase = await createClient()
-  const { data: auth } = await supabase.auth.getUser()
-  if (!auth.user) return null
+  const user = await getAuthUser()
+  if (!user) return null
 
+  const supabase = await createClient()
   const { data } = await supabase
     .from('participants')
     .select('avatar_url')
-    .eq('user_id', auth.user.id)
+    .eq('user_id', user.id)
     .not('avatar_url', 'is', null)
     .limit(1)
     .maybeSingle()

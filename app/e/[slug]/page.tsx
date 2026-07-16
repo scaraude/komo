@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getUserId } from '@/lib/auth'
+import { getEventBySlug } from '@/lib/events'
 import { PresenceToggle } from '@/components/presence/PresenceToggle'
 import { PartialPresence } from '@/components/presence/PartialPresence'
 import { LiveCounter } from '@/components/presence/LiveCounter'
@@ -53,15 +54,27 @@ export default async function EventPage({
 
   const supabase = await createClient()
 
-  const [{ data: event }, userId] = await Promise.all([
-    supabase.from('events').select('*').eq('slug', slug).single(),
-    getUserId(),
-  ])
+  const [event, userId] = await Promise.all([getEventBySlug(slug), getUserId()])
   if (!event) notFound()
   if (!userId) redirect(`/e/${slug}/join`)
 
   const isPoll = !event.date_start
   const isMultiDay = !isPoll && event.date_start !== event.date_end
+
+  const activeTab = tab && MODULE_TABS.has(tab) ? tab : null
+  const showHub = activeTab === null
+
+  // Chaque écran ne lit que ses propres tables : sans ce filtrage, ouvrir un
+  // seul onglet chargeait les 11 tables de l'event (et payait la RLS sur
+  // chaque ligne) pour n'en afficher qu'une poignée.
+  const needsMeals = !isPoll && (showHub || activeTab === 'bouffe' || activeTab === 'fil')
+  const needsProducts = !isPoll && (showHub || activeTab === 'bouffe' || activeTab === 'fil')
+  const needsMealOwners = !isPoll && (activeTab === 'bouffe' || activeTab === 'fil')
+  const needsActivities = !isPoll && (showHub || activeTab === 'activites' || activeTab === 'fil')
+  const needsSignups = !isPoll && (activeTab === 'activites' || activeTab === 'fil')
+  const needsTransport =
+    !isPoll && (showHub || activeTab === 'presence' || activeTab === 'transport' || activeTab === 'fil')
+  const needsAccommodation = isMultiDay && activeTab === 'presence'
 
   const [
     { data: participant },
@@ -80,19 +93,31 @@ export default async function EventPage({
     isPoll
       ? supabase.from('date_proposals').select('*').eq('event_id', event.id).order('start_date')
       : Promise.resolve({ data: [] }),
-    isMultiDay
+    needsAccommodation
       ? supabase.from('accommodation_options').select('*').eq('event_id', event.id).order('created_at')
       : Promise.resolve({ data: [] }),
-    supabase.from('meals').select('*').eq('event_id', event.id).order('created_at'),
-    supabase.from('products').select('*').eq('event_id', event.id).order('created_at'),
-    supabase.from('meal_owners').select('*').eq('event_id', event.id),
-    supabase.from('activities').select('*').eq('event_id', event.id).order('created_at'),
-    supabase.from('activity_signups').select('*').eq('event_id', event.id),
+    needsMeals
+      ? supabase.from('meals').select('*').eq('event_id', event.id).order('created_at')
+      : Promise.resolve({ data: [] }),
+    needsProducts
+      ? supabase.from('products').select('*').eq('event_id', event.id).order('created_at')
+      : Promise.resolve({ data: [] }),
+    needsMealOwners
+      ? supabase.from('meal_owners').select('*').eq('event_id', event.id)
+      : Promise.resolve({ data: [] }),
+    needsActivities
+      ? supabase.from('activities').select('*').eq('event_id', event.id).order('created_at')
+      : Promise.resolve({ data: [] }),
+    needsSignups
+      ? supabase.from('activity_signups').select('*').eq('event_id', event.id)
+      : Promise.resolve({ data: [] }),
     (async () => {
+      if (!needsTransport) return { legs: [], occupants: [] }
       const { data: legs } = await supabase.from('transport_legs').select('*').eq('event_id', event.id)
+      if (!legs?.length) return { legs: legs ?? [], occupants: [] }
       const { data: occupants } = await supabase
         .from('transport_occupants').select('*')
-        .in('leg_id', (legs ?? []).map((l) => l.id))
+        .in('leg_id', legs.map((leg) => leg.id))
       return { legs, occupants }
     })(),
   ])
@@ -103,10 +128,6 @@ export default async function EventPage({
   // Créateur de l'event : sert à la sheet membres (bloque « Quitter le Komo »).
   const isCreator = event.created_by === userId
   const wording = EVENT_TYPE_WORDING[event.event_type as keyof typeof EVENT_TYPE_WORDING] ?? EVENT_TYPE_WORDING.autre
-
-
-  const activeTab = tab && MODULE_TABS.has(tab) ? tab : null
-  const showHub = activeTab === null
 
   // ====================== LANDING « SONDAGE » ======================
   // Pas encore de dates : l'event n'a pas de hub, il a une landing. Un invité

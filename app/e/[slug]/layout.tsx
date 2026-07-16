@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { createClient } from '@/lib/supabase/server'
+import { getEventBySlug } from '@/lib/events'
 import { clientEnv } from '@/lib/env/client'
 
 const BASE_URL = clientEnv.siteUrl
@@ -10,9 +10,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>
 }): Promise<Metadata> {
   const { slug } = await params
-  const supabase = await createClient()
-  const { data: event } = await supabase
-    .from('events').select('title, destination').eq('slug', slug).single()
+  const event = await getEventBySlug(slug)
 
   if (!event) return {}
 
