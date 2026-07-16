@@ -259,6 +259,10 @@ export type Database = {
     Functions: {
       email_is_registered: { Args: { p_email: string }; Returns: boolean }
       email_has_pseudo_on_event: { Args: { p_email: string; p_event_id: string }; Returns: boolean }
+      reconnectable_account_on_event: {
+        Args: { p_email: string; p_event_id: string }
+        Returns: { user_id: string; email_confirmed: boolean }[]
+      }
       move_occupant: { Args: { p_from_leg: string | null; p_to_leg: string | null; p_participant: string }; Returns: undefined }
       set_date_vote: { Args: { p_proposal: string; p_participant: string; p_vote: boolean }; Returns: undefined }
       set_event_pitch: { Args: { p_slug: string; p_pitch: string | null }; Returns: undefined }

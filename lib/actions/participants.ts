@@ -25,7 +25,8 @@ export type JoinState =
  * (slug est bind côté form).
  *
  * Étape `email` : si l'email correspond à un compte DÉJÀ participant de cet
- * event (`email_has_pseudo_on_event`), on envoie un magic link de reconnexion
+ * event (`reconnectable_account_on_event`, email confirmé OU juste en attente),
+ * on force au besoin la confirmation puis on envoie un magic link de reconnexion
  * (→ `verify`) ; sinon (compte inconnu, ou existant mais pas membre) on passe
  * à l'étape `choose` en portant l'email. L'oracle vit côté service_role.
  *
@@ -52,15 +53,17 @@ export async function joinEvent(
     if (!event) redirect('/')
 
     const admin = createAdminClient()
-    const { data: hasPseudo } = await admin.rpc('email_has_pseudo_on_event', {
-      p_email: email,
-      p_event_id: event.id,
-    })
+    const { data: match } = await admin
+      .rpc('reconnectable_account_on_event', { p_email: email, p_event_id: event.id })
+      .maybeSingle()
 
-    if (hasPseudo) {
-      // Compte déjà participant de cet event → magic link : au clic il revient
-      // authentifié (→ /auth/confirm → cette page) et le dédoublonnage par
-      // user_id le reconnaît, sans re-saisie ni doublon.
+    if (match) {
+      if (!match.email_confirmed) {
+        await admin.auth.admin.updateUserById(match.user_id, {
+          email,
+          email_confirm: true,
+        })
+      }
       await supabase.auth.signInWithOtp({
         email,
         options: {
