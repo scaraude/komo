@@ -12,22 +12,31 @@ alter table public.participants
 
 -- Bucket public en lecture (photo non sensible) ; écriture restreinte au
 -- dossier `{auth.uid()}/...` par les policies storage.objects ci-dessous.
-insert into storage.buckets (id, name, public)
-values ('avatars', 'avatars', true)
-on conflict (id) do nothing;
+-- Encadré : le schéma `storage` est absent des stacks où storage est désactivé
+-- (ex. CI lean), on ne joue le bloc que s'il existe.
+do $$
+begin
+  if to_regclass('storage.buckets') is null then
+    return;
+  end if;
 
-drop policy if exists "avatars_read_public" on storage.objects;
-create policy "avatars_read_public" on storage.objects for select
-  using (bucket_id = 'avatars');
+  insert into storage.buckets (id, name, public)
+  values ('avatars', 'avatars', true)
+  on conflict (id) do nothing;
 
-drop policy if exists "avatars_write_own" on storage.objects;
-create policy "avatars_write_own" on storage.objects for insert
-  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+  drop policy if exists "avatars_read_public" on storage.objects;
+  create policy "avatars_read_public" on storage.objects for select
+    using (bucket_id = 'avatars');
 
-drop policy if exists "avatars_update_own" on storage.objects;
-create policy "avatars_update_own" on storage.objects for update
-  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+  drop policy if exists "avatars_write_own" on storage.objects;
+  create policy "avatars_write_own" on storage.objects for insert
+    with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
 
-drop policy if exists "avatars_delete_own" on storage.objects;
-create policy "avatars_delete_own" on storage.objects for delete
-  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+  drop policy if exists "avatars_update_own" on storage.objects;
+  create policy "avatars_update_own" on storage.objects for update
+    using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+  drop policy if exists "avatars_delete_own" on storage.objects;
+  create policy "avatars_delete_own" on storage.objects for delete
+    using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+end $$;
