@@ -1,4 +1,5 @@
 import 'server-only'
+import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { clientEnv } from '@/lib/env/client'
 
@@ -9,25 +10,24 @@ export async function siteOrigin(): Promise<string> {
 }
 
 /**
- * Identité courante (id de l'utilisateur Supabase Auth), ou null.
+ * Identité courante, dédupliquée pour la durée de la requête : `auth.getUser()`
+ * est un appel réseau au serveur d'auth, et une même page l'appelle depuis
+ * plusieurs composants (page, AppHeader, avatar…). Sans ce cache, chaque appel
+ * repart sur le réseau et les latences s'additionnent en série.
  * Lecture seule → utilisable dans un Server Component.
  */
-export async function getUserId(): Promise<string | null> {
-  const supabase = await createClient()
-  const { data } = await supabase.auth.getUser()
-  return data.user?.id ?? null
-}
+export const getAuthUser = cache(
+  async (): Promise<{ id: string; email: string | null } | null> => {
+    const supabase = await createClient()
+    const { data } = await supabase.auth.getUser()
+    if (!data.user) return null
+    return { id: data.user.id, email: data.user.email ?? null }
+  },
+)
 
-/**
- * Identité courante avec son email (null si pas de session, ou si l'user
- * anonyme n'a pas encore lié d'email). Sert à masquer le champ email quand
- * il est déjà renseigné. Lecture seule → OK en Server Component.
- */
-export async function getAuthUser(): Promise<{ id: string; email: string | null } | null> {
-  const supabase = await createClient()
-  const { data } = await supabase.auth.getUser()
-  if (!data.user) return null
-  return { id: data.user.id, email: data.user.email ?? null }
+export async function getUserId(): Promise<string | null> {
+  const user = await getAuthUser()
+  return user?.id ?? null
 }
 
 /**

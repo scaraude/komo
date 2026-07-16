@@ -14,6 +14,13 @@ export type ActivitySignup = Tables['activity_signups']['Row']
 export type DateProposal = Tables['date_proposals']['Row']
 
 /**
+ * « Le plan » tient en 2-3 lignes — même limite qu'en base (CHECK
+ * event_pitch_length). Vit ici et pas dans `lib/actions/events.ts` : un module
+ * `'use server'` ne peut exporter que des fonctions async.
+ */
+export const PITCH_MAX_LENGTH = 280
+
+/**
  * Une période : un intervalle de dates (bornes incluses), au format ISO
  * `YYYY-MM-DD`. Brique réutilisable — un séjour, un créneau de sondage, etc.
  * Voir `formatPeriod` dans `lib/format.ts`.

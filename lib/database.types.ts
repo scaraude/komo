@@ -15,6 +15,8 @@ type EventRow = {
   event_type: EventType
   presence_deadline: string | null
   tricount_url: string | null
+  /** « Le plan » : 2-3 lignes de l'orga pour donner envie (max 280 car.). */
+  pitch: string | null
   created_at: string
 }
 
@@ -95,11 +97,12 @@ export type Database = {
     Tables: {
       events: {
         Row: EventRow
-        Insert: Omit<EventRow, 'id' | 'created_at' | 'creator_token' | 'created_by' | 'presence_deadline' | 'tricount_url' | 'event_type' | 'date_start' | 'date_end'> & {
+        Insert: Omit<EventRow, 'id' | 'created_at' | 'creator_token' | 'created_by' | 'presence_deadline' | 'tricount_url' | 'pitch' | 'event_type' | 'date_start' | 'date_end'> & {
           creator_token?: string
           created_by?: string | null
           presence_deadline?: string | null
           tricount_url?: string | null
+          pitch?: string | null
           event_type?: EventType
           date_start?: string | null
           date_end?: string | null
@@ -256,8 +259,13 @@ export type Database = {
     Functions: {
       email_is_registered: { Args: { p_email: string }; Returns: boolean }
       email_has_pseudo_on_event: { Args: { p_email: string; p_event_id: string }; Returns: boolean }
+      reconnectable_account_on_event: {
+        Args: { p_email: string; p_event_id: string }
+        Returns: { user_id: string; email_confirmed: boolean }[]
+      }
       move_occupant: { Args: { p_from_leg: string | null; p_to_leg: string | null; p_participant: string }; Returns: undefined }
       set_date_vote: { Args: { p_proposal: string; p_participant: string; p_vote: boolean }; Returns: undefined }
+      set_event_pitch: { Args: { p_slug: string; p_pitch: string | null }; Returns: undefined }
       set_event_tricount_url: { Args: { p_slug: string; p_url: string | null }; Returns: undefined }
       set_presence: { Args: { p_participant: string; p_status: string | null }; Returns: undefined }
       toggle_accommodation_vote: { Args: { p_option: string; p_participant: string }; Returns: undefined }

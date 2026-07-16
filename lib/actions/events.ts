@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { nanoid } from 'nanoid'
 import { createClient } from '@/lib/supabase/server'
 import { ensureUser, siteOrigin } from '@/lib/auth'
+import { PITCH_MAX_LENGTH } from '@/lib/types'
 
 export async function createEvent(formData: FormData) {
   const title = formData.get('title')?.toString().trim()
@@ -49,6 +50,25 @@ export async function createEvent(formData: FormData) {
   }
 
   redirect(`/e/${slug}/join`)
+}
+
+// « Le plan » : le pitch affiché en tête de la landing tant que les dates ne
+// sont pas fixées. Authz déléguée à la RPC set_event_pitch (orgas seulement).
+// Chaîne vide → on efface. Renvoie { ok } pour que l'UI réconcilie plutôt que
+// d'afficher un optimistic « fantôme » perdu au reload.
+export async function updateEventPitch(
+  slug: string,
+  pitch: string,
+): Promise<{ ok: boolean }> {
+  const value = pitch.trim().slice(0, PITCH_MAX_LENGTH) || null
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('set_event_pitch', {
+    p_slug: slug,
+    p_pitch: value,
+  })
+  if (error) return { ok: false }
+  revalidatePath(`/e/${slug}`)
+  return { ok: true }
 }
 
 // Lien Tricount / cagnotte de l'event (URL de partage collée par un membre).
