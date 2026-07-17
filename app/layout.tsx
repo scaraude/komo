@@ -5,9 +5,8 @@ import { UndoProvider } from '@/components/ui/undo'
 import { ServiceWorkerRegister } from '@/components/pwa/ServiceWorkerRegister'
 import { InstallPrompt } from '@/components/pwa/InstallPrompt'
 import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
-// Charte KOMO : Fredoka pour les titres (rond, amical), Manrope pour le corps.
-// Fonts variables → on charge l'axe de poids complet (pas de `weight` figé).
 const fredoka = Fredoka({
   subsets: ['latin'],
   variable: '--font-fredoka',
@@ -41,6 +40,7 @@ export default function RootLayout({
         <ServiceWorkerRegister />
         <InstallPrompt />
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )
